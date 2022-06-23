@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32602.215
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ADService", "ADService\ADService.csproj", "{A42B9788-016C-4C4A-8E55-32041A5B55E2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ADServiceTest", "ADServiceTest\ADServiceTest.csproj", "{D52C6E10-5376-49E5-954E-3A35CD16126F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A42B9788-016C-4C4A-8E55-32041A5B55E2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A42B9788-016C-4C4A-8E55-32041A5B55E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A42B9788-016C-4C4A-8E55-32041A5B55E2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A42B9788-016C-4C4A-8E55-32041A5B55E2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D52C6E10-5376-49E5-954E-3A35CD16126F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D52C6E10-5376-49E5-954E-3A35CD16126F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D52C6E10-5376-49E5-954E-3A35CD16126F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D52C6E10-5376-49E5-954E-3A35CD16126F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {393417CA-0BB2-476B-8771-2F0C9E791264}
+	EndGlobalSection
+EndGlobal
