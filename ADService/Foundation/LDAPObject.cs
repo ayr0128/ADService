@@ -13,55 +13,10 @@ namespace ADService.Foundation
     /// </summary>
     public class LDAPObject
     {
-        #region 過濾字串集成
-        /// <summary>
-        /// 組成找尋指定區分名稱的過濾字串
-        /// </summary>
-        /// <param name="distinguishedNames">限制區分名稱</param>
-        /// <returns>過濾用字串, 沒有任何區分名稱需指定會提供空字串</returns>
-        internal static string GetOneOfDNFiliter(params string[] distinguishedNames)
-        {
-            // 如果沒有任何區分名稱則不必進行過濾字串組合
-            if (distinguishedNames.Length == 0)
-            {
-                // 返回空字串讓外部跳過搜尋動作
-                return string.Empty;
-            }
-
-            // 區分名稱的過濾內容: 此時會缺失開頭與結尾的部分
-            string distinguishedNamesSubFiliter = string.Join($")({Attributes.C_DISTINGGUISHEDNAME}=", distinguishedNames);
-            // 組成找尋任意一個與指定區分名稱相符的過濾字串
-            return $"(|({Attributes.C_DISTINGGUISHEDNAME}={distinguishedNamesSubFiliter}))";
-        }
-
-        /// <summary>
-        /// 組成找尋指定物件類型的過濾字串
-        /// </summary>
-        /// <param name="categories">限制區分名稱</param>
-        /// <returns>過濾用字串, 沒有任何區分名稱需指定會提供空字串</returns>
-        internal static string GetOneOfCategoryFiliter(in CategoryTypes categories)
-        {
-            // 找到須限制的物件類型
-            Dictionary<CategoryTypes, string> dictionaryLimitedCategory = LDAPCategory.GetValuesByTypes(categories);
-            // 如果沒有過濾類型則不必進行過濾字串組合
-            if (dictionaryLimitedCategory.Count == 0)
-            {
-                // 返回空字串讓外部跳過搜尋動作
-                return string.Empty;
-            }
-
-            // 物件類型的過濾內容: 外部須注意不得提供
-            string categoriesSubFiliter = string.Join($")({Attributes.C_OBJECTCATEGORY}=", dictionaryLimitedCategory.Values);
-            // 組成找尋任意一個與指定區分名稱相符的過濾字串
-            return $"(|({Attributes.C_OBJECTCATEGORY}={categoriesSubFiliter}))";
-        }
-
         /// <summary>
         /// 搜尋物件時使用的特性鍵值
         /// </summary>
-        internal static string[] PropertiesToLoad => new string[] { Attributes.C_DISTINGGUISHEDNAME };
-        #endregion
-
+        internal static string[] PropertiesToLoad => new string[] { Properties.C_DISTINGGUISHEDNAME, "allowedAttributes", "allowedChildClasses" };
 
         #region 創建物件以及創建描述
         /// <summary>
@@ -69,9 +24,10 @@ namespace ADService.Foundation
         /// </summary>
         /// <param name="entry">入口物件</param>
         /// <param name="entriesMedia">入口物件創建器</param>
+        /// <param name="propertiesResult">透過找尋取得字的屬性</param>
         /// <returns>使用 object 封裝對外提供的物件</returns>
         /// <exception cref="LDAPExceptions">物件未實作工廠模式或實作過程中出現錯誤時丟出例外</exception>
-        internal static LDAPObject ToObject(in DirectoryEntry entry, in LDAPEntriesMedia entriesMedia)
+        internal static LDAPObject ToObject(in DirectoryEntry entry, in LDAPEntriesMedia entriesMedia, in ResultPropertyCollection propertiesResult)
         {
             // 解析物件類型
             CategoryTypes type = LDAPEntries.ParseCategory(entry.Properties);
@@ -81,28 +37,28 @@ namespace ADService.Foundation
                 case CategoryTypes.CONTAINER: // 容器
                     {
                         // 對外提供 '容器'
-                        return new LDAPContainer(entry, entriesMedia);
+                        return new LDAPContainer(entry, entriesMedia, propertiesResult);
                     }
                 case CategoryTypes.DOMAIN_DNS: // 網域
                     {
                         // 對外提供 '網域' 結構
-                        return new LDAPDomainDNS(entry, entriesMedia);
+                        return new LDAPDomainDNS(entry, entriesMedia, propertiesResult);
                     }
                 case CategoryTypes.ORGANIZATION_UNIT: // 組織單位
                     {
                         // 對外提供 '組織單位' 結構
-                        return new LDAPOrganizationUnit(entry, entriesMedia);
+                        return new LDAPOrganizationUnit(entry, entriesMedia, propertiesResult);
                     }
                 case CategoryTypes.ForeignSecurityPrincipals: // 內部安全性群組
                 case CategoryTypes.GROUP:                     // 群組
                     {
                         // 對外提供 '群組' 結構
-                        return new LDAPGroup(entry, entriesMedia);
+                        return new LDAPGroup(entry, entriesMedia, propertiesResult);
                     }
                 case CategoryTypes.PERSON: // 成員
                     {
                         // 對外提供 '成員' 結構
-                        return new LDAPPerson(entry, entriesMedia);
+                        return new LDAPPerson(entry, entriesMedia, propertiesResult);
                     }
                 default:
                     {
@@ -119,11 +75,13 @@ namespace ADService.Foundation
         /// <param name="primaryGroupToken">主要隸屬群組的 Token</param>
         internal static Dictionary<string, LDAPRelationship> ToRelationshipByToken(in LDAPEntriesMedia entriesMedia, in int primaryGroupToken)
         {
+            // 找到須限制的物件類型
+            Dictionary<CategoryTypes, string> dictionaryLimitedCategory = LDAPCategory.GetValuesByTypes(CategoryTypes.PERSON);
             // 使用根目錄
             using (DirectoryEntry root = entriesMedia.DomainRoot())
             {
                 // 加密避免 LDAP 注入式攻擊: 透過主要隸屬群組關聯的物件必定圍成員
-                string encoderFiliter = $"(&{GetOneOfCategoryFiliter(CategoryTypes.PERSON)}({Attributes.C_PRIMARYGROUPID}={primaryGroupToken}))";
+                string encoderFiliter = $"(&{LDAPEntries.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}({Properties.C_PRIMARYGROUPID}={primaryGroupToken}))";
 
                 // 搜尋主要隸屬群組關聯的物件
                 using (DirectorySearcher searcher = new DirectorySearcher(root, encoderFiliter, PropertiesToLoad))
@@ -224,7 +182,7 @@ namespace ADService.Foundation
                 case CategoryTypes.GROUP:                     // 群組
                     {
                         // 重新命名用的結構
-                        string nameFormat = $"{Attributes.P_CN.ToUpper()}={Name}";
+                        string nameFormat = $"{Properties.P_CN.ToUpper()}={Name}";
                         // 找到名稱的位置: 必定能找到
                         int index = DistinguishedName.IndexOf(nameFormat);
                         // 切割字串取得目標所在的組織單位
@@ -235,7 +193,7 @@ namespace ADService.Foundation
                 case CategoryTypes.ORGANIZATION_UNIT:
                     {
                         // 重新命名用的結構
-                        string nameFormat = $"{Attributes.P_OU.ToUpper()}={Name}";
+                        string nameFormat = $"{Properties.P_OU.ToUpper()}={Name}";
                         // 找到名稱的位置: 必定能找到
                         int index = DistinguishedName.IndexOf(nameFormat);
                         // 切割字串取得目標所在的組織單位
@@ -260,42 +218,15 @@ namespace ADService.Foundation
         /// <summary>
         /// 此物件的名稱
         /// </summary>
-        public string Name
-        {
-            get
-            {
-                // 取得 名稱 不存在應丟出例外
-                StoredProperties.GetPropertySingle(Attributes.P_NAME, out string storedValue);
-                // 提供 名稱
-                return storedValue;
-            }
-        }
+        public string Name => StoredProperties.GetPropertySingle<string>(Properties.P_NAME);
         /// <summary>
         /// 此物件的區分名稱
         /// </summary>
-        public string DistinguishedName
-        {
-            get
-            {
-                // 取得 區分名稱 不存在應丟出例外
-                StoredProperties.GetPropertySingle(Attributes.C_DISTINGGUISHEDNAME, out string storedValue);
-                // 提供 區分名稱
-                return storedValue;
-            }
-        }
+        public string DistinguishedName => StoredProperties.GetPropertySingle<string>(Properties.C_DISTINGGUISHEDNAME);
         /// <summary>
         /// 此物件的全域唯一標識符
         /// </summary>
-        public string GUID
-        {
-            get
-            {
-                // 取得 GUID 不存在應丟出例外
-                StoredProperties.GetPropertyGUID(Attributes.C_OBJECTGUID, out string storedValue);
-                // 提供 GUID
-                return storedValue;
-            }
-        }
+        public string GUID => StoredProperties.GetPropertyGUID(Properties.C_OBJECTGUID);
         /// <summary>
         /// 容器類型
         /// </summary>
@@ -304,7 +235,7 @@ namespace ADService.Foundation
             get
             {
                 // 取得 類別 不存在應丟出例外
-                StoredProperties.GetPropertySingle(Attributes.C_OBJECTCATEGORY, out string storedValue);
+                string storedValue = StoredProperties.GetPropertySingle<string>(Properties.C_OBJECTCATEGORY);
                 // 轉換物件類型
                 return LDAPEntries.GetObjectType(storedValue);
             }
@@ -315,13 +246,14 @@ namespace ADService.Foundation
         /// </summary>
         /// <param name="entry">入口物件</param>
         /// <param name="entriesMedia">入口物件創建器</param>
+        /// <param name="propertiesResult">透過找尋取得字的屬性</param>
         /// <exception cref="LDAPExceptions">解析鍵值不符合規則時對外丟出</exception>
-        internal LDAPObject(in DirectoryEntry entry, in LDAPEntriesMedia entriesMedia)
+        internal LDAPObject(in DirectoryEntry entry, in LDAPEntriesMedia entriesMedia, in ResultPropertyCollection propertiesResult)
         {
             // 腳本物件找尋
             LDAPConfiguration configuration = new LDAPConfiguration(entriesMedia);
             // 初始化可用屬性
-            StoredProperties = new LDAPProperties(configuration, entry);
+            StoredProperties = new LDAPProperties(configuration, entry, propertiesResult);
         }
 
         /// <summary>

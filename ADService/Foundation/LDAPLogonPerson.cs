@@ -1,6 +1,7 @@
 ﻿using ADService.Environments;
 using ADService.Media;
 using ADService.Protocol;
+using System.Collections.Generic;
 using System.DirectoryServices;
 using System.Runtime.InteropServices;
 
@@ -22,12 +23,14 @@ namespace ADService.Foundation
         /// <exception cref="COMException">無法連線至伺服器時</exception>
         internal static LDAPLogonPerson Authentication(in LDAPEntriesMedia entriesMedia, in string userName, in string password)
         {
+            // 找到須限制的物件類型
+            Dictionary<CategoryTypes, string> dictionaryLimitedCategory = LDAPCategory.GetValuesByTypes(CategoryTypes.PERSON);
             // 使用 using 讓連線在跳出方法後即刻釋放: 此處使用的權限是登入者的帳號權限
             using ( DirectoryEntry root = entriesMedia.DomainRoot() )
             {
                 // 直行至此已經確認使用者可以
                 // 加密避免 LDAP 注入式攻擊
-                string encoderFiliter = $"(&{GetOneOfCategoryFiliter(CategoryTypes.PERSON)}(|(sAMAccountName={userName})(userPrincipalName={userName})))";
+                string encoderFiliter = $"(&{LDAPEntries.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}(|(sAMAccountName={userName})(userPrincipalName={userName})))";
                 /* 備註: 為何要額外搜尋一次?
                      1. 連線時如果未在伺服器後提供區分名稱, 會使用物件類型 domainDNS 來回傳
                      2. 為避免部分資料缺失, 需額外指定
@@ -46,7 +49,7 @@ namespace ADService.Foundation
                     using (DirectoryEntry entry = one.GetDirectoryEntry())
                     {
                         // 對外提供登入者結構: 建構時若無法找到必須存在的鍵值會丟出例外
-                        return new LDAPLogonPerson(userName, password, entry, entriesMedia);
+                        return new LDAPLogonPerson(userName, password, entry, entriesMedia, one.Properties);
                     }
                 }
             }
@@ -68,8 +71,9 @@ namespace ADService.Foundation
         /// <param name="password">密碼</param>
         /// <param name="entry">入口物件</param>
         /// <param name="entriesMedia">入口物件創建器</param>
+        /// <param name="propertiesResult">透過找尋取得字的屬性</param>
         /// <exception cref="LDAPExceptions">解析鍵值不符合規則時對外丟出</exception>
-        internal LDAPLogonPerson(in string userName, in string password, in DirectoryEntry entry, in LDAPEntriesMedia entriesMedia) : base(entry, entriesMedia)
+        internal LDAPLogonPerson(in string userName, in string password, in DirectoryEntry entry, in LDAPEntriesMedia entriesMedia, in ResultPropertyCollection propertiesResult) : base(entry, entriesMedia, propertiesResult)
         {
             // 記錄帳號
             UserName = userName;

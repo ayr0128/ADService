@@ -385,7 +385,7 @@ namespace ADServiceFrameworkTest
                                 switch (pair.Key)
                                 {
                                     // 添加至成員欄位
-                                    case Attributes.P_MEMBER:
+                                    case Properties.P_MEMBER:
                                         {
                                             // 使此成員成為群組成員
                                             modifyList.Add(OriginPERSON1);
@@ -394,7 +394,7 @@ namespace ADServiceFrameworkTest
                                         }
                                         break;
                                     // 添加至隸屬群組欄位
-                                    case Attributes.P_MEMBEROF:
+                                    case Properties.P_MEMBEROF:
                                         {
                                             // 使此群組成為指定群組的成員
                                             modifyList.Add(OriginGROUP1);

@@ -267,14 +267,16 @@ namespace ADService.Certification
                 analytical.Invoke(ref certification, Invoker, Destination, protocol);
 
                 // 推入修改
-                Dictionary<string, DirectoryEntry> dictionaryDistinguishedNameWithEntry = certification.Commited();
+                Dictionary<string, RequiredCommitSet> dictionaryDistinguishedNameWitSet = certification.Commited();
                 // 對外提供所有影響的物件
-                Dictionary<string, LDAPObject> dictionaryDistinguishedNameWithLDAPObject = new Dictionary<string, LDAPObject>(dictionaryDistinguishedNameWithEntry.Count);
+                Dictionary<string, LDAPObject> dictionaryDistinguishedNameWithLDAPObject = new Dictionary<string, LDAPObject>(dictionaryDistinguishedNameWitSet.Count);
                 // 遍歷修改內容
-                foreach (KeyValuePair<string, DirectoryEntry> pair in dictionaryDistinguishedNameWithEntry)
+                foreach (KeyValuePair<string, RequiredCommitSet> pair in dictionaryDistinguishedNameWitSet)
                 {
+                    // 異動資料
+                    RequiredCommitSet set = pair.Value;
                     // 重新製作目標物件
-                    LDAPObject reflashObject = LDAPObject.ToObject(pair.Value, EntriesMedia);
+                    LDAPObject reflashObject = LDAPObject.ToObject(set.Entry, EntriesMedia, set.Properties);
                     // 轉換物件為空
                     if (reflashObject == null)
                     {

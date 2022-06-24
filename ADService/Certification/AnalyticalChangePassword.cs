@@ -32,12 +32,12 @@ namespace ADService.Certification
             // 整合各 SID 權向狀態
             AccessRuleInformation[] accessRuleInformations = GetAccessRuleInformations(invoker, destination);
             // 取得彙整權限
-            AccessRuleRightFlags mixedProcessedRightsProperty = AccessRuleInformation.CombineAccessRuleRightFlags(Attributes.EX_CHANGEPASSWORD, accessRuleInformations);
+            AccessRuleRightFlags mixedProcessedRightsProperty = AccessRuleInformation.CombineAccessRuleRightFlags(Properties.EX_CHANGEPASSWORD, accessRuleInformations);
             // 不存在 '名稱' 的寫入權限
             if ((mixedProcessedRightsProperty & AccessRuleRightFlags.RightExtended) == AccessRuleRightFlags.None)
             {
                 // 對外提供失敗
-                return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{Attributes.EX_CHANGEPASSWORD} 的額外權限");
+                return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{Properties.EX_CHANGEPASSWORD} 的額外權限");
             }
 
             // 具有修改名稱權限
@@ -93,16 +93,16 @@ namespace ADService.Certification
             }
 
             // 取得修改目標的入口物件
-            DirectoryEntry entry = certification.GetEntry(destination.DistinguishedName);
+            RequiredCommitSet set = certification.GetEntry(destination.DistinguishedName);
             // 應存在修改目標
-            if (entry == null)
+            if (set == null)
             {
                 // 若觸發此處例外必定為程式漏洞
                 return;
             }
 
             // 呼叫改變密碼的動作
-            object invokeResult = entry.Invoke("ChangePassword", changePWDProtocol.From, changePWDProtocol.To);
+            object invokeResult = set.Entry.Invoke("ChangePassword", changePWDProtocol.From, changePWDProtocol.To);
             // 此時會鳩收到的回覆格式必定為字串
             if (Convert.ToUInt64(invokeResult) != 0)
             {

@@ -31,19 +31,28 @@ namespace ADService.Configuration
         /// <summary>
         /// 此藍本結構是否僅儲存一筆
         /// </summary>
-        private const string ATTRIBUTE_SCHEMA_IS_SINGLEVALUED = "isSingleValued"; 
+        private const string ATTRIBUTE_SCHEMA_IS_SINGLEVALUED = "isSingleValued";
+        /// <summary>
+        /// 搜尋時找尋的資料
+        /// </summary>
+        private static string[] PROPERTIES = new string[] {
+            ATTRIBUTE_SCHEMA_PROPERTY,
+            ATTRIBUTE_SCHEMA_GUID,
+            ATTRIBUTE_SCHEMA_SECURITY_GUID,
+            ATTRIBUTE_SCHEMA_IS_SINGLEVALUED,
+        };
 
         /// <summary>
         /// 取得藍本的指定欄位名稱
         /// </summary>
         /// <param name="entries">入口物件製作器</param>
         /// <param name="value">目標 GUID</param>
-        /// <param name="configuration">設定位置</param>
+        /// <param name="configurationContext">設定位置</param>
         /// <returns>藍本結構</returns>
-        internal static UnitSchema Get(in LDAPEntriesMedia entries, in Guid value, in string configuration)
+        internal static UnitSchema Get(in LDAPEntriesMedia entries, in Guid value, in string configurationContext)
         {
             // 藍本入口物件不存在
-            using (DirectoryEntry entrySchema = entries.ByDistinguisedName($"{CONTEXT_SCHEMA},{configuration}"))
+            using (DirectoryEntry entrySchema = entries.ByDistinguisedName($"{CONTEXT_SCHEMA},{configurationContext}"))
             {
                 // 使用文字串流
                 StringBuilder sb = new StringBuilder();
@@ -57,7 +66,7 @@ namespace ADService.Configuration
                 // 需使用加密避免 LDAP 注入式攻擊
                 string filiter = $"({ATTRIBUTE_SCHEMA_GUID}={sb})";
                 // 從入口物件中找尋到指定物件
-                using (DirectorySearcher searcher = new DirectorySearcher(entrySchema, filiter, new string[] { Attributes.C_DISTINGGUISHEDNAME }))
+                using (DirectorySearcher searcher = new DirectorySearcher(entrySchema, filiter, PROPERTIES))
                 {
                     // 取得指定物件
                     SearchResult one = searcher.FindOne();
@@ -68,12 +77,8 @@ namespace ADService.Configuration
                         return null;
                     }
 
-                    // 轉換成入口物件
-                    using (DirectoryEntry objectEntry = one.GetDirectoryEntry())
-                    {
-                        // 對外提供描述名稱
-                        return new UnitSchema(objectEntry.Properties);
-                    }
+                    // 對外提供描述名稱
+                    return new UnitSchema(one.Properties);
                 }
             }
         }
@@ -83,17 +88,17 @@ namespace ADService.Configuration
         /// </summary>
         /// <param name="entries">入口物件製作器</param>
         /// <param name="value">展示名稱</param>
-        /// <param name="configuration">設定位置</param>
+        /// <param name="configurationContext">設定位置</param>
         /// <returns>藍本結構</returns>
-        internal static UnitSchema Get(in LDAPEntriesMedia entries, in string value, in string configuration)
+        internal static UnitSchema Get(in LDAPEntriesMedia entries, in string value, in string configurationContext)
         {
             // 新建立藍本入口物件
-            using (DirectoryEntry entrySchema = entries.ByDistinguisedName($"{CONTEXT_SCHEMA},{configuration}"))
+            using (DirectoryEntry entrySchema = entries.ByDistinguisedName($"{CONTEXT_SCHEMA},{configurationContext}"))
             {
                 // 需使用加密避免 LDAP 注入式攻擊
                 string filiter = $"({ATTRIBUTE_SCHEMA_PROPERTY}={value})";
                 // 從入口物件中找尋到指定物件
-                using (DirectorySearcher searcher = new DirectorySearcher(entrySchema, filiter, new string[] { Attributes.C_DISTINGGUISHEDNAME }))
+                using (DirectorySearcher searcher = new DirectorySearcher(entrySchema, filiter, PROPERTIES))
                 {
                     // 取得指定物件
                     SearchResult one = searcher.FindOne();
@@ -104,12 +109,8 @@ namespace ADService.Configuration
                         return null;
                     }
 
-                    // 轉換成入口物件
-                    using (DirectoryEntry objectEntry = one.GetDirectoryEntry())
-                    {
-                        // 對外提供描述名稱
-                        return new UnitSchema(objectEntry.Properties);
-                    }
+                    // 對外提供描述名稱
+                    return new UnitSchema(one.Properties);
                 }
             }
         }
@@ -139,7 +140,7 @@ namespace ADService.Configuration
         /// 實作藍本結構
         /// </summary>
         /// <param name="properties">入口物件持有的屬性</param>
-        internal UnitSchema(in PropertyCollection properties)
+        internal UnitSchema(in ResultPropertyCollection properties)
         {
             // 將名稱轉換成小寫
             Name = LDAPEntries.ParseSingleValue<string>(ATTRIBUTE_SCHEMA_PROPERTY, properties).ToLower();

@@ -18,9 +18,9 @@ namespace ADService.Foundation
             get
             {
                 // 取得 SID: 不存在應丟出例外
-                StoredProperties.GetPropertySID(Attributes.C_OBJECTSID, out string primarySID);
+                string primarySID = StoredProperties.GetPropertySID(Properties.C_OBJECTSID);
                 // 取得 GROUPID: 不存在應丟出例外
-                StoredProperties.GetPropertySingle(Attributes.C_PRIMARYGROUPID, out int primaryGROUPID);
+                int primaryGROUPID = StoredProperties.GetPropertySingle<int>(Properties.C_PRIMARYGROUPID);
 
                 // 已知成員的 SID 去除最後一個 '-' 後的資料則是網域 SID
                 int index = primarySID.LastIndexOf('-');
@@ -34,7 +34,8 @@ namespace ADService.Foundation
         /// </summary>
         /// <param name="entry">入口物件</param>
         /// <param name="entriesMedia">入口物件創建器</param>
-        internal LDAPPerson(in DirectoryEntry entry, in LDAPEntriesMedia entriesMedia) : base(entry, entriesMedia)
+        /// <param name="propertiesResult">透過找尋取得字的屬性</param>
+        internal LDAPPerson(in DirectoryEntry entry, in LDAPEntriesMedia entriesMedia, in ResultPropertyCollection propertiesResult) : base(entry, entriesMedia, propertiesResult)
         {
             // 不是允許類型: 成員
             if ((Type & CategoryTypes.PERSON) == CategoryTypes.NONE)

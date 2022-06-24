@@ -13,6 +13,54 @@ namespace ADService.Media
     /// </summary>
     internal class LDAPEntries
     {
+        #region 通用搜尋字串
+        /// <summary>
+        /// 組成找尋指定區分名稱的過濾字串
+        /// </summary>
+        /// <param name="propertyName">目標欄位</param>
+        /// <param name="values">限制的內容</param>
+        /// <returns>過濾用字串, 沒有任何區分名稱需指定會提供空字串</returns>
+        internal static string GetORFiliter(in string propertyName, params string[] values)
+        {
+            // 如果沒有任何區分名稱則不必進行過濾字串組合
+            if (string.IsNullOrWhiteSpace(propertyName))
+            {
+                // 返回空字串讓外部跳過搜尋動作
+                return string.Empty;
+            }
+
+            // 轉乘小寫
+            string nameLower = propertyName.ToLower();
+            // 區分名稱的過濾內容: 此時會缺失開頭與結尾的部分
+            string subFiliter = string.Join($")({nameLower}=", values);
+            // 組成找尋任意一個與指定區分名稱相符的過濾字串
+            return string.IsNullOrEmpty(subFiliter) ? string.Empty : $"(|({nameLower}={subFiliter}))";
+        }
+
+        /// <summary>
+        /// 組成找尋指定區分名稱的過濾字串
+        /// </summary>
+        /// <param name="propertyName">目標欄位</param>
+        /// <param name="values">限制的內容</param>
+        /// <returns>過濾用字串, 沒有任何區分名稱需指定會提供空字串</returns>
+        internal static string GetORFiliter(in string propertyName, in IEnumerable<string> values)
+        {
+            // 如果沒有任何區分名稱則不必進行過濾字串組合
+            if (string.IsNullOrWhiteSpace(propertyName))
+            {
+                // 返回空字串讓外部跳過搜尋動作
+                return string.Empty;
+            }
+
+            // 轉乘小寫
+            string nameLower = propertyName.ToLower();
+            // 區分名稱的過濾內容: 此時會缺失開頭與結尾的部分
+            string subFiliter = string.Join($")({nameLower}=", values);
+            // 組成找尋任意一個與指定區分名稱相符的過濾字串
+            return string.IsNullOrEmpty(subFiliter) ? string.Empty : $"(|({nameLower}={subFiliter}))";
+        }
+        #endregion
+
         #region 解析 LDAP 鍵值
         /// <summary>
         /// 解析目標鍵值
@@ -77,6 +125,31 @@ namespace ADService.Media
         }
 
         /// <summary>
+        /// 解析目標鍵值
+        /// </summary>
+        /// <param name="propertyName">解析目標鍵值</param>
+        /// <param name="properties">整包的鍵值儲存容器, 直接傳入不於外部解析是為了避免漏修改</param>
+        /// <returns>從容器中取得目標資料內容</returns>
+        internal static T[] ParseMutipleValue<T>(in string propertyName, in ResultPropertyCollection properties)
+        {
+            // 取得指定特性鍵值內容
+            ResultPropertyValueCollection collection = properties[propertyName];
+            // 不存在資料且強迫必須存在時
+            if ((collection == null || collection.Count == 0))
+            {
+                // 此特性鍵值必須存在因而丟出例外
+                return Array.Empty<T>();
+            }
+
+            // 宣告長度
+            object[] copyOut = new object[collection.Count];
+            // 將資料拷貝出來
+            collection.CopyTo(copyOut, 0);
+            // 對外提供轉換後型別
+            return Array.ConvertAll(copyOut, convertedObject => (T)convertedObject);
+        }
+
+        /// <summary>
         /// 解析目標鍵值, 預期格式是 SID
         /// </summary>
         /// <param name="propertyName">解析目標鍵值</param>
@@ -135,6 +208,32 @@ namespace ADService.Media
             // 對外提供轉換後型別
             return convertor.ToString("D");
         }
+        /// <summary>
+        /// 解析目標鍵值, 預期格式是 GUID
+        /// </summary>
+        /// <param name="propertyName">解析目標鍵值</param>
+        /// <param name="properties">整包的搜尋鍵值儲存容器, 直接傳入不於外部解析是為了避免漏修改</param>
+        /// <returns>從容器中取得目標資料內容</returns>
+        internal static string ParseGUID(in string propertyName, in ResultPropertyCollection properties)
+        {
+            // 取得指定特性鍵值內容
+            byte[] valueBytes = ParseSingleValue<byte[]>(propertyName, properties);
+            // 對外提供的 SID 轉換器
+            Guid convertor;
+            // 不存在資料且強迫必須存在時
+            if (valueBytes == null || valueBytes.Length == 0)
+            {
+                // 退外提供空的 SID
+                convertor = Guid.Empty;
+            }
+            else
+            {
+                // 需要透過 SecurityIdentifier 轉換成對應字串
+                convertor = new Guid(valueBytes);
+            }
+            // 對外提供轉換後型別
+            return convertor.ToString("D");
+        }
 
         /// <summary>
         /// 解析 <see cref="C_OBJECTCATEGORY">物件類型</see> 的鍵值容器
@@ -144,7 +243,7 @@ namespace ADService.Media
         internal static CategoryTypes ParseCategory(in PropertyCollection properties)
         {
             // 取得 '物件類型' 特性鍵值內容
-            string categoryDistinguishedName = ParseSingleValue<string>(Attributes.C_OBJECTCATEGORY, properties);
+            string categoryDistinguishedName = ParseSingleValue<string>(Properties.C_OBJECTCATEGORY, properties);
             // 解析取得的區分名稱來得到物件類型
             return GetObjectType(categoryDistinguishedName);
         }
@@ -157,7 +256,7 @@ namespace ADService.Media
         internal static CategoryTypes GetObjectType(in string categoryDistinguishedName)
         {
             // 用來切割物件類型的字串
-            string[] splitElements = new string[] { $"{Attributes.P_DC.ToUpper()}=", $"{Attributes.P_OU.ToUpper()}=", $"{Attributes.P_CN.ToUpper()}=" };
+            string[] splitElements = new string[] { $"{Properties.P_DC.ToUpper()}=", $"{Properties.P_OU.ToUpper()}=", $"{Properties.P_CN.ToUpper()}=" };
             // 切割物件類型
             string[] elements = categoryDistinguishedName.Split(splitElements, StringSplitOptions.RemoveEmptyEntries);
 
@@ -178,7 +277,7 @@ namespace ADService.Media
             if (!result.TryGetValue(category, out CategoryTypes type))
             {
                 // 對外丟出例外: 未實做邏輯錯誤
-                throw new LDAPExceptions($"未實作解析資訊:{Attributes.C_OBJECTCATEGORY} 儲存的內容:{categoryDistinguishedName}", ErrorCodes.LOGIC_ERROR);
+                throw new LDAPExceptions($"未實作解析資訊:{Properties.C_OBJECTCATEGORY} 儲存的內容:{categoryDistinguishedName}", ErrorCodes.LOGIC_ERROR);
             }
             // 存在時對外提供物件類型
             return type;

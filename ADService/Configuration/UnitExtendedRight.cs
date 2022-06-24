@@ -1,5 +1,4 @@
-﻿using ADService.Details;
-using ADService.Media;
+﻿using ADService.Media;
 using ADService.Protocol;
 using System;
 using System.DirectoryServices;
@@ -24,15 +23,22 @@ namespace ADService.Configuration
         /// 額外權限的搜尋目標
         /// </summary>
         private const string ATTRIBUTE_EXTENDEDRIGHT_PROPERTY = "displayName";
+        /// <summary>
+        /// 搜尋時找尋的資料
+        /// </summary>
+        private static string[] PROPERTIES = new string[] {
+            ATTRIBUTE_EXTENDEDRIGHT_GUID,
+            ATTRIBUTE_EXTENDEDRIGHT_PROPERTY,
+        };
 
         /// <summary>
         /// 取得擴展權限的指定欄位名稱
         /// </summary>
         /// <param name="entries">入口物件製作器</param>
         /// <param name="value">目標 GUID</param>
-        /// <param name="configuration">設定位置</param>
+        /// <param name="configurationContext">設定位置</param>
         /// <returns>額外權限結構</returns>
-        internal static UnitExtendedRight Get(in LDAPEntriesMedia entries, in Guid value, in string configuration)
+        internal static UnitExtendedRight Get(in LDAPEntriesMedia entries, in Guid value, in string configurationContext)
         {
             // 是空的 GUID
             if (value.Equals(Guid.Empty))
@@ -42,14 +48,14 @@ namespace ADService.Configuration
             }
 
             // 新建立藍本入口物件
-            using (DirectoryEntry extendedRight = entries.ByDistinguisedName($"{CONTEXT_EXTENDEDRIGHT},{configuration}"))
+            using (DirectoryEntry extendedRight = entries.ByDistinguisedName($"{CONTEXT_EXTENDEDRIGHT},{configurationContext}"))
             {
                 // 輸出成 GUID 格式字串
                 string valueGUID = value.ToString("D");
                 // 需使用加密避免 LDAP 注入式攻擊
                 string filiter = $"({ATTRIBUTE_EXTENDEDRIGHT_GUID}={valueGUID})";
                 // 從入口物件中找尋到指定物件
-                using (DirectorySearcher searcher = new DirectorySearcher(extendedRight, filiter, new string[] { Attributes.C_DISTINGGUISHEDNAME }))
+                using (DirectorySearcher searcher = new DirectorySearcher(extendedRight, filiter, PROPERTIES))
                 {
                     // 取得指定物件
                     SearchResult one = searcher.FindOne();
@@ -60,12 +66,8 @@ namespace ADService.Configuration
                         return null;
                     }
 
-                    // 轉換成入口物件
-                    using (DirectoryEntry objectEntry = one.GetDirectoryEntry())
-                    {
-                        // 對外提供預計對外提供的資料
-                        return new UnitExtendedRight(objectEntry.Properties);
-                    }
+                    // 對外提供預計對外提供的資料
+                    return new UnitExtendedRight(one.Properties);
                 }
             }
         }
@@ -75,9 +77,9 @@ namespace ADService.Configuration
         /// </summary>
         /// <param name="entries">入口物件製作器</param>
         /// <param name="value">展示名稱</param>
-        /// <param name="configuration">設定位置</param>
+        /// <param name="configurationContext">設定位置</param>
         /// <returns>額外權限結構</returns>
-        internal static UnitExtendedRight Get(in LDAPEntriesMedia entries, in string value, in string configuration)
+        internal static UnitExtendedRight Get(in LDAPEntriesMedia entries, in string value, in string configurationContext)
         {
             // 是空的字串
             if (string.IsNullOrWhiteSpace(value))
@@ -87,12 +89,12 @@ namespace ADService.Configuration
             }
 
             // 新建立藍本入口物件
-            using (DirectoryEntry entry = entries.ByDistinguisedName($"{CONTEXT_EXTENDEDRIGHT},{configuration}"))
+            using (DirectoryEntry entry = entries.ByDistinguisedName($"{CONTEXT_EXTENDEDRIGHT},{configurationContext}"))
             {
                 // 需使用加密避免 LDAP 注入式攻擊
                 string filiter = $"({ATTRIBUTE_EXTENDEDRIGHT_PROPERTY}={value})";
                 // 從入口物件中找尋到指定物件
-                using (DirectorySearcher searcher = new DirectorySearcher(entry, filiter, new string[] { Attributes.C_DISTINGGUISHEDNAME }))
+                using (DirectorySearcher searcher = new DirectorySearcher(entry, filiter, PROPERTIES))
                 {
                     // 取得指定物件
                     SearchResult one = searcher.FindOne();
@@ -103,12 +105,8 @@ namespace ADService.Configuration
                         return null;
                     }
 
-                    // 轉換成入口物件
-                    using (DirectoryEntry objectEntry = one.GetDirectoryEntry())
-                    {
-                        // 對外提供預計對外提供的資料
-                        return new UnitExtendedRight(objectEntry.Properties);
-                    }
+                    // 對外提供預計對外提供的資料
+                    return new UnitExtendedRight(one.Properties);
                 }
             }
         }
@@ -128,12 +126,9 @@ namespace ADService.Configuration
         /// 實作額外權限結構
         /// </summary>
         /// <param name="properties">入口物件持有的屬性</param>
-        internal UnitExtendedRight(in PropertyCollection properties)
+        internal UnitExtendedRight(in ResultPropertyCollection properties)
         {
-            // 將 名稱 成小解
-            Name = LDAPEntries.ParseSingleValue<string>(ATTRIBUTE_EXTENDEDRIGHT_PROPERTY, properties).ToLower();
-
-            // 將 GUID 換成小解
+            Name       = LDAPEntries.ParseSingleValue<string>(ATTRIBUTE_EXTENDEDRIGHT_PROPERTY, properties).ToLower();
             RightsGUID = LDAPEntries.ParseSingleValue<string>(ATTRIBUTE_EXTENDEDRIGHT_GUID, properties).ToLower();
         }
     }

@@ -108,10 +108,20 @@ namespace ADService
             try
             {
                 // 透過 GUID 找到指定物件, 注意如果找不到會有奇怪的錯誤
-                using ( DirectoryEntry entry = entriesMedia.ByGUID(GUID) )
+                using (DirectoryEntry entry = entriesMedia.ByGUID(GUID))
                 {
-                    // 轉換成可用物件
-                    return LDAPObject.ToObject(entry, entriesMedia);
+                    // 取得區分名稱
+                    string distinguishedName = LDAPEntries.ParseSingleValue<string>(Properties.C_DISTINGGUISHEDNAME, entry.Properties);
+                    // [TODO] 應使用加密字串避免注入式攻擊
+                    string encoderFiliter = LDAPEntries.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, distinguishedName);
+                    // 找尋某些額外參數
+                    using (DirectorySearcher searcher = new DirectorySearcher(entry, encoderFiliter, LDAPObject.PropertiesToLoad, SearchScope.Base))
+                    {
+                        // 找到其他屬性
+                        SearchResult one = searcher.FindOne();
+                        // 轉換成可用物件
+                        return LDAPObject.ToObject(entry, entriesMedia, one.Properties);
+                    }
                 }
             }
             // 發生時機: 使用者登入時發現例外錯誤
@@ -145,6 +155,8 @@ namespace ADService
                 return new Dictionary<string, LDAPObject>(0);
             }
 
+            // 找到須限制的物件類型
+            Dictionary<CategoryTypes, string> dictionaryLimitedCategory = LDAPCategory.GetValuesByTypes(categories);
             /* 此處處理出現問題會接收到例外:
                  1. 若訪問伺服器發生問題: 會對外提供 LDAPExceptions
             */
@@ -156,23 +168,23 @@ namespace ADService
                 using (DirectoryEntry root = entriesMedia.DomainRoot())
                 {
                     // [TODO] 應使用加密字串避免注入式攻擊
-                    string encoderFiliter = $"(&{LDAPObject.GetOneOfCategoryFiliter(categories)}{LDAPObject.GetOneOfDNFiliter(distinguishedNames)})";
+                    string encoderFiliter = $"(&{LDAPEntries.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}{LDAPEntries.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, distinguishedNames)})";
                     // 找尋指定目標
                     using (DirectorySearcher searcher = new DirectorySearcher(root, encoderFiliter, LDAPObject.PropertiesToLoad, SearchScope.Subtree))
                     {
                         // 將指定目標過濾出來
-                        using (SearchResultCollection collection = searcher.FindAll())
+                        using (SearchResultCollection all = searcher.FindAll())
                         {
                             // 使用取得的資料長度作為容器大小宣告字典, 格式如右: Dictionary '區分名稱, 基層物件類型'
-                            Dictionary<string, LDAPObject> dictionaryDNWithObject = new Dictionary<string, LDAPObject>(collection.Count);
+                            Dictionary<string, LDAPObject> dictionaryDNWithObject = new Dictionary<string, LDAPObject>(all.Count);
                             // 遍歷取得的結果
-                            foreach (SearchResult result in collection)
+                            foreach (SearchResult one in all)
                             {
                                 // 將取得物件轉換為入口物件
-                                using (DirectoryEntry resultEntry = result.GetDirectoryEntry())
+                                using (DirectoryEntry resultEntry = one.GetDirectoryEntry())
                                 {
                                     // 轉換成系統使用的物件類型
-                                    LDAPObject resultObject = LDAPObject.ToObject(resultEntry, entriesMedia);
+                                    LDAPObject resultObject = LDAPObject.ToObject(resultEntry, entriesMedia, one.Properties);
                                     // 物件為登入者時, 使用新物件的特性鍵值更新登入者並更換儲存物件:
                                     LDAPObject storedObject = logon.SwapFrom(resultObject);
                                     // 絕對不應該重複
@@ -258,14 +270,24 @@ namespace ADService
                     // 使用 using 讓連線在跳出方法後即刻釋放: 此處使用的權限是登入者的帳號權限
                     using (DirectoryEntry root = entriesMedia.DomainRoot())
                     {
-                        // 製作根目錄物件: 此時絕對是集成類型的物件
-                        LDAPAssembly assembly = (LDAPAssembly)LDAPObject.ToObject(root, entriesMedia);
-                        // 取得此入口物件類型下的目標類型物件
-                        List<LDAPObject> children = LDAPAssembly.WithChild(root, entriesMedia, categories | extendFlags);
-                        // 將找尋的下層子物件提供給集成類型物件並刷新
-                        assembly.Reflash(children);
-                        // 由於外部沒有指定查詢的區分名稱, 因此使用固定字串讓外部可以取得找尋到的網域
-                        organizationuUnitDictionary.Add(LDAPAssembly.ROOT, assembly);
+                        // 取得區分名稱
+                        string distinguishedName = LDAPEntries.ParseSingleValue<string>(Properties.C_DISTINGGUISHEDNAME, root.Properties);
+                        // [TODO] 應使用加密字串避免注入式攻擊
+                        string encoderFiliter = LDAPEntries.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, distinguishedName);
+                        // 找尋某些額外參數
+                        using (DirectorySearcher searcher = new DirectorySearcher(root, encoderFiliter, LDAPObject.PropertiesToLoad, SearchScope.Base))
+                        {
+                            // 找到需額外搜尋的資料
+                            SearchResult one = searcher.FindOne();
+                            // 製作根目錄物件: 此時絕對是集成類型的物件
+                            LDAPAssembly assembly = (LDAPAssembly)LDAPObject.ToObject(root, entriesMedia, one.Properties);
+                            // 取得此入口物件類型下的目標類型物件
+                            List<LDAPObject> children = LDAPAssembly.WithChild(root, entriesMedia, categories | extendFlags);
+                            // 將找尋的下層子物件提供給集成類型物件並刷新
+                            assembly.Reflash(children);
+                            // 由於外部沒有指定查詢的區分名稱, 因此使用固定字串讓外部可以取得找尋到的網域
+                            organizationuUnitDictionary.Add(LDAPAssembly.ROOT, assembly);
+                        }
                     }
                     // 將處理完成的組織單位提供給外部
                     return organizationuUnitDictionary;

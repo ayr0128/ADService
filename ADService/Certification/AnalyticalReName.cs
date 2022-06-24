@@ -32,13 +32,13 @@ namespace ADService.Certification
             // 整合各 SID 權向狀態
             AccessRuleInformation[] accessRuleInformations = GetAccessRuleInformations(invoker, destination);
             // 權限混和
-            AccessRuleRightFlags mixedProcessedRightsProperty = AccessRuleInformation.CombineAccessRuleRightFlags(Attributes.P_NAME, accessRuleInformations);
+            AccessRuleRightFlags mixedProcessedRightsProperty = AccessRuleInformation.CombineAccessRuleRightFlags(Properties.P_NAME, accessRuleInformations);
 
             // 不存在 '名稱' 的寫入權限
             if ((mixedProcessedRightsProperty & AccessRuleRightFlags.PropertyWrite) == AccessRuleRightFlags.None)
             {
                 // 對外提供失敗
-                return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{Attributes.P_NAME} 的寫入權限");
+                return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{Properties.P_NAME} 的寫入權限");
             }
 
             // 需要另外一個名稱權限
@@ -52,14 +52,14 @@ namespace ADService.Certification
                 case CategoryTypes.PERSON:
                     {
                         // 權限混和
-                        destinationRightsTypeName |= AccessRuleInformation.CombineAccessRuleRightFlags(Attributes.P_CN, accessRuleInformations);
+                        destinationRightsTypeName |= AccessRuleInformation.CombineAccessRuleRightFlags(Properties.P_CN, accessRuleInformations);
                     }
                     break;
                 // 隸屬群組
                 case CategoryTypes.ORGANIZATION_UNIT:
                     {
                         // 權限混和
-                        destinationRightsTypeName |= AccessRuleInformation.CombineAccessRuleRightFlags(Attributes.P_OU, accessRuleInformations);
+                        destinationRightsTypeName |= AccessRuleInformation.CombineAccessRuleRightFlags(Properties.P_OU, accessRuleInformations);
                     }
                     break;
             }
@@ -113,7 +113,7 @@ namespace ADService.Certification
                 case CategoryTypes.ORGANIZATION_UNIT:
                     {
                         // 重新命名用的結構
-                        string receivedNameFormat = $"{Attributes.P_OU}={name}";
+                        string receivedNameFormat = $"{Properties.P_OU}={name}";
 
                         // 組織單位時: 父層底下不應有任何其他新名稱物件
                         using (DirectoryEntry entryRoot = certification.EntriesMedia.ByDistinguisedName(distinguishedName))
@@ -135,7 +135,7 @@ namespace ADService.Certification
                 case CategoryTypes.PERSON:
                     {
                         // 重新命名用的結構
-                        string receivedNameFormat = $"{Attributes.P_CN}={name}";
+                        string receivedNameFormat = $"{Properties.P_CN}={name}";
                         // 群組, 電腦, 成員時: 根目錄底下不應有任何其他新名稱的相同物件
                         using (DirectoryEntry entryRoot = certification.EntriesMedia.DomainRoot())
                         {
@@ -178,9 +178,9 @@ namespace ADService.Certification
             }
 
             // 取得修改目標的入口物件
-            DirectoryEntry entry = certification.GetEntry(destination.DistinguishedName);
+            RequiredCommitSet set = certification.GetEntry(destination.DistinguishedName);
             // 應存在修改目標
-            if (entry == null)
+            if (set == null)
             {
                 // 若觸發此處例外必定為程式漏洞
                 return;
@@ -196,7 +196,7 @@ namespace ADService.Certification
                 case CategoryTypes.ORGANIZATION_UNIT:
                     {
                         // 重新命名用的結構
-                        nameInFormat = $"{Attributes.P_OU}={name}";
+                        nameInFormat = $"{Properties.P_OU}={name}";
                     }
                     break;
                 // 群組
@@ -205,7 +205,7 @@ namespace ADService.Certification
                 case CategoryTypes.PERSON:
                     {
                         // 重新命名用的結構
-                        nameInFormat = $"{Attributes.P_CN}={name}";
+                        nameInFormat = $"{Properties.P_CN}={name}";
                     }
                     break;
                 default:
@@ -228,7 +228,7 @@ namespace ADService.Certification
             }
 
             // 通過後就可以重新命名了
-            entry.Rename(nameInFormat);
+            set.Entry.Rename(nameInFormat);
             // 設定需求推入實作
             certification.RequiredCommit(destination.DistinguishedName);
         }

@@ -17,16 +17,7 @@ namespace ADService.Foundation
         IRevealerMemberOf
     {
         #region 介面:IRevealerSID
-        string IRevealerSID.Value
-        {
-            get
-            {
-                // 嘗試取得 SID 的儲存資料
-                StoredProperties.GetPropertySID(Attributes.C_OBJECTSID, out string valueSID);
-                // 對外提供 SID
-                return valueSID;
-            }
-        }
+        string IRevealerSID.Value => StoredProperties.GetPropertySID(Properties.C_OBJECTSID);
         #endregion
 
         #region 介面:IRevealerMemberOf
@@ -43,10 +34,11 @@ namespace ADService.Foundation
         /// </summary>
         /// <param name="entry">入口物件</param>
         /// <param name="entriesMedia">入口物件創建器</param>
-        internal LDAPEntity(in DirectoryEntry entry, in LDAPEntriesMedia entriesMedia) : base(entry, entriesMedia)
+        /// <param name="propertiesResult">透過找尋取得字的屬性</param>
+        internal LDAPEntity(in DirectoryEntry entry, in LDAPEntriesMedia entriesMedia, in ResultPropertyCollection propertiesResult) : base(entry, entriesMedia, propertiesResult)
         {
             // 取得 memberOf: 不存在應丟出例外
-            StoredProperties.GetPropertyMultiple(Attributes.P_MEMBEROF, out string[] memberOf);
+            string[] memberOf = StoredProperties.GetPropertyMultiple<string>(Properties.P_MEMBEROF);
             // 初始化隸屬群組
             MemberOf = ToRelationshipByDNs(entriesMedia, memberOf);
         }

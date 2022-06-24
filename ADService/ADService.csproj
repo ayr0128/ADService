@@ -77,7 +77,7 @@
     <Compile Include="Certification\CertificationProperties.cs" />
     <Compile Include="Configuration\UnitExtendedRight.cs" />
     <Compile Include="Configuration\UnitSchema.cs" />
-    <Compile Include="Protocol\Attributes.cs" />
+    <Compile Include="Protocol\Properties.cs" />
     <Compile Include="Environments\LDAPCategory.cs" />
     <Compile Include="Environments\LDAPConst.cs" />
     <Compile Include="Environments\LDAPExceptions.cs" />

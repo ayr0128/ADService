@@ -33,7 +33,7 @@ namespace ADService.Foundation
             get
             {
                 // 取得 SID: 不存在應丟出例外
-                StoredProperties.GetPropertySID(Attributes.C_OBJECTSID, out string primarySID);
+                string primarySID = StoredProperties.GetPropertySID(Properties.C_OBJECTSID);
 
                 // 已知群組 SID 最後一個 '-' 後的資料就是 PrimaryGroupToken
                 int index = primarySID.LastIndexOf('-');
@@ -47,7 +47,8 @@ namespace ADService.Foundation
         /// </summary>
         /// <param name="entry">入口物件</param>
         /// <param name="entriesMedia">入口物件創建器</param>
-        internal LDAPGroup(in DirectoryEntry entry, in LDAPEntriesMedia entriesMedia) : base(entry, entriesMedia)
+        /// <param name="propertiesResult">透過找尋取得字的屬性</param>
+        internal LDAPGroup(in DirectoryEntry entry, in LDAPEntriesMedia entriesMedia, in ResultPropertyCollection propertiesResult) : base(entry, entriesMedia, propertiesResult)
         {
             // 限制應為: 成員, 內部安全性群組
             const CategoryTypes TypeLimited = CategoryTypes.GROUP | CategoryTypes.ForeignSecurityPrincipals;
@@ -59,7 +60,7 @@ namespace ADService.Foundation
             }
 
             // 取得 member 不存在應丟出例外
-            StoredProperties.GetPropertyMultiple(Attributes.P_MEMBER, out string[] member);
+            string[] member = StoredProperties.GetPropertyMultiple<string>(Properties.P_MEMBER);
             // 初始化成員
             Member = ToRelationshipByDNs(entriesMedia, member);
 

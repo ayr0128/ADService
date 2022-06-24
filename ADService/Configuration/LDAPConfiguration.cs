@@ -17,6 +17,10 @@ namespace ADService.Configuration
         /// 設定入口物件位置
         /// </summary>
         private const string CONTEXT_CONFIGURATION = "configurationNamingContext";
+        /// <summary>
+        /// 設定入口物件位置
+        /// </summary>
+        private const string CONTEXT_SCHEMA = "schemaNamingContext";
 
         /// <summary>
         /// 紀錄外部提供的入口物件創建器
@@ -27,6 +31,10 @@ namespace ADService.Configuration
         /// 設定區分名稱
         /// </summary>
         private readonly string ConfigurationDistinguishedName;
+        /// <summary>
+        /// 藍本區分名稱
+        /// </summary>
+        private readonly string SchemaDistinguishedName;
 
         /// <summary>
         /// 取得 DSE 中的設定區分名稱位置, 並建構連線用相關暫存
@@ -41,6 +49,8 @@ namespace ADService.Configuration
             {
                 // 取得內部設定位置
                 ConfigurationDistinguishedName = LDAPEntries.ParseSingleValue<string>(CONTEXT_CONFIGURATION, root.Properties);
+                // 取得內部難本位置
+                SchemaDistinguishedName = LDAPEntries.ParseSingleValue<string>(CONTEXT_SCHEMA, root.Properties);
             }
         }
 

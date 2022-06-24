@@ -42,12 +42,12 @@ namespace ADService.Media
         /// <exception cref="LDAPExceptions">解析鍵值不符合規則時對外丟出</exception>
         public LDAPRelationship(in DirectoryEntry entry, in bool isPrimary)
         {
-            DistinguishedName = LDAPEntries.ParseSingleValue<string>(Attributes.C_DISTINGGUISHEDNAME, entry.Properties);
-            Name              = LDAPEntries.ParseSingleValue<string>(Attributes.P_NAME, entry.Properties);
+            DistinguishedName = LDAPEntries.ParseSingleValue<string>(Properties.C_DISTINGGUISHEDNAME, entry.Properties);
+            Name              = LDAPEntries.ParseSingleValue<string>(Properties.P_NAME, entry.Properties);
 
             Type = LDAPEntries.ParseCategory(entry.Properties);
-            SID  = LDAPEntries.ParseSID(Attributes.C_OBJECTSID, entry.Properties);
-            GUID = LDAPEntries.ParseGUID(Attributes.C_OBJECTGUID, entry.Properties);
+            SID  = LDAPEntries.ParseSID(Properties.C_OBJECTSID, entry.Properties);
+            GUID = LDAPEntries.ParseGUID(Properties.C_OBJECTGUID, entry.Properties);
 
             // 紀錄是否從主要關聯物件而來
             IsPrimary = isPrimary;
