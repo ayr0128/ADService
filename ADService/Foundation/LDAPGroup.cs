@@ -33,7 +33,7 @@ namespace ADService.Foundation
             get
             {
                 // 取得 SID: 不存在應丟出例外
-                if (!StoredProperties.GetPropertyValue(LDAPAttributes.C_OBJECTSID, out string primarySID) || string.IsNullOrEmpty(primarySID))
+                if (!StoredProperties.GetPropertySID(LDAPAttributes.C_OBJECTSID, out string primarySID) || string.IsNullOrEmpty(primarySID))
                 {
                     throw new LDAPExceptions($"嘗試取得物件:{DistinguishedName} 的:{LDAPAttributes.C_OBJECTSID} 但資料不存在, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
                 }
@@ -61,20 +61,11 @@ namespace ADService.Foundation
                 throw new LDAPExceptions($"基礎物件類型:{Type} 不是期望的群組類型:{TypeLimited}", ErrorCodes.LOGIC_ERROR);
             }
 
-            // 設定支援鍵值
-            StoredProperties.SetPropertiesSupported(
-                entry.Properties,       // 搜尋得到的結果
-                LDAPAttributes.P_MEMBER // 支援: 成員
-            );
-
             // 取得 member 不存在應丟出例外
-            if (!StoredProperties.GetPropertyValue(LDAPAttributes.P_MEMBER, out string[] member))
-            {
-                throw new LDAPExceptions($"嘗試取得物件:{DistinguishedName} 的:{LDAPAttributes.P_MEMBER} 但資料不存在, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
-            }
-
+            StoredProperties.GetPropertyMultiple(LDAPAttributes.P_MEMBER, out string[] member);
             // 初始化成員
             Member = ToRelationshipByDNs(entriesMedia, member);
+
             // 初始化主要隸屬群組成員
             Dictionary<string, LDAPRelationship> primaryRelationship = ToRelationshipByToken(entriesMedia, PrimaryGroupyToken);
             // 將主要隸屬物件加入成員

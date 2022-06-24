@@ -1,4 +1,5 @@
 ﻿using ADService.Environments;
+using ADService.Media;
 using System.DirectoryServices;
 
 namespace ADService.Protocol
@@ -41,12 +42,12 @@ namespace ADService.Protocol
         /// <exception cref="LDAPExceptions">解析鍵值不符合規則時對外丟出</exception>
         public LDAPRelationship(in DirectoryEntry entry, in bool isPrimary)
         {
-            DistinguishedName = LDAPAttributes.ParseSingleValue<string>(LDAPAttributes.C_DISTINGGUISHEDNAME, true, entry.Properties);
-            Name              = LDAPAttributes.ParseSingleValue<string>(LDAPAttributes.P_NAME, true, entry.Properties);
+            DistinguishedName = LDAPAttributes.ParseSingleValue<string>(LDAPAttributes.C_DISTINGGUISHEDNAME, entry.Properties);
+            Name              = LDAPAttributes.ParseSingleValue<string>(LDAPAttributes.P_NAME, entry.Properties);
 
             Type = LDAPAttributes.ParseCategory(entry.Properties);
-            SID  = LDAPAttributes.ParseSID(LDAPAttributes.C_OBJECTSID, true, entry.Properties);
-            GUID = LDAPAttributes.ParseGUID(LDAPAttributes.C_OBJECTGUID, true, entry.Properties);
+            SID  = LDAPAttributes.ParseSID(LDAPAttributes.C_OBJECTSID, entry.Properties);
+            GUID = LDAPAttributes.ParseGUID(LDAPAttributes.C_OBJECTGUID, entry.Properties);
 
             // 紀錄是否從主要關聯物件而來
             IsPrimary = isPrimary;

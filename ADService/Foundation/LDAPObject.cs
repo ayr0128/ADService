@@ -1,6 +1,6 @@
-﻿using ADService.Environments;
+﻿using ADService.Configuration;
+using ADService.Environments;
 using ADService.Media;
-using ADService.Permissions;
 using ADService.Protocol;
 using ADService.Revealer;
 using System.Collections.Generic;
@@ -205,11 +205,7 @@ namespace ADService.Foundation
         /// <summary>
         /// 設定鍵值儲存與解析功能
         /// </summary>
-        internal LDAPPropertiesRevealer StoredProperties = new LDAPPropertiesRevealer();
-        /// <summary>
-        /// 儲存此物件的安全性相關設定
-        /// </summary>
-        internal LDAPPermissions StoredPermissions;
+        internal LDAPProperties StoredProperties;
 
         /// <summary>
         /// 此物件的名稱
@@ -219,7 +215,7 @@ namespace ADService.Foundation
             get
             {
                 // 取得 名稱 不存在應丟出例外
-                if (!StoredProperties.GetPropertyValue(LDAPAttributes.P_NAME, out string storedValue) || string.IsNullOrEmpty(storedValue))
+                if (!StoredProperties.GetPropertySingle(LDAPAttributes.P_NAME, out string storedValue) || string.IsNullOrEmpty(storedValue))
                 {
                     throw new LDAPExceptions($"嘗試取得物件:{DistinguishedName} 的:{LDAPAttributes.P_NAME} 但資料不存在, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
                 }
@@ -236,7 +232,7 @@ namespace ADService.Foundation
             get
             {
                 // 取得 區分名稱 不存在應丟出例外
-                if (!StoredProperties.GetPropertyValue(LDAPAttributes.C_DISTINGGUISHEDNAME, out string storedValue) || string.IsNullOrEmpty(storedValue))
+                if (!StoredProperties.GetPropertySingle(LDAPAttributes.C_DISTINGGUISHEDNAME, out string storedValue) || string.IsNullOrEmpty(storedValue))
                 {
                     throw new LDAPExceptions($"嘗試取得物件:{DistinguishedName} 的:{LDAPAttributes.C_DISTINGGUISHEDNAME} 但資料不存在, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
                 }
@@ -253,7 +249,7 @@ namespace ADService.Foundation
             get
             {
                 // 取得 GUID 不存在應丟出例外
-                if (!StoredProperties.GetPropertyValue(LDAPAttributes.C_OBJECTGUID, out string storedValue) || string.IsNullOrEmpty(storedValue))
+                if (!StoredProperties.GetPropertyGUID(LDAPAttributes.C_OBJECTGUID, out string storedValue) || string.IsNullOrEmpty(storedValue))
                 {
                     throw new LDAPExceptions($"嘗試取得物件:{DistinguishedName} 的:{LDAPAttributes.C_OBJECTGUID} 但資料不存在, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
                 }
@@ -270,7 +266,7 @@ namespace ADService.Foundation
             get
             {
                 // 取得 類別 不存在應丟出例外
-                if (!StoredProperties.GetPropertyValue(LDAPAttributes.C_OBJECTCATEGORY, out string storedValue) || string.IsNullOrEmpty(storedValue))
+                if (!StoredProperties.GetPropertySingle(LDAPAttributes.C_OBJECTCATEGORY, out string storedValue) || string.IsNullOrEmpty(storedValue))
                 {
                     throw new LDAPExceptions($"嘗試取得物件:{DistinguishedName} 的:{LDAPAttributes.C_OBJECTCATEGORY} 但資料不存在, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
                 }
@@ -288,21 +284,10 @@ namespace ADService.Foundation
         /// <exception cref="LDAPExceptions">解析鍵值不符合規則時對外丟出</exception>
         internal LDAPObject(in DirectoryEntry entry, in LDAPEntriesMedia entriesMedia)
         {
-            // 設定支援鍵值
-            StoredProperties.SetPropertiesSupported(
-                entry.Properties, // 搜尋得到的結果
-                LDAPAttributes.P_NAME,               // 支援: 名稱
-                LDAPAttributes.C_DISTINGGUISHEDNAME, // 支援: 物件類型
-                LDAPAttributes.C_OBJECTCATEGORY,     // 支援: 物件類型
-                LDAPAttributes.C_OBJECTGUID,         // 支援: GUID
-                LDAPAttributes.P_DESCRIPTION         // 支援: 描述
-            );
-
-            using (LDAPSchema schema = new LDAPSchema(entriesMedia))
-            {
-                // 儲存所有安全性相關設定
-                StoredPermissions = new LDAPPermissions(entriesMedia, schema, entry.ObjectSecurity);
-            }
+            // 腳本物件找尋
+            LDAPConfiguration configuration = new LDAPConfiguration(entriesMedia);
+            // 初始化可用屬性
+            StoredProperties = new LDAPProperties(configuration, entry);
         }
 
         /// <summary>
@@ -323,8 +308,6 @@ namespace ADService.Foundation
 
             // 執行至此能保證 GUID 相同, 替換內部特性鍵值內容
             StoredProperties = newObject.StoredProperties;
-            // 替換安全性設定
-            StoredPermissions = newObject.StoredPermissions;
             // 通知外部替換成功
             return this;
         }

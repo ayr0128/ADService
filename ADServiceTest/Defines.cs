@@ -2,6 +2,7 @@
 using ADService.Certification;
 using ADService.Environments;
 using ADService.Foundation;
+using ADService.Media;
 using ADService.Protocol;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;

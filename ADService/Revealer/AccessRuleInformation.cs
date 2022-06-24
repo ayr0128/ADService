@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.DirectoryServices;
 using System.Security.AccessControl;
 
-namespace ADService.Permissions
+namespace ADService.Revealer
 {
     /// <summary>
     /// 內部存取結構
@@ -76,10 +76,10 @@ namespace ADService.Permissions
         /// <param name="unit">此 GUID 的相關資料</param>
         /// <param name="protertySet">目標鍵值</param>
         /// <param name="accessRule">存取規則, 整包船入取得目標需求資料</param>
-        internal AccessRuleInformation(in SchemaUnit unit, in HashSet<string> protertySet, in ActiveDirectoryAccessRule accessRule)
+        internal AccessRuleInformation(in string name, in HashSet<string> propertySet, in ActiveDirectoryAccessRule accessRule)
         {
-            NameAttribute = unit == null ? string.Empty : unit.Name;
-            PropertySet   = protertySet;
+            NameAttribute = name;
+            PropertySet   = propertySet ?? new HashSet<string>(0);
 
             WasAllow = accessRule.AccessControlType == AccessControlType.Allow;
             IsInherited = accessRule.IsInherited;
@@ -112,7 +112,7 @@ namespace ADService.Permissions
                 // 是否為指定的存取鍵值
                 bool isAttributeName = attributeName == accessRuleInformation.NameAttribute;
                 // 是否於關聯群組內
-                bool isInPropertySet = accessRuleInformation.PropertySet == null ? false : accessRuleInformation.PropertySet.Contains(attributeName);
+                bool isInPropertySet = accessRuleInformation.PropertySet.Contains(attributeName);
                 /* 符合下述規則時不對外提供
                      - 不是指定的存取鍵值
                      - 不在關聯群組內
@@ -170,7 +170,7 @@ namespace ADService.Permissions
                 // 是否為指定的存取鍵值
                 bool isAttributeName = attributeName == accessRuleInformation.NameAttribute;
                 // 是否於關聯群組內
-                bool isInPropertySet = accessRuleInformation.PropertySet == null ? false : accessRuleInformation.PropertySet.Contains(attributeName);
+                bool isInPropertySet = accessRuleInformation.PropertySet.Contains(attributeName);
                 /* 符合下述規則時不對外提供
                      - 不是指定的存取鍵值
                      - 不在關聯群組內

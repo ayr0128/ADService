@@ -2,8 +2,8 @@
 using ADService.Features;
 using ADService.Foundation;
 using ADService.Media;
-using ADService.Permissions;
 using ADService.Protocol;
+using ADService.Revealer;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -192,7 +192,7 @@ namespace ADService.Certification
                     case LDAPAttributes.P_USERACCOUNTCONTROL:
                         {
                             // 目前持有的資訊內容
-                            if (!destination.StoredProperties.GetPropertyValue(propertyName, out AccountControlFlags storedValue))
+                            if (!destination.StoredProperties.GetPropertySingle(propertyName, out AccountControlFlags storedValue))
                             {
                                 // 跳過此處理
                                 continue;
@@ -232,7 +232,7 @@ namespace ADService.Certification
                     case LDAPAttributes.P_PWDLASTSET:
                         {
                             // 目前持有的資訊內容
-                            if (!destination.StoredProperties.GetPropertyValue(propertyName, out long storedValue))
+                            if (!destination.StoredProperties.GetPropertyInterval(propertyName, out long storedValue))
                             {
                                 // 跳過此處理
                                 continue;
@@ -275,7 +275,7 @@ namespace ADService.Certification
                     case LDAPAttributes.P_SUPPORTEDENCRYPTIONTYPES:
                         {
                             // 目前持有的資訊內容
-                            if (!destination.StoredProperties.GetPropertyValue(propertyName, out EncryptedType storedValue))
+                            if (!destination.StoredProperties.GetPropertySingle(propertyName, out EncryptedType storedValue))
                             {
                                 // 跳過此處理
                                 continue;
@@ -320,7 +320,7 @@ namespace ADService.Certification
                     default:
                         {
                             // 目前持有的資訊內容
-                            if (!destination.StoredProperties.GetPropertyValue(propertyName, out string storedValue))
+                            if (!destination.StoredProperties.GetPropertySingle(propertyName, out string storedValue))
                             {
                                 // 跳過此處理
                                 continue;
@@ -511,7 +511,7 @@ namespace ADService.Certification
                                             foreach (SearchResult one in all)
                                             {
                                                 // 取得區分名稱
-                                                string distinguishedName = LDAPAttributes.ParseSingleValue<string>(LDAPAttributes.C_DISTINGGUISHEDNAME, true, one.Properties);
+                                                string distinguishedName = LDAPAttributes.ParseSingleValue<string>(LDAPAttributes.C_DISTINGGUISHEDNAME, one.Properties);
                                                 /* 根據異動目標判斷異動權限是否不可用
                                                      1. 異動資料是自己, 不包含異動自己的權限
                                                      2. 異動資料不是自己, 不包含異動的權限
@@ -620,7 +620,7 @@ namespace ADService.Certification
                                             foreach (SearchResult one in all)
                                             {
                                                 // 取得區分名稱
-                                                string distinguishedName = LDAPAttributes.ParseSingleValue<string>(LDAPAttributes.C_DISTINGGUISHEDNAME, true, one.Properties);
+                                                string distinguishedName = LDAPAttributes.ParseSingleValue<string>(LDAPAttributes.C_DISTINGGUISHEDNAME, one.Properties);
                                                 // 設定並轉換成入口物件
                                                 certification.SetEntry(one.GetDirectoryEntry(), distinguishedName);
                                             }
@@ -950,7 +950,7 @@ namespace ADService.Certification
                             // 取得這個參數可調整的參數
                             AccountControlFlags accountControlFlagsMask = AccountControlFromProtocolsToFlags(ACOUNTCONTROL_MASK);
                             // 取得目前持有的屬性
-                            destination.StoredProperties.GetPropertyValue(propertyName, out AccountControlFlags storedValue);
+                            destination.StoredProperties.GetPropertySingle(propertyName, out AccountControlFlags storedValue);
                             // 檢查是否有異動
                             if ((storedValue & accountControlFlagsMask) == accountControlFlags)
                             {
@@ -976,7 +976,7 @@ namespace ADService.Certification
                             // 轉換成控制旗標
                             AccountControlProtocols convertedProtocol = receivedValue?.ToObject<AccountControlProtocols>() ?? AccountControlProtocols.NONE;
                             // 取得目前持有的屬性
-                            destination.StoredProperties.GetPropertyValue(propertyName, out long storedValue);
+                            destination.StoredProperties.GetPropertyInterval(propertyName, out long storedValue);
                             // 取得本次是否包含使用者照號一棟
                             if (dictionaryAttributeNameWithDetail.TryGetValue(LDAPAttributes.P_USERACCOUNTCONTROL, out JToken userAccountControlJToken))
                             {
@@ -986,7 +986,7 @@ namespace ADService.Certification
                             else
                             {
                                 // 取得目前持有的使用者帳號控制屬性
-                                destination.StoredProperties.GetPropertyValue(LDAPAttributes.P_USERACCOUNTCONTROL, out AccountControlFlags userAccountControlValue);
+                                destination.StoredProperties.GetPropertySingle(LDAPAttributes.P_USERACCOUNTCONTROL, out AccountControlFlags userAccountControlValue);
                                 // 轉換成外部協議可是別的格式
                                 convertedProtocol |= AccountControlFromFlagsToProtocols(userAccountControlValue);
                             }
@@ -1048,7 +1048,7 @@ namespace ADService.Certification
                             encryptedType |= (convertedProtocol & AccountControlProtocols.ACCOUNT_KERBEROS_AES256) == AccountControlProtocols.ACCOUNT_KERBEROS_AES256 ? EncryptedType.AES256 : EncryptedType.NONE;
 
                             // 取得目前持有的屬性
-                            destination.StoredProperties.GetPropertyValue(propertyName, out EncryptedType storedValue);
+                            destination.StoredProperties.GetPropertySingle(propertyName, out EncryptedType storedValue);
                             // 檢查修改後設是否與現在鄉相同
                             if ((storedValue & ENCRYPT_MASK) == encryptedType)
                             {

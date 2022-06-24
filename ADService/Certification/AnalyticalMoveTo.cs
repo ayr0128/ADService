@@ -1,8 +1,8 @@
 ﻿using ADService.Environments;
 using ADService.Foundation;
 using ADService.Media;
-using ADService.Permissions;
 using ADService.Protocol;
+using ADService.Revealer;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -166,7 +166,7 @@ namespace ADService.Certification
                     }
 
                     // 整合各 SID 權向狀態
-                    AccessRuleInformation[] accessRuleInformations = GetAccessRuleInformations(invoker, destination);
+                    AccessRuleInformation[] accessRuleInformations = GetAccessRuleInformations(invoker, entryObject);
                     // 權限混和
                     AccessRuleRightFlags mixedProcessedRightsProperty = AccessRuleInformation.CombineAccessRuleRightFlags(categoryValue, accessRuleInformations);
 

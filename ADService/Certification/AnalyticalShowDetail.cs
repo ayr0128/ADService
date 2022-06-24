@@ -1,7 +1,6 @@
 ﻿using ADService.Environments;
 using ADService.Foundation;
 using ADService.Media;
-using ADService.Permissions;
 using ADService.Protocol;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
@@ -13,7 +12,6 @@ namespace ADService.Certification
     /// </summary>
     internal sealed class AnalyticalShowDetail : Analytical
     {
-
         /// <summary>
         /// 呼叫基底建構子
         /// </summary>

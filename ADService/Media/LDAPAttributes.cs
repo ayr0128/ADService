@@ -1,11 +1,12 @@
-﻿using ADService.Protocol;
+﻿using ADService.Environments;
+using ADService.Protocol;
 using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
 using System.Linq;
 using System.Security.Principal;
 
-namespace ADService.Environments
+namespace ADService.Media
 {
     /// <summary>
     /// 所有支援的特性鍵值
@@ -61,47 +62,41 @@ namespace ADService.Environments
         /// 解析目標鍵值
         /// </summary>
         /// <param name="propertyName">解析目標鍵值</param>
-        /// <param name="forceExist">資料是否必須存在</param>
         /// <param name="properties">整包的鍵值儲存容器, 直接傳入不於外部解析是為了避免漏修改</param>
         /// <returns>從容器中取得目標資料內容</returns>
-        internal static T ParseSingleValue<T>(in string propertyName, in bool forceExist, in PropertyCollection properties)
+        internal static T ParseSingleValue<T>(in string propertyName, in PropertyCollection properties)
         {
             // 取得指定特性鍵值內容
             PropertyValueCollection collection = properties[propertyName];
             // 不存在資料且強迫必須存在時
-            if ((collection == null || collection.Count == 0) && forceExist)
+            if ((collection == null || collection.Count == 0))
             {
                 // 此特性鍵值必須存在因而丟出例外
-                throw new LDAPExceptions($"解析資訊:{propertyName} 儲存的內容時, 內容長度不如預期", ErrorCodes.LOGIC_ERROR);
+                return default(T);
             }
 
-            // 轉換至指定型別
-            T converted = collection == null ? default : (T)collection.Value;
             // 對外提供轉換後型別
-            return converted;
+            return (T)collection.Value;
         }
         /// <summary>
         /// 解析目標鍵值
         /// </summary>
         /// <param name="propertyName">解析目標鍵值</param>
-        /// <param name="forceExist">資料是否必須存在</param>
-        /// <param name="properties">搜尋的鍵值儲存容器, 直接傳入不於外部解析是為了避免漏修改</param>
+        /// <param name="properties">整包的鍵值儲存容器, 直接傳入不於外部解析是為了避免漏修改</param>
         /// <returns>從容器中取得目標資料內容</returns>
-        internal static T ParseSingleValue<T>(in string propertyName, in bool forceExist, in ResultPropertyCollection properties)
+        internal static T ParseSingleValue<T>(in string propertyName, in ResultPropertyCollection properties)
         {
             // 取得指定特性鍵值內容
             ResultPropertyValueCollection collection = properties[propertyName];
             // 不存在資料且強迫必須存在時
-            if ((collection == null || collection.Count == 0) && forceExist)
+            if ((collection == null || collection.Count == 0))
             {
                 // 此特性鍵值必須存在因而丟出例外
-                throw new LDAPExceptions($"解析資訊:{propertyName} 儲存的內容時, 內容長度不如預期", ErrorCodes.LOGIC_ERROR);
+                return default(T);
             }
 
-            // 轉換至指定型別
-            T converted = collection == null ? default : (T)collection[0];
             // 對外提供轉換後型別
-            return converted;
+            return (T)collection[0];
         }
 
         /// <summary>
@@ -111,15 +106,15 @@ namespace ADService.Environments
         /// <param name="forceExist">資料是否必須存在</param>
         /// <param name="properties">整包的鍵值儲存容器, 直接傳入不於外部解析是為了避免漏修改</param>
         /// <returns>從容器中取得目標資料內容</returns>
-        internal static string ParseSID(in string propertyName, in bool forceExist, in PropertyCollection properties)
+        internal static string ParseSID(in string propertyName, in PropertyCollection properties)
         {
             // 取得指定特性鍵值內容
-            byte[] valueBytes = ParseSingleValue<byte[]>(propertyName, forceExist, properties);
+            byte[] valueBytes = ParseSingleValue<byte[]>(propertyName, properties);
             // 不存在資料且強迫必須存在時
-            if ((valueBytes == null || valueBytes.Length == 0) && forceExist)
+            if (valueBytes == null || valueBytes.Length == 0)
             {
-                // 此特性鍵值必須存在因而丟出例外
-                throw new LDAPExceptions($"解析資訊:{propertyName} 儲存的內容時, 內容長度不如預期", ErrorCodes.LOGIC_ERROR);
+                // 對外提供空字串
+                return string.Empty;
             }
 
             // 對外提供的 SID 轉換器
@@ -138,62 +133,19 @@ namespace ADService.Environments
             // 對外提供轉換後型別
             return convertor.ToString();
         }
-
         /// <summary>
         /// 解析目標鍵值, 預期格式是 GUID
         /// </summary>
         /// <param name="propertyName">解析目標鍵值</param>
-        /// <param name="forceExist">資料是否必須存在</param>
-        /// <param name="properties">整包的鍵值儲存容器, 直接傳入不於外部解析是為了避免漏修改</param>
-        /// <returns>從容器中取得目標資料內容</returns>
-        internal static string ParseGUID(in string propertyName, in bool forceExist, in PropertyCollection properties)
-        {
-            // 取得指定特性鍵值內容
-            byte[] valueBytes = ParseSingleValue<byte[]>(propertyName, forceExist, properties);
-            // 不存在資料且強迫必須存在時
-            if ((valueBytes == null || valueBytes.Length == 0) && forceExist)
-            {
-                // 此特性鍵值必須存在因而丟出例外
-                throw new LDAPExceptions($"解析資訊:{propertyName} 儲存的內容時, 內容長度不如預期", ErrorCodes.LOGIC_ERROR);
-            }
-
-            // 對外提供的 SID 轉換器
-            Guid convertor;
-            // 資料為空
-            if (valueBytes == null || valueBytes.Length == 0)
-            {
-                // 退外提供空的 SID
-                convertor = Guid.Empty;
-            }
-            else
-            {
-                // 需要透過 SecurityIdentifier 轉換成對應字串
-                convertor = new Guid(valueBytes);
-            }
-            // 對外提供轉換後型別
-            return convertor.ToString("D");
-        }
-        /// <summary>
-        /// 解析目標鍵值, 預期格式是 GUID
-        /// </summary>
-        /// <param name="propertyName">解析目標鍵值</param>
-        /// <param name="forceExist">資料是否必須存在</param>
         /// <param name="properties">整包的搜尋鍵值儲存容器, 直接傳入不於外部解析是為了避免漏修改</param>
         /// <returns>從容器中取得目標資料內容</returns>
-        internal static string ParseGUID(in string propertyName, in bool forceExist, in ResultPropertyCollection properties)
+        internal static string ParseGUID(in string propertyName, in PropertyCollection properties)
         {
             // 取得指定特性鍵值內容
-            byte[] valueBytes = ParseSingleValue<byte[]>(propertyName, forceExist, properties);
-            // 不存在資料且強迫必須存在時
-            if ((valueBytes == null || valueBytes.Length == 0) && forceExist)
-            {
-                // 此特性鍵值必須存在因而丟出例外
-                throw new LDAPExceptions($"解析資訊:{propertyName} 儲存的內容時, 內容長度不如預期", ErrorCodes.LOGIC_ERROR);
-            }
-
+            byte[] valueBytes = ParseSingleValue<byte[]>(propertyName, properties);
             // 對外提供的 SID 轉換器
             Guid convertor;
-            // 資料為空
+            // 不存在資料且強迫必須存在時
             if (valueBytes == null || valueBytes.Length == 0)
             {
                 // 退外提供空的 SID
@@ -233,6 +185,28 @@ namespace ADService.Environments
         }
 
         /// <summary>
+        /// 解析目標鍵值
+        /// </summary>
+        /// <param name="propertyName">解析目標鍵值</param>
+        /// <param name="forceExist">資料是否必須存在</param>
+        /// <param name="properties">整包的鍵值儲存容器, 直接傳入不於外部解析是為了避免漏修改</param>
+        /// <returns>從容器中取得目標資料內容</returns>
+        internal static T[] ParseMultipleValue<T>(in string propertyName, in PropertyCollection properties)
+        {
+            // 取得指定特性鍵值內容
+            PropertyValueCollection collection = properties[propertyName];
+            // 不存在資料且強迫必須存在時
+            if ((collection == null || collection.Count == 0))
+            {
+                // 對外提供空陣列
+                return Array.Empty<T>();
+            }
+
+            // 對外提供轉換後型別
+            return collection.Cast<T>().ToArray();
+        }
+
+        /// <summary>
         /// 解析 <see cref="C_OBJECTCATEGORY">物件類型</see> 的鍵值容器
         /// </summary>
         /// <param name="properties">整包的鍵值儲存容器, 直接傳入不於外部解析是為了避免漏修改</param>
@@ -240,7 +214,7 @@ namespace ADService.Environments
         internal static CategoryTypes ParseCategory(in PropertyCollection properties)
         {
             // 取得 '物件類型' 特性鍵值內容
-            string categoryDistinguishedName = ParseSingleValue<string>(C_OBJECTCATEGORY, true, properties);
+            string categoryDistinguishedName = ParseSingleValue<string>(C_OBJECTCATEGORY, properties);
             // 解析取得的區分名稱來得到物件類型
             return GetObjectType(categoryDistinguishedName);
         }

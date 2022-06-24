@@ -22,7 +22,7 @@ namespace ADService.Foundation
             get
             {
                 // 嘗試取得 SID 的儲存資料
-                if (!StoredProperties.GetPropertyValue(LDAPAttributes.C_OBJECTSID, out string valueSID) || string.IsNullOrEmpty(valueSID))
+                if (!StoredProperties.GetPropertySID(LDAPAttributes.C_OBJECTSID, out string valueSID) || string.IsNullOrEmpty(valueSID))
                 {
                     throw new LDAPExceptions($"嘗試取得物件:{DistinguishedName} 的:{LDAPAttributes.C_OBJECTSID} 但資料不存在, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
                 }
@@ -49,20 +49,8 @@ namespace ADService.Foundation
         /// <param name="entriesMedia">入口物件創建器</param>
         internal LDAPEntity(in DirectoryEntry entry, in LDAPEntriesMedia entriesMedia) : base(entry, entriesMedia)
         {
-            // 設定支援鍵值
-            StoredProperties.SetPropertiesSupported(
-                entry.Properties,          // 搜尋得到的結果
-
-                LDAPAttributes.P_MEMBEROF, // 支援: 成員
-                LDAPAttributes.C_OBJECTSID // 支援: SID
-            );
-
             // 取得 memberOf: 不存在應丟出例外
-            if (!StoredProperties.GetPropertyValue(LDAPAttributes.P_MEMBEROF, out string[] memberOf))
-            {
-                throw new LDAPExceptions($"嘗試取得物件:{DistinguishedName} 的:{LDAPAttributes.P_MEMBEROF} 但資料不存在, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
-            }
-
+            StoredProperties.GetPropertyMultiple(LDAPAttributes.P_MEMBEROF, out string[] memberOf);
             // 初始化隸屬群組
             MemberOf = ToRelationshipByDNs(entriesMedia, memberOf);
         }

@@ -18,7 +18,7 @@ namespace ADService.Foundation
             get
             {
                 // 取得 SID: 不存在應丟出例外
-                if (!StoredProperties.GetPropertyValue(LDAPAttributes.C_OBJECTSID, out string primarySID) || string.IsNullOrEmpty(primarySID))
+                if (!StoredProperties.GetPropertySID(LDAPAttributes.C_OBJECTSID, out string primarySID) || string.IsNullOrEmpty(primarySID))
                 {
                     throw new LDAPExceptions($"嘗試取得物件:{DistinguishedName} 的:{LDAPAttributes.C_OBJECTSID} 但資料不存在, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
                 }
@@ -27,7 +27,7 @@ namespace ADService.Foundation
                 int index = primarySID.LastIndexOf('-');
 
                 // 取得 GROUPID: 不存在應丟出例外
-                if (!StoredProperties.GetPropertyValue(LDAPAttributes.C_PRIMARYGROUPID, out int primaryGROUPID))
+                if (!StoredProperties.GetPropertySingle(LDAPAttributes.C_PRIMARYGROUPID, out int primaryGROUPID))
                 {
                     throw new LDAPExceptions($"嘗試取得物件:{DistinguishedName} 的:{LDAPAttributes.C_PRIMARYGROUPID} 但資料不存在, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
                 }
@@ -50,23 +50,6 @@ namespace ADService.Foundation
                 // 對外丟出類型不正確例外
                 throw new LDAPExceptions($"基礎物件類型:{Type} 不是期望的成員類型:{CategoryTypes.PERSON}", ErrorCodes.LOGIC_ERROR);
             }
-
-            // 設定支援鍵值
-            StoredProperties.SetPropertiesSupported(
-                entry.Properties, // 搜尋得到的結果
-
-                LDAPAttributes.P_DISPLAYNAME,              // 支援: 顯示名稱
-                LDAPAttributes.P_SN,                       // 支援: 姓
-                LDAPAttributes.P_GIVENNAME,                // 支援: 名
-                LDAPAttributes.P_INITIALS,                 // 支援: 縮寫
-                LDAPAttributes.P_USERACCOUNTCONTROL,       // 支援: 使用者帳號控制旗標
-                LDAPAttributes.P_PWDLASTSET,               // 支援: 密碼最後設置時間
-                LDAPAttributes.P_LOCKOUTTIME,              // 支援: 帳號鎖定時間
-                LDAPAttributes.P_ACCOUNTEXPIRES,           // 支援: 密碼過期時間
-                LDAPAttributes.P_SUPPORTEDENCRYPTIONTYPES, // 支援: 加密方式支援
-
-                LDAPAttributes.C_PRIMARYGROUPID // 支援: 主要隸屬群組
-            );
 
             // 初始化主要隸屬群組
             LDAPRelationship primaryGroup = ToRelationshipBySID(entriesMedia, PrimaryGroupSID);

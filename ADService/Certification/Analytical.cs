@@ -1,8 +1,8 @@
 ﻿using ADService.Features;
 using ADService.Foundation;
 using ADService.Media;
-using ADService.Permissions;
 using ADService.Protocol;
+using ADService.Revealer;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -125,7 +125,7 @@ namespace ADService.Certification
             foreach (string SID in SIDs)
             {
                 // 取得 SID 應支援的支援所有屬性名稱
-                AccessRuleInformation[] permissioAccessRuleInformations = destination.StoredPermissions.GetAccessRuleInformations(SID);
+                AccessRuleInformation[] permissioAccessRuleInformations = destination.StoredProperties.GetAccessRuleInformations(SID);
                 // 如果不存在或長度為 0, 則當作未持有
                 if (permissioAccessRuleInformations == null || permissioAccessRuleInformations.Length == 0)
                 {

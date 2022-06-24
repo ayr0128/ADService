@@ -75,7 +75,9 @@
     <Compile Include="Certification\AnalyticalShowDetail.cs" />
     <Compile Include="Certification\LDAPCertification.cs" />
     <Compile Include="Certification\CertificationProperties.cs" />
-    <Compile Include="Environments\LDAPAttributes.cs" />
+    <Compile Include="Configuration\UnitExtendedRight.cs" />
+    <Compile Include="Configuration\UnitSchema.cs" />
+    <Compile Include="Media\LDAPAttributes.cs" />
     <Compile Include="Environments\LDAPCategory.cs" />
     <Compile Include="Environments\LDAPConst.cs" />
     <Compile Include="Environments\LDAPExceptions.cs" />
@@ -96,22 +98,14 @@
     <Compile Include="LDAPServe.cs" />
     <Compile Include="LDAPUnsecurity.cs" />
     <Compile Include="Media\LDAPEntries.cs" />
-    <Compile Include="Permissions\AccessRuleInformation.cs" />
-    <Compile Include="Permissions\LDAPPermissions.cs" />
-    <Compile Include="Permissions\LDAPSchema.cs" />
+    <Compile Include="Revealer\AccessRuleInformation.cs" />
+    <Compile Include="Configuration\LDAPConfiguration.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Protocol\ChangePWD.cs" />
     <Compile Include="Protocol\Consts.cs" />
     <Compile Include="Protocol\InvokeCondition.cs" />
     <Compile Include="Protocol\LDAPRelationship.cs" />
-    <Compile Include="Revealer\LDAPPropertiesRevealer.cs" />
-    <Compile Include="Revealer\RevealerEnumProperties.cs" />
-    <Compile Include="Revealer\RevealerGUIDProperties.cs" />
-    <Compile Include="Revealer\RevealerMultipleProperties.cs" />
-    <Compile Include="Revealer\RevealerProperties.cs" />
-    <Compile Include="Revealer\RevealerSIDProperties.cs" />
-    <Compile Include="Revealer\RevealerSingleLongProperties.cs" />
-    <Compile Include="Revealer\RevealerSingleProperties.cs" />
+    <Compile Include="Revealer\LDAPProperties.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
