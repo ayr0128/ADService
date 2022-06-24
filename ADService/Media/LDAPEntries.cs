@@ -1,6 +1,10 @@
-﻿using System;
+﻿using ADService.Environments;
+using ADService.Protocol;
+using System;
+using System.Collections.Generic;
 using System.DirectoryServices;
 using System.Runtime.InteropServices;
+using System.Security.Principal;
 
 namespace ADService.Media
 {
@@ -9,6 +13,178 @@ namespace ADService.Media
     /// </summary>
     internal class LDAPEntries
     {
+        #region 解析 LDAP 鍵值
+        /// <summary>
+        /// 解析目標鍵值
+        /// </summary>
+        /// <param name="propertyName">解析目標鍵值</param>
+        /// <param name="properties">整包的鍵值儲存容器, 直接傳入不於外部解析是為了避免漏修改</param>
+        /// <returns>從容器中取得目標資料內容</returns>
+        internal static T ParseSingleValue<T>(in string propertyName, in PropertyCollection properties)
+        {
+            // 取得指定特性鍵值內容
+            PropertyValueCollection collection = properties[propertyName];
+            // 不存在資料且強迫必須存在時
+            if ((collection == null || collection.Count == 0))
+            {
+                // 此特性鍵值必須存在因而丟出例外
+                return default(T);
+            }
+
+            // 對外提供轉換後型別
+            return (T)collection.Value;
+        }
+        /// <summary>
+        /// 解析目標鍵值
+        /// </summary>
+        /// <param name="propertyName">解析目標鍵值</param>
+        /// <param name="properties">整包的鍵值儲存容器, 直接傳入不於外部解析是為了避免漏修改</param>
+        /// <returns>從容器中取得目標資料內容</returns>
+        internal static T[] ParseMutipleValue<T>(in string propertyName, in PropertyCollection properties)
+        {
+            // 取得指定特性鍵值內容
+            PropertyValueCollection collection = properties[propertyName];
+            // 不存在資料且強迫必須存在時
+            if ((collection == null || collection.Count == 0))
+            {
+                // 此特性鍵值必須存在因而丟出例外
+                return Array.Empty<T>();
+            }
+
+            // 對外提供轉換後型別
+            return Array.ConvertAll((object[])collection.Value, convertedObject => (T)convertedObject);
+        }
+
+        /// <summary>
+        /// 解析目標鍵值
+        /// </summary>
+        /// <param name="propertyName">解析目標鍵值</param>
+        /// <param name="properties">整包的鍵值儲存容器, 直接傳入不於外部解析是為了避免漏修改</param>
+        /// <returns>從容器中取得目標資料內容</returns>
+        internal static T ParseSingleValue<T>(in string propertyName, in ResultPropertyCollection properties)
+        {
+            // 取得指定特性鍵值內容
+            ResultPropertyValueCollection collection = properties[propertyName];
+            // 不存在資料且強迫必須存在時
+            if ((collection == null || collection.Count == 0))
+            {
+                // 此特性鍵值必須存在因而丟出例外
+                return default(T);
+            }
+
+            // 對外提供轉換後型別
+            return (T)collection[0];
+        }
+
+        /// <summary>
+        /// 解析目標鍵值, 預期格式是 SID
+        /// </summary>
+        /// <param name="propertyName">解析目標鍵值</param>
+        /// <param name="properties">整包的鍵值儲存容器, 直接傳入不於外部解析是為了避免漏修改</param>
+        /// <returns>從容器中取得目標資料內容</returns>
+        internal static string ParseSID(in string propertyName, in PropertyCollection properties)
+        {
+            // 取得指定特性鍵值內容
+            byte[] valueBytes = ParseSingleValue<byte[]>(propertyName, properties);
+            // 不存在資料且強迫必須存在時
+            if (valueBytes == null || valueBytes.Length == 0)
+            {
+                // 對外提供空字串
+                return string.Empty;
+            }
+
+            // 對外提供的 SID 轉換器
+            SecurityIdentifier convertor;
+            // 資料為空
+            if (valueBytes == null || valueBytes.Length == 0)
+            {
+                // 退外提供空的 SID
+                convertor = new SecurityIdentifier(WellKnownSidType.NullSid, null);
+            }
+            else
+            {
+                // 需要透過 SecurityIdentifier 轉換成對應字串
+                convertor = new SecurityIdentifier(valueBytes, 0);
+            }
+            // 對外提供轉換後型別
+            return convertor.ToString();
+        }
+        /// <summary>
+        /// 解析目標鍵值, 預期格式是 GUID
+        /// </summary>
+        /// <param name="propertyName">解析目標鍵值</param>
+        /// <param name="properties">整包的搜尋鍵值儲存容器, 直接傳入不於外部解析是為了避免漏修改</param>
+        /// <returns>從容器中取得目標資料內容</returns>
+        internal static string ParseGUID(in string propertyName, in PropertyCollection properties)
+        {
+            // 取得指定特性鍵值內容
+            byte[] valueBytes = ParseSingleValue<byte[]>(propertyName, properties);
+            // 對外提供的 SID 轉換器
+            Guid convertor;
+            // 不存在資料且強迫必須存在時
+            if (valueBytes == null || valueBytes.Length == 0)
+            {
+                // 退外提供空的 SID
+                convertor = Guid.Empty;
+            }
+            else
+            {
+                // 需要透過 SecurityIdentifier 轉換成對應字串
+                convertor = new Guid(valueBytes);
+            }
+            // 對外提供轉換後型別
+            return convertor.ToString("D");
+        }
+
+        /// <summary>
+        /// 解析 <see cref="C_OBJECTCATEGORY">物件類型</see> 的鍵值容器
+        /// </summary>
+        /// <param name="properties">整包的鍵值儲存容器, 直接傳入不於外部解析是為了避免漏修改</param>
+        /// <returns>從容器中取得的 <see cref="C_OBJECTCATEGORY">物件類型</see> 鍵值內容</returns>
+        internal static CategoryTypes ParseCategory(in PropertyCollection properties)
+        {
+            // 取得 '物件類型' 特性鍵值內容
+            string categoryDistinguishedName = ParseSingleValue<string>(Attributes.C_OBJECTCATEGORY, properties);
+            // 解析取得的區分名稱來得到物件類型
+            return GetObjectType(categoryDistinguishedName);
+        }
+        /// <summary>
+        /// 根據解析物件類型區分名稱來提供物件為何種類型
+        /// </summary>
+        /// <param name="categoryDistinguishedName">需解析區分名稱</param>
+        /// <returns></returns>
+        /// <exception cref="LDAPExceptions">區分名稱無法正常解析實對外丟出</exception>
+        internal static CategoryTypes GetObjectType(in string categoryDistinguishedName)
+        {
+            // 用來切割物件類型的字串
+            string[] splitElements = new string[] { $"{Attributes.P_DC.ToUpper()}=", $"{Attributes.P_OU.ToUpper()}=", $"{Attributes.P_CN.ToUpper()}=" };
+            // 切割物件類型
+            string[] elements = categoryDistinguishedName.Split(splitElements, StringSplitOptions.RemoveEmptyEntries);
+
+            // 第一個參數為物件類型的描述: 但是需要物件類型的長度決定如何處理
+            string category = string.Empty;
+            // 物件類型長度不可能比 1 少, 但是為了防呆還是增加此邏輯判斷
+            if (elements.Length >= 1)
+            {
+                // 第一個元素必定是物件類型
+                string elementFirst = elements[0];
+                // 如果物件類型字串解析後長度比 1 大, 則第一個元素後面會多一個 ',' 會需要被移除
+                category = elements.Length > 1 ? elementFirst.Substring(0, elementFirst.Length - 1) : elementFirst;
+            }
+
+            // 透過描述取得物件類型描述
+            Dictionary<string, CategoryTypes> result = LDAPCategory.GetTypeByCategories(category);
+            // 物件類型不存在
+            if (!result.TryGetValue(category, out CategoryTypes type))
+            {
+                // 對外丟出例外: 未實做邏輯錯誤
+                throw new LDAPExceptions($"未實作解析資訊:{Attributes.C_OBJECTCATEGORY} 儲存的內容:{categoryDistinguishedName}", ErrorCodes.LOGIC_ERROR);
+            }
+            // 存在時對外提供物件類型
+            return type;
+        }
+        #endregion
+
         /// <summary>
         /// 連線網域: 可用 IP 或 網址, 根據實作方式限制
         /// </summary>

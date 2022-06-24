@@ -64,11 +64,11 @@ namespace ADService.Certification
         /// <summary>
         /// 透過指定的證書提供可用方法與其動作協議描述, 如何使用需解析 <see cref="InvokeCondition">協議描述</see>, 目前支援下述項目
         /// <list type="table|number">
-        ///    <item> <see cref="LDAPMethods.M_RENAME">重新命名</see> </item>
-        ///    <item> <see cref="LDAPMethods.M_MOVETO">移動至</see> </item>
-        ///    <item> <see cref="LDAPMethods.M_SHOWDETAIL">物件細節參數</see> </item>
-        ///    <item> <see cref="LDAPMethods.M_CHANGEPWD">重置密碼</see> </item>
-        ///    <item> <see cref="LDAPMethods.M_RESETPWD">強制重設密碼</see> </item>
+        ///    <item> <see cref="Methods.M_RENAME">重新命名</see> </item>
+        ///    <item> <see cref="Methods.M_MOVETO">移動至</see> </item>
+        ///    <item> <see cref="Methods.M_SHOWDETAIL">物件細節參數</see> </item>
+        ///    <item> <see cref="Methods.M_CHANGEPWD">重置密碼</see> </item>
+        ///    <item> <see cref="Methods.M_RESETPWD">強制重設密碼</see> </item>
         /// </list>
         /// </summary>
         /// <returns>可用方法與預期接收參數, 格式如右 Dictionary '功能, 協議描述' </returns>
@@ -121,7 +121,7 @@ namespace ADService.Certification
         /// <summary>
         /// 透過指定的證書與可用方法取得對應協定描述, 如何使用需解析 <see cref="InvokeCondition">協議描述</see>, 目前支援下述項目
         /// <list type="table|number">
-        ///    <item> <see cref="LDAPMethods.M_MODIFYDETAIL">異動細節</see> </item>
+        ///    <item> <see cref="Methods.M_MODIFYDETAIL">異動細節</see> </item>
         /// </list>
         /// </summary>
         /// <param name="attributeName">目標屬性</param>

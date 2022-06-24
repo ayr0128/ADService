@@ -1,12 +1,13 @@
 ﻿using ADService.Configuration;
 using ADService.Environments;
+using ADService.Protocol;
 using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
 using System.Reflection;
 using System.Security.Principal;
 
-namespace ADService.Revealer
+namespace ADService.Details
 {
     /// <summary>
     /// 使用 JSON 做為基底的特性鍵值轉換器
@@ -17,6 +18,10 @@ namespace ADService.Revealer
         /// 目前儲存的特性鍵值資料
         /// </summary>
         private readonly Dictionary<string, PropertyDetail> dictionaryNameWithPorpertyDetail = new Dictionary<string, PropertyDetail>();
+        /// <summary>
+        /// 以 SID 記錄各條存取權限
+        /// </summary>
+        private readonly Dictionary<string, List<AccessRuleInformation>> dictionarySIDWithPermissions = new Dictionary<string, List<AccessRuleInformation>>();
 
         /// <summary>
         /// 從入口物件取得的資料
@@ -30,7 +35,11 @@ namespace ADService.Revealer
             /// <summary>
             /// 從入口物件取得的資料數值
             /// </summary>
-            internal object[] PropertyValue;
+            internal object PropertyValue;
+            /// <summary>
+            /// 數據大小
+            /// </summary>
+            internal int SizeOf;
 
             /// <summary>
             /// 建構藍本物件如何解析
@@ -39,27 +48,17 @@ namespace ADService.Revealer
             /// <param name="property">入口物件儲存資料</param>
             internal PropertyDetail(in UnitSchema schema, in PropertyValueCollection property)
             {
-                PropertyValue = new object[property.Count];
-                IsSingleValue = schema.IsSingleValued;
+                PropertyValue = property.Value;
+                SizeOf        = property.Count;
 
-                // 根據是否為單一數值決定如何處理
-                if (schema.IsSingleValued)
-                {
-                    // 單筆資料
-                    PropertyValue[0] = property.Value;
-                }
-                else
-                {
-                    // 多筆資料
-                    property.CopyTo(PropertyValue, 0);
-                }
+                IsSingleValue = schema.IsSingleValued;
             }
         }
 
         /// <summary>
-        /// 以 SID 記錄各條存取權限
+        /// 允許使用的屬性
         /// </summary>
-        private readonly Dictionary<string, List<AccessRuleInformation>> dictionarySIDWithPermissions = new Dictionary<string, List<AccessRuleInformation>>();
+        private string[] AllowedAttributes;
 
         /// <summary>
         /// 建構特性儲存與分析類別
@@ -85,7 +84,7 @@ namespace ADService.Revealer
                 // 宣告實體資料
                 PropertyDetail propertyDetail = new PropertyDetail(schema, value);
                 // 整理屬性
-                dictionaryNameWithPorpertyDetail.Add(value.PropertyName.ToLower(), propertyDetail);
+                dictionaryNameWithPorpertyDetail.Add(schema.Name, propertyDetail);
                 // 檢查是否需要加入作為群組物件
                 if (LDAPConfiguration.IsGUIDEmpty(schema.SecurityGUID))
                 {
@@ -190,8 +189,10 @@ namespace ADService.Revealer
         {
             // 預設
             convertedValue = default(T);
+            // 查詢的資料鍵值須為小姐
+            string nameLower = propertyName.ToLower();
             // 嘗試取得內容
-            if(!dictionaryNameWithPorpertyDetail.TryGetValue(propertyName.ToLower(), out PropertyDetail detail))
+            if (!dictionaryNameWithPorpertyDetail.TryGetValue(nameLower, out PropertyDetail detail))
             {
                 // 不存在時不處理
                 return false;
@@ -205,7 +206,7 @@ namespace ADService.Revealer
             }
 
             // 轉換
-            convertedValue = (T)detail.PropertyValue[0];
+            convertedValue = (T)detail.PropertyValue;
             // 提供查詢結果
             return true;
         }
@@ -221,8 +222,10 @@ namespace ADService.Revealer
         {
             // 預設
             convertedValue = 0;
+            // 查詢的資料鍵值須為小姐
+            string nameLower = propertyName.ToLower();
             // 嘗試取得內容
-            if (!dictionaryNameWithPorpertyDetail.TryGetValue(propertyName.ToLower(), out PropertyDetail detail))
+            if (!dictionaryNameWithPorpertyDetail.TryGetValue(nameLower, out PropertyDetail detail))
             {
                 // 不存在時不處理
                 return false;
@@ -234,14 +237,13 @@ namespace ADService.Revealer
                 // 丟出例外: 因為此狀態沒有實作
                 throw new LDAPExceptions($"屬性:{propertyName} 應使用陣列方式進行轉換, 因使用了錯誤方法因而丟出例外, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
             }
-            // 本次需處理資料
-            object value = detail.PropertyValue[0];
+
             // 取得類型
-            Type type = value.GetType();
+            Type type = detail.PropertyValue.GetType();
             // 取得高位元
-            int highPart = (int)type.InvokeMember("HighPart", BindingFlags.GetProperty, null, value, null);
+            int highPart = (int)type.InvokeMember("HighPart", BindingFlags.GetProperty, null, detail.PropertyValue, null);
             // 取得低位元
-            int lowPart  = (int)type.InvokeMember("LowPart", BindingFlags.GetProperty, null, value, null);
+            int lowPart  = (int)type.InvokeMember("LowPart", BindingFlags.GetProperty, null, detail.PropertyValue, null);
             // 疊加作為結果
             convertedValue = (long)highPart << 32 | (uint)lowPart;
             // 提供查詢結果
@@ -252,15 +254,16 @@ namespace ADService.Revealer
         /// 根據鍵值取得儲存內容
         /// </summary>
         /// <param name="propertyName">特性參數</param>
-        /// <param name="convertedValue">實際資料</param>
         /// <returns> 資料是否存在 </returns>
         /// <exception cref="LDAPExceptions">當內部儲存資料為多筆時將拋出例外</exception>
         internal bool GetPropertySID(in string propertyName, out string convertedValue)
         {
             // 預設
-            convertedValue = string.Empty;
+            convertedValue = new SecurityIdentifier(WellKnownSidType.NullSid, null).ToString();
+            // 查詢的資料鍵值須為小姐
+            string nameLower = propertyName.ToLower();
             // 嘗試取得內容
-            if (!dictionaryNameWithPorpertyDetail.TryGetValue(propertyName.ToLower(), out PropertyDetail detail))
+            if (!dictionaryNameWithPorpertyDetail.TryGetValue(nameLower, out PropertyDetail detail))
             {
                 // 不存在時不處理
                 return false;
@@ -273,7 +276,7 @@ namespace ADService.Revealer
                 throw new LDAPExceptions($"屬性:{propertyName} 應使用陣列方式進行轉換, 因使用了錯誤方法因而丟出例外, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
             }
 
-            SecurityIdentifier securityIdentifier = new SecurityIdentifier((byte[])detail.PropertyValue[0], 0);
+            SecurityIdentifier securityIdentifier = new SecurityIdentifier((byte[])detail.PropertyValue, 0);
             // 轉換
             convertedValue = securityIdentifier.ToString();
             // 提供查詢結果
@@ -291,8 +294,10 @@ namespace ADService.Revealer
         {
             // 預設
             convertedValue = string.Empty;
+            // 查詢的資料鍵值須為小姐
+            string nameLower = propertyName.ToLower();
             // 嘗試取得內容
-            if (!dictionaryNameWithPorpertyDetail.TryGetValue(propertyName.ToLower(), out PropertyDetail detail))
+            if (!dictionaryNameWithPorpertyDetail.TryGetValue(nameLower, out PropertyDetail detail))
             {
                 // 不存在時不處理
                 return false;
@@ -305,7 +310,7 @@ namespace ADService.Revealer
                 throw new LDAPExceptions($"屬性:{propertyName} 應使用陣列方式進行轉換, 因使用了錯誤方法因而丟出例外, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
             }
 
-            Guid guid = new Guid((byte[])detail.PropertyValue[0]);
+            Guid guid = new Guid((byte[])detail.PropertyValue);
             // 轉換
             convertedValue = guid.ToString("D");
             // 提供查詢結果
@@ -324,8 +329,10 @@ namespace ADService.Revealer
         {
             // 預設
             convertedValue = Array.Empty<T>();
+            // 查詢的資料鍵值須為小姐
+            string nameLower = propertyName.ToLower();
             // 嘗試取得內容
-            if (!dictionaryNameWithPorpertyDetail.TryGetValue(propertyName.ToLower(), out PropertyDetail detail))
+            if (!dictionaryNameWithPorpertyDetail.TryGetValue(nameLower, out PropertyDetail detail))
             {
                 // 不存在時不處理
                 return false;
@@ -339,7 +346,7 @@ namespace ADService.Revealer
             }
 
             // 轉換
-            convertedValue = Array.ConvertAll(detail.PropertyValue, converted => (T)converted);
+            convertedValue = Array.ConvertAll((object[])detail.PropertyValue, converted => (T)converted);
             // 提供查詢結果
             return true;
         }

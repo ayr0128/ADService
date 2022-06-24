@@ -1,8 +1,8 @@
-﻿using ADService.Environments;
+﻿using ADService.Details;
+using ADService.Environments;
 using ADService.Foundation;
 using ADService.Media;
 using ADService.Protocol;
-using ADService.Revealer;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -18,7 +18,7 @@ namespace ADService.Certification
         /// <summary>
         /// 呼叫基底建構子
         /// </summary>
-        internal AnalyticalChangePassword() : base(LDAPMethods.M_CHANGEPWD) { }
+        internal AnalyticalChangePassword() : base(Methods.M_CHANGEPWD) { }
 
         internal override (bool, InvokeCondition, string) Invokable(in LDAPEntriesMedia entriesMedia, in LDAPObject invoker, in LDAPObject destination)
         {
@@ -32,12 +32,12 @@ namespace ADService.Certification
             // 整合各 SID 權向狀態
             AccessRuleInformation[] accessRuleInformations = GetAccessRuleInformations(invoker, destination);
             // 取得彙整權限
-            AccessRuleRightFlags mixedProcessedRightsProperty = AccessRuleInformation.CombineAccessRuleRightFlags(LDAPAttributes.EX_CHANGEPASSWORD, accessRuleInformations);
+            AccessRuleRightFlags mixedProcessedRightsProperty = AccessRuleInformation.CombineAccessRuleRightFlags(Attributes.EX_CHANGEPASSWORD, accessRuleInformations);
             // 不存在 '名稱' 的寫入權限
             if ((mixedProcessedRightsProperty & AccessRuleRightFlags.RightExtended) == AccessRuleRightFlags.None)
             {
                 // 對外提供失敗
-                return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{LDAPAttributes.EX_CHANGEPASSWORD} 的額外權限");
+                return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{Attributes.EX_CHANGEPASSWORD} 的額外權限");
             }
 
             // 具有修改名稱權限

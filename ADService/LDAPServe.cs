@@ -138,32 +138,27 @@ namespace ADService
         /// <returns>使用提供條件找尋指定的區分名稱物件, 需自行檢查是否有發現目標, 格式如右: Dictionary '區分名稱, 基層物件類型'</returns>
         public Dictionary<string, LDAPObject> GetObjects(in LDAPLogonPerson logon, in CategoryTypes categories = CategoryTypes.NONE, params string[] distinguishedNames)
         {
+            // 空字串: 沒有指定區分名稱
+            if (distinguishedNames.Length == 0)
+            {
+                // 對外提供容器大小為 0 的字典, 因為沒有指定區分名稱
+                return new Dictionary<string, LDAPObject>(0);
+            }
+
             /* 此處處理出現問題會接收到例外:
                  1. 若訪問伺服器發生問題: 會對外提供 LDAPExceptions
             */
             try
             {
-                // 取得過濾後應取得的區分名稱
-                string distinguishedNameFiliter = LDAPAttributes.GetOneOfDNFiliter(distinguishedNames);
-                // 空字串: 沒有指定區分名稱
-                if (string.IsNullOrEmpty(distinguishedNameFiliter))
-                {
-                    // 對外提供容器大小為 0 的字典, 因為沒有指定區分名稱
-                    return new Dictionary<string, LDAPObject>(0);
-                }
-
-                // 取得過濾後應保留的物件類型: 是空的沒有關係, 代表不論指定區分名稱的物件是什麼都接受
-                string categoriesFiliter = LDAPAttributes.GetOneOfCategoryFiliter(categories);
-
                 // 使用指定使用者帳號密碼製作一個入口物件製作器
                 LDAPEntriesMedia entriesMedia = Enrties.GetCreator(logon.UserName, logon.Password);
                 // 找尋指定區分名稱時需要從根目錄開始找尋
                 using (DirectoryEntry root = entriesMedia.DomainRoot())
                 {
                     // [TODO] 應使用加密字串避免注入式攻擊
-                    string encoderMoveToFiliter = $"(&{categoriesFiliter}{distinguishedNameFiliter})";
+                    string encoderFiliter = $"(&{LDAPObject.GetOneOfCategoryFiliter(categories)}{LDAPObject.GetOneOfDNFiliter(distinguishedNames)})";
                     // 找尋指定目標
-                    using (DirectorySearcher searcher = new DirectorySearcher(root, encoderMoveToFiliter, LDAPAttributes.PropertiesToLoad, SearchScope.Subtree))
+                    using (DirectorySearcher searcher = new DirectorySearcher(root, encoderFiliter, LDAPObject.PropertiesToLoad, SearchScope.Subtree))
                     {
                         // 將指定目標過濾出來
                         using (SearchResultCollection collection = searcher.FindAll())

@@ -27,12 +27,12 @@ namespace ADService.Foundation
             {
                 // 直行至此已經確認使用者可以
                 // 加密避免 LDAP 注入式攻擊
-                string encoderFiliter = $"(&{LDAPAttributes.GetOneOfCategoryFiliter(CategoryTypes.PERSON)}(|(sAMAccountName={userName})(userPrincipalName={userName})))";
+                string encoderFiliter = $"(&{GetOneOfCategoryFiliter(CategoryTypes.PERSON)}(|(sAMAccountName={userName})(userPrincipalName={userName})))";
                 /* 備註: 為何要額外搜尋一次?
                      1. 連線時如果未在伺服器後提供區分名稱, 會使用物件類型 domainDNS 來回傳
                      2. 為避免部分資料缺失, 需額外指定
                 */
-                using ( DirectorySearcher searcher = new DirectorySearcher(root, encoderFiliter, LDAPAttributes.PropertiesToLoad) )
+                using ( DirectorySearcher searcher = new DirectorySearcher(root, encoderFiliter, PropertiesToLoad) )
                 {
                     // 必定存在至少一個搜尋結果:
                     SearchResult one = searcher.FindOne();

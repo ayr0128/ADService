@@ -1,5 +1,6 @@
 ﻿using ADService.Environments;
 using ADService.Media;
+using ADService.Protocol;
 using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
@@ -39,7 +40,7 @@ namespace ADService.Configuration
             using (DirectoryEntry root = entriesMedia.DSERoot())
             {
                 // 取得內部設定位置
-                ConfigurationDistinguishedName = LDAPAttributes.ParseSingleValue<string>(CONTEXT_CONFIGURATION, root.Properties);
+                ConfigurationDistinguishedName = LDAPEntries.ParseSingleValue<string>(CONTEXT_CONFIGURATION, root.Properties);
             }
         }
 
@@ -70,11 +71,13 @@ namespace ADService.Configuration
         internal UnitSchema GetSchema(in Guid value)
         {
             // 轉換成根據查詢結構: 若此處出現錯誤則必定是羅錯誤導致加入重複物件
-            Dictionary<string, UnitSchema> dictionaryGUIDWithUnitSchema = UnitSchemas.ToDictionary(schema => schema.SchemaGUID.ToLower());
+            Dictionary<string, UnitSchema> dictionaryGUIDWithUnitSchema = UnitSchemas.ToDictionary(schema => schema.SchemaGUID);
             // 對外提供的結果
             UnitSchema result = null;
+            // 由於儲存結構中醫慮採用小寫, 所以搜尋參數於搜尋前須改為小寫
+            string valueGUID = value.ToString("D").ToLower();
             // 找尋目標藍本結構
-            if (!Guid.Empty.Equals(value) && !dictionaryGUIDWithUnitSchema.TryGetValue(value.ToString("D").ToLower(), out result))
+            if (!Guid.Empty.Equals(value) && !dictionaryGUIDWithUnitSchema.TryGetValue(valueGUID, out result))
             {
                 // 重新建立藍本結構
                 result = UnitSchema.Get(EntriesMedia, value, ConfigurationDistinguishedName);
@@ -97,11 +100,13 @@ namespace ADService.Configuration
         internal UnitSchema GetSchema(in string value)
         {
             // 轉換成根據查詢結構: 若此處出現錯誤則必定是羅錯誤導致加入重複物件
-            Dictionary<string, UnitSchema> dictionaryDisplayNameWithUnitSchema = UnitSchemas.ToDictionary(schema => schema.Name.ToLower());
+            Dictionary<string, UnitSchema> dictionaryDisplayNameWithUnitSchema = UnitSchemas.ToDictionary(schema => schema.Name);
             // 對外提供的結果
             UnitSchema result = null;
+            // 由於儲存結構中醫慮採用小寫, 所以搜尋參數於搜尋前須改為小寫
+            string valueLower= value.ToLower();
             // 找尋目標藍本結構
-            if (!string.IsNullOrWhiteSpace(value) && !dictionaryDisplayNameWithUnitSchema.TryGetValue(value.ToLower(), out result))
+            if (!string.IsNullOrWhiteSpace(value) && !dictionaryDisplayNameWithUnitSchema.TryGetValue(value, out result))
             {
                 // 重新建立藍本結構
                 result = UnitSchema.Get(EntriesMedia, value, ConfigurationDistinguishedName);
@@ -131,11 +136,13 @@ namespace ADService.Configuration
         internal UnitExtendedRight GetExtendedRight(in Guid value)
         {
             // 轉換成根據查詢結構: 若此處出現錯誤則必定是羅錯誤導致加入重複物件
-            Dictionary<string, UnitExtendedRight> dictionaryGUIDWithUnitExtendedRight = UnitExtendedRights.ToDictionary(extendedRight => extendedRight.RightsGUID.ToLower());
+            Dictionary<string, UnitExtendedRight> dictionaryGUIDWithUnitExtendedRight = UnitExtendedRights.ToDictionary(extendedRight => extendedRight.RightsGUID);
             // 對外提供的結果
             UnitExtendedRight result = null;
+            // 由於儲存結構中醫慮採用小寫, 所以搜尋參數於搜尋前須改為小寫
+            string valueGUID = value.ToString("D").ToLower();
             // 找尋目標額外權限
-            if (!Guid.Empty.Equals(value) && !dictionaryGUIDWithUnitExtendedRight.TryGetValue(value.ToString("D").ToLower(), out result))
+            if (!Guid.Empty.Equals(value) && !dictionaryGUIDWithUnitExtendedRight.TryGetValue(valueGUID, out result))
             {
                 // 重新建立藍本結構
                 result = UnitExtendedRight.Get(EntriesMedia, value, ConfigurationDistinguishedName);

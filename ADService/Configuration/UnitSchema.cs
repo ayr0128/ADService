@@ -1,4 +1,5 @@
 ﻿using ADService.Media;
+using ADService.Protocol;
 using System;
 using System.DirectoryServices;
 using System.Text;
@@ -56,7 +57,7 @@ namespace ADService.Configuration
                 // 需使用加密避免 LDAP 注入式攻擊
                 string filiter = $"({ATTRIBUTE_SCHEMA_GUID}={sb})";
                 // 從入口物件中找尋到指定物件
-                using (DirectorySearcher searcher = new DirectorySearcher(entrySchema, filiter, new string[] { LDAPAttributes.C_DISTINGGUISHEDNAME }))
+                using (DirectorySearcher searcher = new DirectorySearcher(entrySchema, filiter, new string[] { Attributes.C_DISTINGGUISHEDNAME }))
                 {
                     // 取得指定物件
                     SearchResult one = searcher.FindOne();
@@ -92,7 +93,7 @@ namespace ADService.Configuration
                 // 需使用加密避免 LDAP 注入式攻擊
                 string filiter = $"({ATTRIBUTE_SCHEMA_PROPERTY}={value})";
                 // 從入口物件中找尋到指定物件
-                using (DirectorySearcher searcher = new DirectorySearcher(entrySchema, filiter, new string[] { LDAPAttributes.C_DISTINGGUISHEDNAME }))
+                using (DirectorySearcher searcher = new DirectorySearcher(entrySchema, filiter, new string[] { Attributes.C_DISTINGGUISHEDNAME }))
                 {
                     // 取得指定物件
                     SearchResult one = searcher.FindOne();
@@ -140,10 +141,14 @@ namespace ADService.Configuration
         /// <param name="properties">入口物件持有的屬性</param>
         internal UnitSchema(in PropertyCollection properties)
         {
-            Name           = LDAPAttributes.ParseSingleValue<string>(ATTRIBUTE_SCHEMA_PROPERTY, properties);
-            SchemaGUID     = LDAPAttributes.ParseGUID(ATTRIBUTE_SCHEMA_GUID, properties);
-            SecurityGUID   = LDAPAttributes.ParseGUID(ATTRIBUTE_SCHEMA_SECURITY_GUID, properties);
-            IsSingleValued = LDAPAttributes.ParseSingleValue<bool>(ATTRIBUTE_SCHEMA_IS_SINGLEVALUED, properties);
+            // 將名稱轉換成小寫
+            Name = LDAPEntries.ParseSingleValue<string>(ATTRIBUTE_SCHEMA_PROPERTY, properties).ToLower();
+
+            // 將 GUID 轉換成小寫
+            SchemaGUID   = LDAPEntries.ParseGUID(ATTRIBUTE_SCHEMA_GUID, properties).ToLower();
+            SecurityGUID = LDAPEntries.ParseGUID(ATTRIBUTE_SCHEMA_SECURITY_GUID, properties).ToLower();
+
+            IsSingleValued = LDAPEntries.ParseSingleValue<bool>(ATTRIBUTE_SCHEMA_IS_SINGLEVALUED, properties);
         }
     }
 }

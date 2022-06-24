@@ -15,7 +15,7 @@ namespace ADService.Certification
         /// <summary>
         /// 呼叫基底建構子
         /// </summary>
-        internal AnalyticalShowDetail() : base(LDAPMethods.M_SHOWDETAIL, true) { }
+        internal AnalyticalShowDetail() : base(Methods.M_SHOWDETAIL, true) { }
 
         internal override (bool, InvokeCondition, string) Invokable(in LDAPEntriesMedia entriesMedia, in LDAPObject invoker, in LDAPObject destination)
         {

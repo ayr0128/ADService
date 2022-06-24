@@ -1,8 +1,8 @@
-﻿using ADService.Features;
+﻿using ADService.Details;
+using ADService.Features;
 using ADService.Foundation;
 using ADService.Media;
 using ADService.Protocol;
-using ADService.Revealer;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;

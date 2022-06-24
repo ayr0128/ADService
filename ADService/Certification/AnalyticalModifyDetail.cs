@@ -1,9 +1,9 @@
-﻿using ADService.Environments;
+﻿using ADService.Details;
+using ADService.Environments;
 using ADService.Features;
 using ADService.Foundation;
 using ADService.Media;
 using ADService.Protocol;
-using ADService.Revealer;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -22,26 +22,26 @@ namespace ADService.Certification
         /// </summary>
         internal static HashSet<string> PropertiesNames = new HashSet<string>
         {
-            LDAPAttributes.P_MEMBER,             // 成員
-            LDAPAttributes.P_MEMBEROF,           // 隸屬群組
-            LDAPAttributes.P_DESCRIPTION,        // 描述
-            LDAPAttributes.P_DISPLAYNAME,        // 顯示名稱
-            LDAPAttributes.P_SN,                 // 姓
-            LDAPAttributes.P_GIVENNAME,          // 名
-            LDAPAttributes.P_INITIALS,           // 英文縮寫
+            Attributes.P_MEMBER,             // 成員
+            Attributes.P_MEMBEROF,           // 隸屬群組
+            Attributes.P_DESCRIPTION,        // 描述
+            Attributes.P_DISPLAYNAME,        // 顯示名稱
+            Attributes.P_SN,                 // 姓
+            Attributes.P_GIVENNAME,          // 名
+            Attributes.P_INITIALS,           // 英文縮寫
 
-            LDAPAttributes.P_PWDLASTSET,               // 密碼最後設置時間
-            LDAPAttributes.P_USERACCOUNTCONTROL,       // 帳號控制
-            LDAPAttributes.P_SUPPORTEDENCRYPTIONTYPES, // 支援的連線加密格式
+            Attributes.P_PWDLASTSET,               // 密碼最後設置時間
+            Attributes.P_USERACCOUNTCONTROL,       // 帳號控制
+            Attributes.P_SUPPORTEDENCRYPTIONTYPES, // 支援的連線加密格式
         };
 
         /// <summary>
         /// 除去需特殊判斷的下述列舉外的所有列舉旗標集合
         /// <list type="table|number">
-        ///    <item> <term> <see cref="AccountControlProtocols.PWD_CHANGE_NEXTLOGON">密碼須在下次登入時重新設置</see> </term> 根據 <see cref="LDAPAttributes.P_PWDLASTSET">權限</see>> 決定是否可查看或調整 </item>
+        ///    <item> <term> <see cref="AccountControlProtocols.PWD_CHANGE_NEXTLOGON">密碼須在下次登入時重新設置</see> </term> 根據 <see cref="Attributes.P_PWDLASTSET">權限</see>> 決定是否可查看或調整 </item>
         ///    <item> <term> <see cref="AccountControlProtocols.PWD_DISABLE_CHANGE">密碼不可變更</see> </term> 與 <see cref="AccountControlProtocols.PWD_CHANGE_NEXTLOGON">密碼須在下次登入時重新設置</see>> 衝突, 衝突時以 <see cref="AccountControlProtocols.PWD_CHANGE_NEXTLOGON">密碼須在下次登入時重新設置</see>> 優先 </item>
-        ///    <item> <term> <see cref="AccountControlProtocols.ACCOUNT_KERBEROS_AES128">支援 AES128 加密傳輸</see> </term> 根據 <see cref="LDAPAttributes.P_SUPPORTEDENCRYPTIONTYPES">權限</see>> 決定是否可查看或調整 </item>
-        ///    <item> <term> <see cref="AccountControlProtocols.ACCOUNT_KERBEROS_AES256">支援 AES256 加密傳輸</see> </term> 根據 <see cref="LDAPAttributes.P_SUPPORTEDENCRYPTIONTYPES">權限</see>> 決定是否可查看或調整 </item>
+        ///    <item> <term> <see cref="AccountControlProtocols.ACCOUNT_KERBEROS_AES128">支援 AES128 加密傳輸</see> </term> 根據 <see cref="Attributes.P_SUPPORTEDENCRYPTIONTYPES">權限</see>> 決定是否可查看或調整 </item>
+        ///    <item> <term> <see cref="AccountControlProtocols.ACCOUNT_KERBEROS_AES256">支援 AES256 加密傳輸</see> </term> 根據 <see cref="Attributes.P_SUPPORTEDENCRYPTIONTYPES">權限</see>> 決定是否可查看或調整 </item>
         /// </list>
         /// </summary>
         private const AccountControlProtocols ACOUNTCONTROL_MASK = AccountControlProtocols.PWD_ENABLE_FOREVER
@@ -65,7 +65,7 @@ namespace ADService.Certification
         /// <summary>
         /// 呼叫基底建構子
         /// </summary>
-        internal AnalyticalModifyDetail() : base(LDAPMethods.M_MODIFYDETAIL, false) { }
+        internal AnalyticalModifyDetail() : base(Methods.M_MODIFYDETAIL, false) { }
 
         /// <summary>
         /// 提供給繼承使用的呼叫建構子
@@ -102,7 +102,7 @@ namespace ADService.Certification
                 switch (propertyName)
                 {
                     #region 成員: 協議
-                    case LDAPAttributes.P_MEMBER:
+                    case Attributes.P_MEMBER:
                         {
                             // 取得介面
                             IRevealerMember revealerMember = destination as IRevealerMember;
@@ -150,7 +150,7 @@ namespace ADService.Certification
                         break;
                     #endregion
                     #region 隸屬群組: 協議
-                    case LDAPAttributes.P_MEMBEROF:
+                    case Attributes.P_MEMBEROF:
                         {
                             // 取得介面
                             IRevealerMemberOf revealerMemberOf = destination as IRevealerMemberOf;
@@ -189,7 +189,7 @@ namespace ADService.Certification
                         break;
                     #endregion
                     #region 使用者帳號控制: 使用整合旗標<LDAPMethods.CW_USERACCOUNTCONTROL> 作為協議
-                    case LDAPAttributes.P_USERACCOUNTCONTROL:
+                    case Attributes.P_USERACCOUNTCONTROL:
                         {
                             // 目前持有的資訊內容
                             if (!destination.StoredProperties.GetPropertySingle(propertyName, out AccountControlFlags storedValue))
@@ -210,7 +210,7 @@ namespace ADService.Certification
                             {
                                 { InvokeCondition.STOREDTYPE, typeEnum.Name },                     // 持有內容描述
                                 { InvokeCondition.VALUE, accountControlProtocols },                // 持有內容
-                                { InvokeCondition.COMBINETAG, LDAPMethods.CT_USERACCOUNTCONTROL }, // 與其他持有此整合旗標的物件視為同一區塊作處理
+                                { InvokeCondition.COMBINETAG, Methods.CT_USERACCOUNTCONTROL }, // 與其他持有此整合旗標的物件視為同一區塊作處理
                                 { InvokeCondition.FLAGMASK, ACOUNTCONTROL_MASK },                  // 提供陳列用的遮罩
                             };
 
@@ -229,7 +229,7 @@ namespace ADService.Certification
                         break;
                     #endregion
                     #region 密碼最後設置時間: 使用整合旗標<LDAPMethods.CW_USERACCOUNTCONTROL> 作為協議
-                    case LDAPAttributes.P_PWDLASTSET:
+                    case Attributes.P_PWDLASTSET:
                         {
                             // 目前持有的資訊內容
                             if (!destination.StoredProperties.GetPropertyInterval(propertyName, out long storedValue))
@@ -253,7 +253,7 @@ namespace ADService.Certification
                             {
                                 { InvokeCondition.STOREDTYPE, typeEnum.Name },                              // 持有內容描述
                                 { InvokeCondition.VALUE, accountControlProtocols },                         // 持有內容
-                                { InvokeCondition.COMBINETAG, LDAPMethods.CT_USERACCOUNTCONTROL },          // 與其他持有此整合旗標的物件視為同一區塊作處理
+                                { InvokeCondition.COMBINETAG, Methods.CT_USERACCOUNTCONTROL },          // 與其他持有此整合旗標的物件視為同一區塊作處理
                                 { InvokeCondition.FLAGMASK, AccountControlProtocols.PWD_CHANGE_NEXTLOGON }, // 提供陳列用的遮罩
                             };
 
@@ -272,7 +272,7 @@ namespace ADService.Certification
                         break;
                     #endregion
                     #region 支援的連線加密格式: 使用整合旗標<LDAPMethods.CW_USERACCOUNTCONTROL> 作為協議
-                    case LDAPAttributes.P_SUPPORTEDENCRYPTIONTYPES:
+                    case Attributes.P_SUPPORTEDENCRYPTIONTYPES:
                         {
                             // 目前持有的資訊內容
                             if (!destination.StoredProperties.GetPropertySingle(propertyName, out EncryptedType storedValue))
@@ -297,7 +297,7 @@ namespace ADService.Certification
                             {
                                 { InvokeCondition.STOREDTYPE, typeEnum.Name },                     // 持有內容描述
                                 { InvokeCondition.VALUE, accountControlProtocols },                // 持有內容
-                                { InvokeCondition.COMBINETAG, LDAPMethods.CT_USERACCOUNTCONTROL }, // 與其他持有此整合旗標的物件視為同一區塊作處理
+                                { InvokeCondition.COMBINETAG, Methods.CT_USERACCOUNTCONTROL }, // 與其他持有此整合旗標的物件視為同一區塊作處理
                                 { InvokeCondition.FLAGMASK, ENCRYPT_PROTOCOLMASK },                // 提供陳列用的遮罩
                             };
 
@@ -431,7 +431,7 @@ namespace ADService.Certification
                 switch (propertyName)
                 {
                     #region 成員: 驗證
-                    case LDAPAttributes.P_MEMBER:
+                    case Attributes.P_MEMBER:
                         {
                             // 檢查目標物件能否取得隸屬群組介面
                             IRevealerMember revealerMember = destination as IRevealerMember;
@@ -489,9 +489,9 @@ namespace ADService.Certification
                                         - 限制只找尋特定區分名稱
                                         [TODO] 應使用加密字串避免注入式攻擊
                                     */
-                                    string encoderFiliter = $"(&{LDAPAttributes.GetOneOfCategoryFiliter(CategoryTypes.GROUP | CategoryTypes.PERSON)}{LDAPAttributes.GetOneOfDNFiliter(researchDNHashSet.ToArray())})";
+                                    string encoderFiliter = $"(&{LDAPObject.GetOneOfCategoryFiliter(CategoryTypes.GROUP | CategoryTypes.PERSON)}{LDAPObject.GetOneOfDNFiliter(researchDNHashSet.ToArray())})";
                                     // 應從根目錄進行搜尋
-                                    using (DirectorySearcher seacher = new DirectorySearcher(entryRoot, encoderFiliter, LDAPAttributes.PropertiesToLoad))
+                                    using (DirectorySearcher seacher = new DirectorySearcher(entryRoot, encoderFiliter, LDAPObject.PropertiesToLoad))
                                     {
                                         // 取得所有項目
                                         using (SearchResultCollection all = seacher.FindAll())
@@ -511,7 +511,7 @@ namespace ADService.Certification
                                             foreach (SearchResult one in all)
                                             {
                                                 // 取得區分名稱
-                                                string distinguishedName = LDAPAttributes.ParseSingleValue<string>(LDAPAttributes.C_DISTINGGUISHEDNAME, one.Properties);
+                                                string distinguishedName = LDAPEntries.ParseSingleValue<string>(Attributes.C_DISTINGGUISHEDNAME, one.Properties);
                                                 /* 根據異動目標判斷異動權限是否不可用
                                                      1. 異動資料是自己, 不包含異動自己的權限
                                                      2. 異動資料不是自己, 不包含異動的權限
@@ -544,7 +544,7 @@ namespace ADService.Certification
                         break;
                     #endregion
                     #region 隸屬群組: 驗證
-                    case LDAPAttributes.P_MEMBEROF:
+                    case Attributes.P_MEMBEROF:
                         {
                             // 檢查目標物件能否取得隸屬群組介面
                             IRevealerMemberOf revealerMemberOf = destination as IRevealerMemberOf;
@@ -600,9 +600,9 @@ namespace ADService.Certification
                                         - 限制只找尋特定區分名稱
                                         [TODO] 應使用加密字串避免注入式攻擊
                                     */
-                                    string encoderFiliter = $"(&{LDAPAttributes.GetOneOfCategoryFiliter(CategoryTypes.GROUP)}{LDAPAttributes.GetOneOfDNFiliter(researchDNHashSet.ToArray())})";
+                                    string encoderFiliter = $"(&{LDAPObject.GetOneOfCategoryFiliter(CategoryTypes.GROUP)}{LDAPObject.GetOneOfDNFiliter(researchDNHashSet.ToArray())})";
                                     // 應從根目錄進行搜尋
-                                    using (DirectorySearcher seacher = new DirectorySearcher(entryRoot, encoderFiliter, LDAPAttributes.PropertiesToLoad))
+                                    using (DirectorySearcher seacher = new DirectorySearcher(entryRoot, encoderFiliter, LDAPObject.PropertiesToLoad))
                                     {
                                         // 取得所有項目
                                         using (SearchResultCollection all = seacher.FindAll())
@@ -620,7 +620,7 @@ namespace ADService.Certification
                                             foreach (SearchResult one in all)
                                             {
                                                 // 取得區分名稱
-                                                string distinguishedName = LDAPAttributes.ParseSingleValue<string>(LDAPAttributes.C_DISTINGGUISHEDNAME, one.Properties);
+                                                string distinguishedName = LDAPEntries.ParseSingleValue<string>(Attributes.C_DISTINGGUISHEDNAME, one.Properties);
                                                 // 設定並轉換成入口物件
                                                 certification.SetEntry(one.GetDirectoryEntry(), distinguishedName);
                                             }
@@ -649,7 +649,7 @@ namespace ADService.Certification
                                 // 整合各 SID 權向狀態
                                 AccessRuleInformation[] accessRuleInformationsMember = GetAccessRuleInformations(invoker, entryObject);
                                 // 權限混和
-                                AccessRuleRightFlags mixedProcessedRightsProcessed = AccessRuleInformation.CombineAccessRuleRightFlags(LDAPAttributes.EX_A10EMEMBER, accessRuleInformationsMember);
+                                AccessRuleRightFlags mixedProcessedRightsProcessed = AccessRuleInformation.CombineAccessRuleRightFlags(Attributes.EX_A10EMEMBER, accessRuleInformationsMember);
 
                                 // 是否可異動
                                 bool isProcessedEditable = (mixedProcessedRightsProcessed & AccessRuleRightFlags.PropertyWrite) != AccessRuleRightFlags.None;
@@ -678,7 +678,7 @@ namespace ADService.Certification
                         break;
                     #endregion
                     #region 使用者帳號控制: 驗證
-                    case LDAPAttributes.P_USERACCOUNTCONTROL:
+                    case Attributes.P_USERACCOUNTCONTROL:
                         {
                             // 若無法編輯
                             if (!isEditable)
@@ -719,7 +719,7 @@ namespace ADService.Certification
                         break;
                     #endregion
                     #region 使用者帳號控制: 驗證
-                    case LDAPAttributes.P_PWDLASTSET:
+                    case Attributes.P_PWDLASTSET:
                         {
                             // 若無法編輯
                             if (!isEditable)
@@ -746,7 +746,7 @@ namespace ADService.Certification
                         break;
                     #endregion
                     #region 支援的連線加密格式: 驗證
-                    case LDAPAttributes.P_SUPPORTEDENCRYPTIONTYPES:
+                    case Attributes.P_SUPPORTEDENCRYPTIONTYPES:
                         {
                             // 若無法編輯
                             if (!isEditable)
@@ -831,7 +831,7 @@ namespace ADService.Certification
                 switch (propertyName)
                 {
                     #region 成員: 實際修改
-                    case LDAPAttributes.P_MEMBER:
+                    case Attributes.P_MEMBER:
                         {
                             // 檢查目標物件能否取得隸屬群組介面
                             IRevealerMember revealerMember = destination as IRevealerMember;
@@ -859,12 +859,12 @@ namespace ADService.Certification
                                     if (pairMemberProcessed.Value)
                                     {
                                         // 喚起移除動作
-                                        entry.Properties[LDAPAttributes.P_MEMBER].Remove(pairMemberProcessed.Key);
+                                        entry.Properties[Attributes.P_MEMBER].Remove(pairMemberProcessed.Key);
                                     }
                                     else
                                     {
                                         // 喚起新增動作
-                                        entry.Properties[LDAPAttributes.P_MEMBER].Add(pairMemberProcessed.Key);
+                                        entry.Properties[Attributes.P_MEMBER].Add(pairMemberProcessed.Key);
                                     }
 
                                     // 宣告字典黨紀錄影響參數
@@ -882,7 +882,7 @@ namespace ADService.Certification
                         break;
                     #endregion
                     #region 隸屬群組: 實際修改
-                    case LDAPAttributes.P_MEMBEROF:
+                    case Attributes.P_MEMBEROF:
                         {
                             // 檢查目標物件能否取得隸屬群組介面
                             IRevealerMemberOf revealerMemberOf = destination as IRevealerMemberOf;
@@ -919,12 +919,12 @@ namespace ADService.Certification
                                     if (pairMemberOfProcessed.Value)
                                     {
                                         // 喚起移除動作
-                                        entryProcessor.Properties[LDAPAttributes.P_MEMBER].Remove(distinguishedNameDestination);
+                                        entryProcessor.Properties[Attributes.P_MEMBER].Remove(distinguishedNameDestination);
                                     }
                                     else
                                     {
                                         // 喚起新增動作
-                                        entryProcessor.Properties[LDAPAttributes.P_MEMBER].Add(distinguishedNameDestination);
+                                        entryProcessor.Properties[Attributes.P_MEMBER].Add(distinguishedNameDestination);
                                     }
 
                                     // 此時目標物件必定有造成異動
@@ -940,7 +940,7 @@ namespace ADService.Certification
                         break;
                     #endregion
                     #region 使用者帳號控制: 實際修改
-                    case LDAPAttributes.P_USERACCOUNTCONTROL:
+                    case Attributes.P_USERACCOUNTCONTROL:
                         {
                             // 轉換成控制旗標
                             AccountControlProtocols convertedProtocol = receivedValue?.ToObject<AccountControlProtocols>() ?? AccountControlProtocols.NONE;
@@ -971,14 +971,14 @@ namespace ADService.Certification
                         break;
                     #endregion
                     #region 密碼最後設置時間: 實際修改
-                    case LDAPAttributes.P_PWDLASTSET:
+                    case Attributes.P_PWDLASTSET:
                         {
                             // 轉換成控制旗標
                             AccountControlProtocols convertedProtocol = receivedValue?.ToObject<AccountControlProtocols>() ?? AccountControlProtocols.NONE;
                             // 取得目前持有的屬性
                             destination.StoredProperties.GetPropertyInterval(propertyName, out long storedValue);
                             // 取得本次是否包含使用者照號一棟
-                            if (dictionaryAttributeNameWithDetail.TryGetValue(LDAPAttributes.P_USERACCOUNTCONTROL, out JToken userAccountControlJToken))
+                            if (dictionaryAttributeNameWithDetail.TryGetValue(Attributes.P_USERACCOUNTCONTROL, out JToken userAccountControlJToken))
                             {
                                 // 混和與疊加控制全縣
                                 convertedProtocol |= userAccountControlJToken?.ToObject<AccountControlProtocols>() ?? AccountControlProtocols.NONE;
@@ -986,7 +986,7 @@ namespace ADService.Certification
                             else
                             {
                                 // 取得目前持有的使用者帳號控制屬性
-                                destination.StoredProperties.GetPropertySingle(LDAPAttributes.P_USERACCOUNTCONTROL, out AccountControlFlags userAccountControlValue);
+                                destination.StoredProperties.GetPropertySingle(Attributes.P_USERACCOUNTCONTROL, out AccountControlFlags userAccountControlValue);
                                 // 轉換成外部協議可是別的格式
                                 convertedProtocol |= AccountControlFromFlagsToProtocols(userAccountControlValue);
                             }
@@ -1035,7 +1035,7 @@ namespace ADService.Certification
                         break;
                     #endregion
                     #region 支援的連線加密格式: 實際修改
-                    case LDAPAttributes.P_SUPPORTEDENCRYPTIONTYPES:
+                    case Attributes.P_SUPPORTEDENCRYPTIONTYPES:
                         {
                             // 轉換成控制旗標
                             AccountControlProtocols convertedProtocol = receivedValue?.ToObject<AccountControlProtocols>() ?? AccountControlProtocols.NONE;
@@ -1109,12 +1109,12 @@ namespace ADService.Certification
                     if (pair.Value)
                     {
                         // 喚起移除動作
-                        entry.Properties[LDAPAttributes.P_MEMBEROF].Remove(pair.Key);
+                        entry.Properties[Attributes.P_MEMBEROF].Remove(pair.Key);
                     }
                     else
                     {
                         // 喚起新增動作
-                        entry.Properties[LDAPAttributes.P_MEMBEROF].Add(pair.Key);
+                        entry.Properties[Attributes.P_MEMBEROF].Add(pair.Key);
                     }
                 }
             }

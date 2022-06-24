@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ADService.Protocol;
+using System;
 
 namespace ADService.Environments
 {

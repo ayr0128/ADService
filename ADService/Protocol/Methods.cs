@@ -3,7 +3,7 @@
     /// <summary>
     /// 所有支援外部呼叫修改的方法與功能
     /// </summary>
-    public static class LDAPMethods
+    public static class Methods
     {
         /// <summary>
         /// 重新命名物件: 右鍵方法

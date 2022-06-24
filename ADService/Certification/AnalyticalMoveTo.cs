@@ -1,8 +1,8 @@
-﻿using ADService.Environments;
+﻿using ADService.Details;
+using ADService.Environments;
 using ADService.Foundation;
 using ADService.Media;
 using ADService.Protocol;
-using ADService.Revealer;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -18,7 +18,7 @@ namespace ADService.Certification
         /// <summary>
         /// 呼叫基底建構子
         /// </summary>
-        internal AnalyticalMoveTo() : base(LDAPMethods.M_MOVETO) { }
+        internal AnalyticalMoveTo() : base(Methods.M_MOVETO) { }
 
         internal override (bool, InvokeCondition, string) Invokable(in LDAPEntriesMedia entriesMedia, in LDAPObject invoker, in LDAPObject destination)
         {
@@ -89,8 +89,8 @@ namespace ADService.Certification
             Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object>
             {
                 { InvokeCondition.CATEGORYLIMITED, CategoryTypes.ORGANIZATION_UNIT },
-                { InvokeCondition.PROPERTIES, new string[]{ LDAPAttributes.C_DISTINGGUISHEDNAME } },
-                { LDAPAttributes.C_DISTINGGUISHEDNAME, new InvokeCondition(commonFlagsDistinguishedName, dictionaryProtocolWithDistinguishedName) },
+                { InvokeCondition.PROPERTIES, new string[]{ Attributes.C_DISTINGGUISHEDNAME } },
+                { Attributes.C_DISTINGGUISHEDNAME, new InvokeCondition(commonFlagsDistinguishedName, dictionaryProtocolWithDistinguishedName) },
             };
 
             // 對外提供成功必須是組織單位的區分名稱
@@ -129,9 +129,9 @@ namespace ADService.Certification
                     - 區分名稱與限制目標符合
                     [TODO] 應使用加密字串避免注入式攻擊
                 */
-                string encoderFiliter = $"(&{LDAPAttributes.GetOneOfCategoryFiliter(CategoryTypes.ORGANIZATION_UNIT | CategoryTypes.DOMAIN_DNS)}{LDAPAttributes.GetOneOfDNFiliter(distinguishedName)})";
+                string encoderFiliter = $"(&{LDAPObject.GetOneOfCategoryFiliter(CategoryTypes.ORGANIZATION_UNIT | CategoryTypes.DOMAIN_DNS)}{LDAPObject.GetOneOfDNFiliter(distinguishedName)})";
                 // 找尋符合條件的物件
-                using (DirectorySearcher searcher = new DirectorySearcher(entryRoot, encoderFiliter, LDAPAttributes.PropertiesToLoad))
+                using (DirectorySearcher searcher = new DirectorySearcher(entryRoot, encoderFiliter, LDAPObject.PropertiesToLoad))
                 {
                     // 應能找尋到一筆
                     SearchResult one = searcher.FindOne();

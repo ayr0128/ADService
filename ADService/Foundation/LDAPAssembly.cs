@@ -21,19 +21,17 @@ namespace ADService.Foundation
         /// <exception cref="LDAPExceptions">非支援物件類型或特性鍵值解析發生錯誤時對外丟出</exception>
         internal static List<LDAPObject> WithChild(in DirectoryEntry entry, in LDAPEntriesMedia entriesMedia, in CategoryTypes extendFlags)
         {
-            // 限制必須是任意一種類型才行
-            string filiter = LDAPAttributes.GetOneOfCategoryFiliter(extendFlags);
+            // [TODO] 應使用加密字串避免注入式攻擊
+            string encoderFiliter = LDAPObject.GetOneOfCategoryFiliter(extendFlags);
             // 沒有指定找尋組織單位底下物件類型
-            if (string.IsNullOrEmpty(filiter))
+            if (string.IsNullOrEmpty(encoderFiliter))
             {
                 // 對外提供例外: 不可能進行搜尋動作但不找尋任何物件
                 throw new LDAPExceptions("沒有指定找尋任何物件類型, 此為邏輯錯誤", ErrorCodes.LOGIC_ERROR);
             }
 
-            // [TODO] 應使用加密字串避免注入式攻擊
-            string encoderMoveToFiliter = filiter;
             //  使用 using 讓連線在跳出方法後即刻釋放: 找尋限定的組織單位
-            using (DirectorySearcher searcherMixed = new DirectorySearcher(entry, encoderMoveToFiliter, LDAPAttributes.PropertiesToLoad, SearchScope.OneLevel))
+            using (DirectorySearcher searcherMixed = new DirectorySearcher(entry, encoderFiliter, LDAPObject.PropertiesToLoad, SearchScope.OneLevel))
             {
                 // 使用 using 讓連線在跳出方法後即刻釋放: 取得隸屬於此組織單位的組織單位與成員
                 using (SearchResultCollection resultMixeds = searcherMixed.FindAll())

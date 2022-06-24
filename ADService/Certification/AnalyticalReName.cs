@@ -1,8 +1,8 @@
-﻿using ADService.Environments;
+﻿using ADService.Details;
+using ADService.Environments;
 using ADService.Foundation;
 using ADService.Media;
 using ADService.Protocol;
-using ADService.Revealer;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -18,7 +18,7 @@ namespace ADService.Certification
         /// <summary>
         /// 呼叫基底建構子
         /// </summary>
-        internal AnalyticalReName() : base(LDAPMethods.M_RENAME) { }
+        internal AnalyticalReName() : base(Methods.M_RENAME) { }
 
         internal override (bool, InvokeCondition, string) Invokable(in LDAPEntriesMedia entriesMedia, in LDAPObject invoker, in LDAPObject destination)
         {
@@ -32,13 +32,13 @@ namespace ADService.Certification
             // 整合各 SID 權向狀態
             AccessRuleInformation[] accessRuleInformations = GetAccessRuleInformations(invoker, destination);
             // 權限混和
-            AccessRuleRightFlags mixedProcessedRightsProperty = AccessRuleInformation.CombineAccessRuleRightFlags(LDAPAttributes.P_NAME, accessRuleInformations);
+            AccessRuleRightFlags mixedProcessedRightsProperty = AccessRuleInformation.CombineAccessRuleRightFlags(Attributes.P_NAME, accessRuleInformations);
 
             // 不存在 '名稱' 的寫入權限
             if ((mixedProcessedRightsProperty & AccessRuleRightFlags.PropertyWrite) == AccessRuleRightFlags.None)
             {
                 // 對外提供失敗
-                return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{LDAPAttributes.P_NAME} 的寫入權限");
+                return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{Attributes.P_NAME} 的寫入權限");
             }
 
             // 需要另外一個名稱權限
@@ -52,14 +52,14 @@ namespace ADService.Certification
                 case CategoryTypes.PERSON:
                     {
                         // 權限混和
-                        destinationRightsTypeName |= AccessRuleInformation.CombineAccessRuleRightFlags(LDAPAttributes.P_CN, accessRuleInformations);
+                        destinationRightsTypeName |= AccessRuleInformation.CombineAccessRuleRightFlags(Attributes.P_CN, accessRuleInformations);
                     }
                     break;
                 // 隸屬群組
                 case CategoryTypes.ORGANIZATION_UNIT:
                     {
                         // 權限混和
-                        destinationRightsTypeName |= AccessRuleInformation.CombineAccessRuleRightFlags(LDAPAttributes.P_OU, accessRuleInformations);
+                        destinationRightsTypeName |= AccessRuleInformation.CombineAccessRuleRightFlags(Attributes.P_OU, accessRuleInformations);
                     }
                     break;
             }
@@ -113,7 +113,7 @@ namespace ADService.Certification
                 case CategoryTypes.ORGANIZATION_UNIT:
                     {
                         // 重新命名用的結構
-                        string receivedNameFormat = $"{LDAPAttributes.P_OU}={name}";
+                        string receivedNameFormat = $"{Attributes.P_OU}={name}";
 
                         // 組織單位時: 父層底下不應有任何其他新名稱物件
                         using (DirectoryEntry entryRoot = certification.EntriesMedia.ByDistinguisedName(distinguishedName))
@@ -121,7 +121,7 @@ namespace ADService.Certification
                             // [TODO] 應使用加密字串避免注入式攻擊
                             string encoderFiliter = $"(&({receivedNameFormat}))";
                             // 從物件所在位置檢查組織單位名稱是否重複
-                            using (DirectorySearcher searcher = new DirectorySearcher(entryRoot, encoderFiliter, LDAPAttributes.PropertiesToLoad, SearchScope.OneLevel))
+                            using (DirectorySearcher searcher = new DirectorySearcher(entryRoot, encoderFiliter, LDAPObject.PropertiesToLoad, SearchScope.OneLevel))
                             {
                                 // 根據結果決定對外提供何種資料
                                 nameInFormat = searcher.FindOne() != null ? string.Empty : receivedNameFormat;
@@ -135,14 +135,14 @@ namespace ADService.Certification
                 case CategoryTypes.PERSON:
                     {
                         // 重新命名用的結構
-                        string receivedNameFormat = $"{LDAPAttributes.P_CN}={name}";
+                        string receivedNameFormat = $"{Attributes.P_CN}={name}";
                         // 群組, 電腦, 成員時: 根目錄底下不應有任何其他新名稱的相同物件
                         using (DirectoryEntry entryRoot = certification.EntriesMedia.DomainRoot())
                         {
                             // [TODO] 應使用加密字串避免注入式攻擊
                             string encoderFiliter = $"(&({receivedNameFormat}))";
                             // 從物件所在位置檢查組織單位名稱是否重複
-                            using (DirectorySearcher searcher = new DirectorySearcher(entryRoot, encoderFiliter, LDAPAttributes.PropertiesToLoad, SearchScope.Subtree))
+                            using (DirectorySearcher searcher = new DirectorySearcher(entryRoot, encoderFiliter, LDAPObject.PropertiesToLoad, SearchScope.Subtree))
                             {
                                 // 根據結果決定對外提供何種資料
                                 nameInFormat = searcher.FindOne() != null ? string.Empty : receivedNameFormat;
@@ -196,7 +196,7 @@ namespace ADService.Certification
                 case CategoryTypes.ORGANIZATION_UNIT:
                     {
                         // 重新命名用的結構
-                        nameInFormat = $"{LDAPAttributes.P_OU}={name}";
+                        nameInFormat = $"{Attributes.P_OU}={name}";
                     }
                     break;
                 // 群組
@@ -205,7 +205,7 @@ namespace ADService.Certification
                 case CategoryTypes.PERSON:
                     {
                         // 重新命名用的結構
-                        nameInFormat = $"{LDAPAttributes.P_CN}={name}";
+                        nameInFormat = $"{Attributes.P_CN}={name}";
                     }
                     break;
                 default:

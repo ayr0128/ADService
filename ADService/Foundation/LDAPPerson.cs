@@ -18,20 +18,12 @@ namespace ADService.Foundation
             get
             {
                 // 取得 SID: 不存在應丟出例外
-                if (!StoredProperties.GetPropertySID(LDAPAttributes.C_OBJECTSID, out string primarySID) || string.IsNullOrEmpty(primarySID))
-                {
-                    throw new LDAPExceptions($"嘗試取得物件:{DistinguishedName} 的:{LDAPAttributes.C_OBJECTSID} 但資料不存在, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
-                }
+                StoredProperties.GetPropertySID(Attributes.C_OBJECTSID, out string primarySID);
+                // 取得 GROUPID: 不存在應丟出例外
+                StoredProperties.GetPropertySingle(Attributes.C_PRIMARYGROUPID, out int primaryGROUPID);
 
                 // 已知成員的 SID 去除最後一個 '-' 後的資料則是網域 SID
                 int index = primarySID.LastIndexOf('-');
-
-                // 取得 GROUPID: 不存在應丟出例外
-                if (!StoredProperties.GetPropertySingle(LDAPAttributes.C_PRIMARYGROUPID, out int primaryGROUPID))
-                {
-                    throw new LDAPExceptions($"嘗試取得物件:{DistinguishedName} 的:{LDAPAttributes.C_PRIMARYGROUPID} 但資料不存在, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
-                }
-
                 // 組成主要隸屬群組 SID
                 return $"{primarySID.Substring(0, index)}-{primaryGROUPID}";
             }

@@ -1,4 +1,6 @@
-﻿using ADService.Media;
+﻿using ADService.Details;
+using ADService.Media;
+using ADService.Protocol;
 using System;
 using System.DirectoryServices;
 
@@ -47,7 +49,7 @@ namespace ADService.Configuration
                 // 需使用加密避免 LDAP 注入式攻擊
                 string filiter = $"({ATTRIBUTE_EXTENDEDRIGHT_GUID}={valueGUID})";
                 // 從入口物件中找尋到指定物件
-                using (DirectorySearcher searcher = new DirectorySearcher(extendedRight, filiter, new string[] { LDAPAttributes.C_DISTINGGUISHEDNAME }))
+                using (DirectorySearcher searcher = new DirectorySearcher(extendedRight, filiter, new string[] { Attributes.C_DISTINGGUISHEDNAME }))
                 {
                     // 取得指定物件
                     SearchResult one = searcher.FindOne();
@@ -90,7 +92,7 @@ namespace ADService.Configuration
                 // 需使用加密避免 LDAP 注入式攻擊
                 string filiter = $"({ATTRIBUTE_EXTENDEDRIGHT_PROPERTY}={value})";
                 // 從入口物件中找尋到指定物件
-                using (DirectorySearcher searcher = new DirectorySearcher(entry, filiter, new string[] { LDAPAttributes.C_DISTINGGUISHEDNAME }))
+                using (DirectorySearcher searcher = new DirectorySearcher(entry, filiter, new string[] { Attributes.C_DISTINGGUISHEDNAME }))
                 {
                     // 取得指定物件
                     SearchResult one = searcher.FindOne();
@@ -128,9 +130,11 @@ namespace ADService.Configuration
         /// <param name="properties">入口物件持有的屬性</param>
         internal UnitExtendedRight(in PropertyCollection properties)
         {
-            Name       = LDAPAttributes.ParseSingleValue<string>(ATTRIBUTE_EXTENDEDRIGHT_PROPERTY, properties);
-            // 這個 GUID 使用字串儲存
-            RightsGUID = LDAPAttributes.ParseSingleValue<string>(ATTRIBUTE_EXTENDEDRIGHT_GUID, properties);
+            // 將 名稱 成小解
+            Name = LDAPEntries.ParseSingleValue<string>(ATTRIBUTE_EXTENDEDRIGHT_PROPERTY, properties).ToLower();
+
+            // 將 GUID 換成小解
+            RightsGUID = LDAPEntries.ParseSingleValue<string>(ATTRIBUTE_EXTENDEDRIGHT_GUID, properties).ToLower();
         }
     }
 }

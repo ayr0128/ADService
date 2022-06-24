@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.DirectoryServices;
 using System.Security.AccessControl;
 
-namespace ADService.Revealer
+namespace ADService.Details
 {
     /// <summary>
     /// 內部存取結構

@@ -33,10 +33,7 @@ namespace ADService.Foundation
             get
             {
                 // 取得 SID: 不存在應丟出例外
-                if (!StoredProperties.GetPropertySID(LDAPAttributes.C_OBJECTSID, out string primarySID) || string.IsNullOrEmpty(primarySID))
-                {
-                    throw new LDAPExceptions($"嘗試取得物件:{DistinguishedName} 的:{LDAPAttributes.C_OBJECTSID} 但資料不存在, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
-                }
+                StoredProperties.GetPropertySID(Attributes.C_OBJECTSID, out string primarySID);
 
                 // 已知群組 SID 最後一個 '-' 後的資料就是 PrimaryGroupToken
                 int index = primarySID.LastIndexOf('-');
@@ -62,7 +59,7 @@ namespace ADService.Foundation
             }
 
             // 取得 member 不存在應丟出例外
-            StoredProperties.GetPropertyMultiple(LDAPAttributes.P_MEMBER, out string[] member);
+            StoredProperties.GetPropertyMultiple(Attributes.P_MEMBER, out string[] member);
             // 初始化成員
             Member = ToRelationshipByDNs(entriesMedia, member);
 
