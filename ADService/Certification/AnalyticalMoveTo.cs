@@ -212,7 +212,7 @@ namespace ADService.Certification
             // 將目標物件移動至目標
             setDestination.Entry.MoveTo(setProcessed.Entry);
             // 設定物件需要被推入
-            certification.RequiredCommit(destination.DistinguishedName);
+            setDestination.CommitRequired();
         }
     }
 }

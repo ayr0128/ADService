@@ -89,6 +89,9 @@ namespace ADService.Certification
             {
                 throw new LDAPExceptions($"類型:{destination.Type} 的物件:{destination.DistinguishedName} 於重置密碼時因錯誤代碼:{invokeResult} 而失敗", ErrorCodes.ACTION_FAILURE);
             }
+
+            // 重製密碼會即刻產生影響, 因此只需要刷新即可
+            set.InvokedReflash();
         }
     }
 }

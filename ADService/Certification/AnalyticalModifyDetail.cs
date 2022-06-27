@@ -785,14 +785,12 @@ namespace ADService.Certification
 
         internal override void Invoke(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol)
         {
-            // 紀錄處理目標的區分名稱
+            // 紀錄目標的區分名稱
             string distinguishedNameDestination = destination.DistinguishedName;
-            // 紀錄喚起者的區分名稱
-            string distinguishedNameInvoker = invoker.DistinguishedName;
             // 取得修改目標的入口物件
-            RequiredCommitSet seteDestination = certification.GetEntry(distinguishedNameDestination);
+            RequiredCommitSet setDestination = certification.GetEntry(destination.DistinguishedName);
             // 簡易防呆: 應於驗證處完成檢驗
-            if (seteDestination == null)
+            if (setDestination == null)
             {
                 // 若觸發此處例外必定為程式漏洞
                 return;
@@ -845,28 +843,33 @@ namespace ADService.Certification
                                 // 遍歷所有項目: 進行異動
                                 foreach (KeyValuePair<string, bool> pairMemberProcessed in dictionaryDNWithIsRemove)
                                 {
+                                    // 取得將影響 Member 欄位的群組
+                                    RequiredCommitSet setProcessed = certification.GetEntry(pairMemberProcessed.Key);
+                                    // 簡易防呆: 物件不存在
+                                    if (setProcessed == null)
+                                    {
+                                        // 不可能發生, 但做個邏輯上的簡易防呆
+                                        continue;
+                                    }
+
                                     // 是否為移除
                                     if (pairMemberProcessed.Value)
                                     {
                                         // 喚起移除動作
-                                        seteDestination.Entry.Properties[Properties.P_MEMBER].Remove(pairMemberProcessed.Key);
+                                        setDestination.Entry.Properties[Properties.P_MEMBER].Remove(pairMemberProcessed.Key);
                                     }
                                     else
                                     {
                                         // 喚起新增動作
-                                        seteDestination.Entry.Properties[Properties.P_MEMBER].Add(pairMemberProcessed.Key);
+                                        setDestination.Entry.Properties[Properties.P_MEMBER].Add(pairMemberProcessed.Key);
                                     }
 
-                                    // 宣告字典黨紀錄影響參數
-                                    Dictionary<string, bool> dictionaryEffectorDNWithIsRemove = new Dictionary<string, bool> { { distinguishedNameDestination, pairMemberProcessed.Value } };
-                                    // 宣告新的影響結構
-                                    InsideMemberOfProcessor processor = new InsideMemberOfProcessor(dictionaryEffectorDNWithIsRemove);
                                     // 推入此物件作為異動後影響項目
-                                    certification.RegisterCommitedInvoker(processor.OnEntryEffecter, pairMemberProcessed.Key);
+                                    setProcessed.ReflashRequired();
                                 }
 
-                                // 此時自身必定有造成異動
-                                certification.RequiredCommit(distinguishedNameDestination);
+                                // 設定需求推入實作
+                                setDestination.CommitRequired();
                             }
                         }
                         break;
@@ -918,13 +921,11 @@ namespace ADService.Certification
                                     }
 
                                     // 此時目標物件必定有造成異動
-                                    certification.RequiredCommit(pairMemberOfProcessed.Key);
+                                    setProcessed.CommitRequired();
                                 }
 
-                                // 宣告新的影響結構
-                                InsideMemberOfProcessor processor = new InsideMemberOfProcessor(dictionaryDNWithIsRemove);
-                                // 推入此物件作為異動後影響項目
-                                certification.RegisterCommitedInvoker(processor.OnEntryEffecter, distinguishedNameDestination);
+                                // 設定需求刷新
+                                setDestination.ReflashRequired();
                             }
                         }
                         break;
@@ -954,9 +955,9 @@ namespace ADService.Certification
                             storedValue |= accountControlFlags;
 
                             // 喚起設置動作
-                            seteDestination.Entry.Properties[propertyName].Value = storedValue;
+                            setDestination.Entry.Properties[propertyName].Value = storedValue;
                             // 此時自身必定有造成異動
-                            certification.RequiredCommit(distinguishedNameDestination);
+                            setDestination.CommitRequired();
                         }
                         break;
                     #endregion
@@ -1018,9 +1019,9 @@ namespace ADService.Certification
                             }
 
                             // 喚起設置動作: 備註, 設置為 -1 會調整成伺服器的現在時間
-                            seteDestination.Entry.Properties[propertyName].Value = modifiedPWDLastSet;
+                            setDestination.Entry.Properties[propertyName].Value = modifiedPWDLastSet;
                             // 此時自身必定有造成異動
-                            certification.RequiredCommit(distinguishedNameDestination);
+                            setDestination.CommitRequired();
                         }
                         break;
                     #endregion
@@ -1052,9 +1053,9 @@ namespace ADService.Certification
                             storedValue |= encryptedType;
 
                             // 喚起設置動作
-                            seteDestination.Entry.Properties[propertyName].Value = storedValue;
+                            setDestination.Entry.Properties[propertyName].Value = storedValue;
                             // 此時自身必定有造成異動
-                            certification.RequiredCommit(distinguishedNameDestination);
+                            setDestination.CommitRequired();
                         }
                         break;
                     #endregion
@@ -1064,48 +1065,12 @@ namespace ADService.Certification
                             // 取得轉換完成的數值
                             string convertedValue = receivedValue?.ToObject<string>() ?? string.Empty;
                             // 喚起設置動作
-                            seteDestination.Entry.Properties[propertyName].Value = string.IsNullOrEmpty(convertedValue) ? null : convertedValue;
+                            setDestination.Entry.Properties[propertyName].Value = string.IsNullOrEmpty(convertedValue) ? null : convertedValue;
                             // 此時自身必定有造成異動
-                            certification.RequiredCommit(distinguishedNameDestination);
+                            setDestination.CommitRequired();
                         }
                         break;
                     #endregion
-                }
-            }
-        }
-
-        /// <summary>
-        /// 用來做推入後影響的內部結構
-        /// </summary>
-        private sealed class InsideMemberOfProcessor
-        {
-            /// <summary>
-            /// 針對入口物件進行的動作
-            /// </summary>
-            internal Dictionary<string, bool> DictionaryDNWithIsRemove;
-
-            /// <summary>
-            /// 提供內部喚醒異動後的影響動作
-            /// </summary>
-            /// <param name="dictionaryDNWithIsRemove">針對入口物件進行的動作</param>
-            internal InsideMemberOfProcessor(in Dictionary<string, bool> dictionaryDNWithIsRemove) => DictionaryDNWithIsRemove = dictionaryDNWithIsRemove;
-
-            internal void OnEntryEffecter(DirectoryEntry entry)
-            {
-                // 將目前紀錄的項目對目標物件產生影響
-                foreach (KeyValuePair<string, bool> pair in DictionaryDNWithIsRemove)
-                {
-                    // 是否為移除
-                    if (pair.Value)
-                    {
-                        // 喚起移除動作
-                        entry.Properties[Properties.P_MEMBEROF].Remove(pair.Key);
-                    }
-                    else
-                    {
-                        // 喚起新增動作
-                        entry.Properties[Properties.P_MEMBEROF].Add(pair.Key);
-                    }
                 }
             }
         }

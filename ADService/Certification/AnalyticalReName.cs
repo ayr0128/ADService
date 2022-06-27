@@ -230,7 +230,7 @@ namespace ADService.Certification
             // 通過後就可以重新命名了
             set.Entry.Rename(nameInFormat);
             // 設定需求推入實作
-            certification.RequiredCommit(destination.DistinguishedName);
+            set.CommitRequired();
         }
     }
 }

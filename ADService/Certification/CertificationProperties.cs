@@ -21,14 +21,6 @@ namespace ADService.Certification
         /// </summary>
         internal ResultPropertyCollection Properties { get; private set; }
 
-        /// <summary>
-        /// 儲存的入口物件是否需要被簽入異動
-        /// </summary>
-        internal bool RequiredCommit { get; private set; }
-        /// <summary>
-        /// 宣告一個暴露的事件註冊器, 用來在推入完成後更新自己
-        /// </summary>
-        internal event Action<DirectoryEntry> OnCommitedFinish = null;
 
         /// <summary>
         /// 推入入口物件並預設為不須簽入
@@ -37,35 +29,61 @@ namespace ADService.Certification
         /// <param name="one">額外查詢的屬性</param>
         internal RequiredCommitSet(in DirectoryEntry entry, in SearchResult one)
         {
-            RequiredCommit = false; // 預設: 沒有被異動不須簽入\
+            RequiredCommit = false;  // 預設: 沒有被異動不須簽入
+            RequiredReflash = false; // 預設: 沒有異動不須刷新
 
             Entry = entry;
             Properties = one.Properties;
         }
 
         /// <summary>
-        /// 有被異動因此需要簽入
+        /// 儲存的入口物件是否需要被簽入異動
         /// </summary>
-        internal void Modified() => RequiredCommit = true;
+        private bool RequiredCommit;
+        /// <summary>
+        /// 設定有發生異動, 須執行推入行為
+        /// </summary>
+        internal void CommitRequired() => RequiredCommit = true;
         /// <summary>
         /// 事件需要由方法內部喚起
         /// </summary>
-        /// <returns>是否存在推入後需修改事件</returns>
+        /// <returns>室友有產生異動</returns>
         internal bool InvokedCommit()
         {
-            // 曾經異動過
+            // 曾經異動
             if (RequiredCommit)
             {
-                // 需要推入異動
+                // 推入異動
                 Entry.CommitChanges();
-                // 刷新快取: 獲取之前推入的部分
+            }
+
+            // 返回存在異動
+            return RequiredCommit;
+        }
+
+        /// <summary>
+        /// 儲存的入口物件是否需要被簽入異動
+        /// </summary>
+        private bool RequiredReflash;
+        /// <summary>
+        /// 設定有發生異動或被影響, 須執行刷新行為
+        /// </summary>
+        internal void ReflashRequired() => RequiredReflash = true;
+        /// <summary>
+        /// 刷新參數取得影響
+        /// </summary>
+        /// <returns>是否受到影響</returns>
+        internal bool InvokedReflash()
+        {
+            // 需要刷新 (有異動也需要刷新)
+            if (RequiredCommit | RequiredReflash)
+            {
+                // 刷新
                 Entry.RefreshCache();
             }
 
-            // 喚起完成行為
-            OnCommitedFinish?.Invoke(Entry);
-            // 返回存在簽入後事件
-            return OnCommitedFinish != null | RequiredCommit;
+            // 返回是否刷新 (有異動也需要刷新)
+            return RequiredCommit | RequiredReflash;
         }
     }
 
@@ -130,47 +148,6 @@ namespace ADService.Certification
         internal void SetEntry(in SearchResult one, in string distinguishedName) => dictionaryDistinguishedNameWitSet.Add(distinguishedName, new RequiredCommitSet(one.GetDirectoryEntry(), one));
 
         /// <summary>
-        /// 設定某個區分名稱有異動, 需要產生簽入行為
-        /// </summary>
-        /// <param name="distinguishedName">區分名稱</param>
-        /// <returns>此區分名稱是否存在設置成功</returns>
-        internal bool RequiredCommit(in string distinguishedName)
-        {
-            // 嘗試從目前暫存的影響入口物件取得指定的目標
-            if (!dictionaryDistinguishedNameWitSet.TryGetValue(distinguishedName, out RequiredCommitSet set))
-            {
-                // 不存在丟出未設置, 外部自行判斷是否出錯
-                return false;
-            }
-
-            // 將此區分名稱設置為需要簽入
-            set.Modified();
-            // 設置成功
-            return true;
-        }
-
-        /// <summary>
-        /// 設定某個區分名稱被推入或者確認沒有推入後應被喚起的行為
-        /// </summary>
-        /// <param name="action">註冊地喚起行為</param>
-        /// <param name="distinguishedName">應執行的目標區分名稱</param>
-        /// <returns>此區分名稱是否存在設置成功</returns>
-        internal bool RegisterCommitedInvoker(in Action<DirectoryEntry> action, in string distinguishedName)
-        {
-            // 嘗試從目前暫存的影響入口物件取得指定的目標
-            if (!dictionaryDistinguishedNameWitSet.TryGetValue(distinguishedName, out RequiredCommitSet set))
-            {
-                // 不存在丟出未設置, 外部自行判斷是否出錯
-                return false;
-            }
-
-            // 推入事件
-            set.OnCommitedFinish += action;
-            // 返回資料設置完成
-            return true;
-        }
-
-        /// <summary>
         /// 推入相關影響後取得入口物件
         /// </summary>
         /// <returns>所有有影響的入口物件, 結構如右: Dictionary'區分名稱, 入口物件' </returns>
@@ -183,13 +160,27 @@ namespace ADService.Certification
             {
                 // 取得內容
                 RequiredCommitSet set = pair.Value;
-                // 喚醒推入動作
-                if (set.InvokedCommit())
+                // 喚醒推入動作: 保持程式碼相同
+                if (set.InvokedCommit() && !dictionarySetByDN.ContainsKey(pair.Key))
                 {
                     // 推入字典黨提供給外部進行資料轉換
                     dictionarySetByDN.Add(pair.Key, set);
                 }
             }
+
+            // 全部異動都推入完成後進行刷新
+            foreach (KeyValuePair<string, RequiredCommitSet> pair in dictionaryDistinguishedNameWitSet)
+            {
+                // 取得內容
+                RequiredCommitSet set = pair.Value;
+                // 喚醒刷新動作, 之前尚未因為異動而堆入推外提供項目
+                if (set.InvokedReflash() && !dictionarySetByDN.ContainsKey(pair.Key))
+                {
+                    // 推入字典黨提供給外部進行資料轉換
+                    dictionarySetByDN.Add(pair.Key, set);
+                }
+            }
+
             // 轉換成陣列提供給外部
             return dictionarySetByDN;
         }
