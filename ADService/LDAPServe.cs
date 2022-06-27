@@ -16,9 +16,9 @@ namespace ADService
     public abstract class LDAPServe
     {
         /// <summary>
-        /// 儲存網域相關資訊並支援相關實作方法的類別
+        /// 此網域伺服器目前被讀取做為暫存參數的所有設定: 有效時間為讀取後五分鐘
         /// </summary>
-        private readonly LDAPEntries Enrties;
+        private readonly LDAPConfiguration Configuration;
 
         /// <summary>
         /// 儲存預計連線的伺服器位置, 當有連線需求時會使用提供的帳號與密碼進行連線伺服器嘗試取得資料
@@ -38,7 +38,7 @@ namespace ADService
             }
 
             // 初始化入口功能支援結構方法
-            Enrties = new LDAPEntries(domain, port);
+            Configuration = new LDAPConfiguration(domain, port);
 
             // 備註: 上述會對外丟出例外的各種參數只是提前判斷基礎規則, 如果不能連線仍然會在嘗試與 AD 伺服器溝通時丟出例外錯誤
         }
@@ -72,10 +72,37 @@ namespace ADService
             */
             try
             {
-                // 使用指定使用者帳號密碼製作一個入口物件製作器
-                LDAPEntriesMedia entriesMedia = Enrties.GetCreator(userName, password);
-                // 提供登入者結構
-                return LDAPLogonPerson.Authentication(entriesMedia, userName, password);
+                // 取得設定與入口物件創建器
+                LDAPConfigurationDispatcher dispatcher = Configuration.Dispatch(userName, password);
+                // 使用 using 讓連線在跳出方法後即刻釋放: 此處使用的權限是登入者的帳號權限
+                using (DirectoryEntry root = dispatcher.DomainRoot())
+                {
+                    // 找到須限制的物件類型
+                    Dictionary<CategoryTypes, string> dictionaryLimitedCategory = LDAPCategory.GetValuesByTypes(CategoryTypes.PERSON);
+                    // 加密避免 LDAP 注入式攻擊
+                    string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}(|(sAMAccountName={userName})(userPrincipalName={userName})))";
+                    /* 備註: 為何要額外搜尋一次?
+                         1. 連線時如果未在伺服器後提供區分名稱, 會使用物件類型 domainDNS 來回傳
+                         2. 為避免部分資料缺失, 需額外指定
+                    */
+                    using (DirectorySearcher searcher = new DirectorySearcher(root, encoderFiliter, LDAPObject.PropertiesToLoad))
+                    {
+                        // 必定存在至少一個搜尋結果:
+                        SearchResult one = searcher.FindOne();
+                        // 不存在搜尋結果
+                        if (one == null)
+                        {
+                            // 對外丟出例外: 邏輯錯誤, 這種錯誤除非多網域否則不應發生
+                            throw new LDAPExceptions($"登入使用者:{userName} 時因無法使用者的實體物件而失敗丟出例外", ErrorCodes.LOGIC_ERROR);
+                        }
+
+                        using (DirectoryEntry entry = one.GetDirectoryEntry())
+                        {
+                            // 對外提供登入者結構: 建構時若無法找到必須存在的鍵值會丟出例外
+                            return new LDAPLogonPerson(entry, dispatcher, one.Properties);
+                        }
+                    }
+                }
             }
             // 發生時機: 使用者登入時發現例外錯誤
             catch (DirectoryServicesCOMException exception)
@@ -101,26 +128,26 @@ namespace ADService
         public LDAPObject GetObjectByGUID(in LDAPLogonPerson logon, in string GUID)
         {
             // 使用指定使用者帳號密碼製作一個入口物件製作器
-            LDAPEntriesMedia entriesMedia = Enrties.GetCreator(logon.UserName, logon.Password);
+            LDAPConfigurationDispatcher dispatcher = Configuration.Dispatch(logon.UserName, logon.Password);
             /* 此處處理出現問題會接收到例外:
                  1. 若訪問伺服器發生問題: 會對外提供 LDAPExceptions
             */
             try
             {
                 // 透過 GUID 找到指定物件, 注意如果找不到會有奇怪的錯誤
-                using (DirectoryEntry entry = entriesMedia.ByGUID(GUID))
+                using (DirectoryEntry entry = dispatcher.ByGUID(GUID))
                 {
                     // 取得區分名稱
-                    string distinguishedName = LDAPEntries.ParseSingleValue<string>(Properties.C_DISTINGGUISHEDNAME, entry.Properties);
+                    string distinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGGUISHEDNAME, entry.Properties);
                     // [TODO] 應使用加密字串避免注入式攻擊
-                    string encoderFiliter = LDAPEntries.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, distinguishedName);
+                    string encoderFiliter = LDAPConfiguration.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, distinguishedName);
                     // 找尋某些額外參數
                     using (DirectorySearcher searcher = new DirectorySearcher(entry, encoderFiliter, LDAPObject.PropertiesToLoad, SearchScope.Base))
                     {
                         // 找到其他屬性
                         SearchResult one = searcher.FindOne();
                         // 轉換成可用物件
-                        return LDAPObject.ToObject(entry, entriesMedia, one.Properties);
+                        return LDAPObject.ToObject(entry, dispatcher, one.Properties);
                     }
                 }
             }
@@ -163,12 +190,12 @@ namespace ADService
             try
             {
                 // 使用指定使用者帳號密碼製作一個入口物件製作器
-                LDAPEntriesMedia entriesMedia = Enrties.GetCreator(logon.UserName, logon.Password);
+                LDAPConfigurationDispatcher dispatcher = Configuration.Dispatch(logon.UserName, logon.Password);
                 // 找尋指定區分名稱時需要從根目錄開始找尋
-                using (DirectoryEntry root = entriesMedia.DomainRoot())
+                using (DirectoryEntry root = dispatcher.DomainRoot())
                 {
                     // [TODO] 應使用加密字串避免注入式攻擊
-                    string encoderFiliter = $"(&{LDAPEntries.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}{LDAPEntries.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, distinguishedNames)})";
+                    string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, distinguishedNames)})";
                     // 找尋指定目標
                     using (DirectorySearcher searcher = new DirectorySearcher(root, encoderFiliter, LDAPObject.PropertiesToLoad, SearchScope.Subtree))
                     {
@@ -184,7 +211,7 @@ namespace ADService
                                 using (DirectoryEntry resultEntry = one.GetDirectoryEntry())
                                 {
                                     // 轉換成系統使用的物件類型
-                                    LDAPObject resultObject = LDAPObject.ToObject(resultEntry, entriesMedia, one.Properties);
+                                    LDAPObject resultObject = LDAPObject.ToObject(resultEntry, dispatcher, one.Properties);
                                     // 物件為登入者時, 使用新物件的特性鍵值更新登入者並更換儲存物件:
                                     LDAPObject storedObject = logon.SwapFrom(resultObject);
                                     // 絕對不應該重複
@@ -230,7 +257,7 @@ namespace ADService
             try
             {
                 // 使用指定使用者帳號密碼製作一個入口物件製作器
-                LDAPEntriesMedia entriesMedia = Enrties.GetCreator(logon.UserName, logon.Password);
+                LDAPConfigurationDispatcher dispatcher = Configuration.Dispatch(logon.UserName, logon.Password);
                 // 有指定區分名稱
                 if (objectLDAPs.Length != 0)
                 {
@@ -247,12 +274,12 @@ namespace ADService
                         }
 
                         // 使用 using 讓連線在跳出方法後即刻釋放: 此處使用的權限是登入者的帳號權限
-                        using (DirectoryEntry entryObject = entriesMedia.ByDistinguisedName(mixedObject.DistinguishedName))
+                        using (DirectoryEntry entryObject = dispatcher.ByDistinguisedName(mixedObject.DistinguishedName))
                         {
                             // 是容器類型是必定能被轉換成容器
                             LDAPAssembly assembly = (LDAPAssembly)mixedObject;
                             // 取得此入口物件類型下的目標類型物件
-                            List<LDAPObject> children = LDAPAssembly.WithChild(entryObject, entriesMedia, categories | extendFlags);
+                            List<LDAPObject> children = LDAPAssembly.WithChild(entryObject, dispatcher, categories | extendFlags);
                             // 將找尋的下層子物件提供給集成類型物件並刷新
                             assembly.Reflash(children);
                             // 對外提供轉換完成的結果
@@ -268,21 +295,21 @@ namespace ADService
                     // 無指定組織單位或網域時, 容器大小必為 1
                     Dictionary<string, LDAPAssembly> organizationuUnitDictionary = new Dictionary<string, LDAPAssembly>(1);
                     // 使用 using 讓連線在跳出方法後即刻釋放: 此處使用的權限是登入者的帳號權限
-                    using (DirectoryEntry root = entriesMedia.DomainRoot())
+                    using (DirectoryEntry root = dispatcher.DomainRoot())
                     {
                         // 取得區分名稱
-                        string distinguishedName = LDAPEntries.ParseSingleValue<string>(Properties.C_DISTINGGUISHEDNAME, root.Properties);
+                        string distinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGGUISHEDNAME, root.Properties);
                         // [TODO] 應使用加密字串避免注入式攻擊
-                        string encoderFiliter = LDAPEntries.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, distinguishedName);
+                        string encoderFiliter = LDAPConfiguration.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, distinguishedName);
                         // 找尋某些額外參數
                         using (DirectorySearcher searcher = new DirectorySearcher(root, encoderFiliter, LDAPObject.PropertiesToLoad, SearchScope.Base))
                         {
                             // 找到需額外搜尋的資料
                             SearchResult one = searcher.FindOne();
                             // 製作根目錄物件: 此時絕對是集成類型的物件
-                            LDAPAssembly assembly = (LDAPAssembly)LDAPObject.ToObject(root, entriesMedia, one.Properties);
+                            LDAPAssembly assembly = (LDAPAssembly)LDAPObject.ToObject(root, dispatcher, one.Properties);
                             // 取得此入口物件類型下的目標類型物件
-                            List<LDAPObject> children = LDAPAssembly.WithChild(root, entriesMedia, categories | extendFlags);
+                            List<LDAPObject> children = LDAPAssembly.WithChild(root, dispatcher, categories | extendFlags);
                             // 將找尋的下層子物件提供給集成類型物件並刷新
                             assembly.Reflash(children);
                             // 由於外部沒有指定查詢的區分名稱, 因此使用固定字串讓外部可以取得找尋到的網域
@@ -332,9 +359,9 @@ namespace ADService
             }
 
             // 使用指定使用者帳號密碼製作一個入口物件製作器
-            LDAPEntriesMedia entriesMedia = Enrties.GetCreator(logon.UserName, logon.Password);
+            LDAPConfigurationDispatcher dispatcher = Configuration.Dispatch(logon.UserName, logon.Password);
             // 製作功能集合, 可能為空
-            return new LDAPCertification(entriesMedia, logon, destination);
+            return new LDAPCertification(dispatcher, logon, destination);
         }
     }
 }

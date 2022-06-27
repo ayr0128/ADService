@@ -1,5 +1,4 @@
-﻿using ADService.Configuration;
-using ADService.Environments;
+﻿using ADService.Environments;
 using ADService.Media;
 using ADService.Protocol;
 using System;
@@ -67,7 +66,7 @@ namespace ADService.Details
         /// <param name="configuration">藍本物件</param>
         /// <param name="entry">入口物件</param>
         /// <param name="propertiesResult">透過找尋取得字的屬性</param>
-        internal LDAPProperties(in LDAPConfiguration configuration, in DirectoryEntry entry, in ResultPropertyCollection propertiesResult)
+        internal LDAPProperties(in LDAPConfigurationDispatcher configuration, in DirectoryEntry entry, in ResultPropertyCollection propertiesResult)
         {
             // 額外權限使用的屬性對照表
             Dictionary<string, HashSet<string>> dictionaryNameWithPropertySet = new Dictionary<string, HashSet<string>>();
@@ -112,7 +111,7 @@ namespace ADService.Details
             }
 
             // 將允許團入屬性改為陣列
-            string[] allowedAttributes = LDAPEntries.ParseMutipleValue<string>(Properties.C_ALLOWEDATTRIBUTES, propertiesResult);
+            string[] allowedAttributes = LDAPConfiguration.ParseMutipleValue<string>(Properties.C_ALLOWEDATTRIBUTES, propertiesResult);
             // 轉換成可比對的屬性參數
             AllowedAttributes = new HashSet<string>(allowedAttributes);
 
@@ -248,7 +247,7 @@ namespace ADService.Details
             // 取得高位元
             int highPart = (int)type.InvokeMember("HighPart", BindingFlags.GetProperty, null, detail.PropertyValue, null);
             // 取得低位元
-            int lowPart  = (int)type.InvokeMember("LowPart", BindingFlags.GetProperty, null, detail.PropertyValue, null);
+            int lowPart = (int)type.InvokeMember("LowPart", BindingFlags.GetProperty, null, detail.PropertyValue, null);
             // 提供查詢結果
             return (long)highPart << 32 | (uint)lowPart;
         }

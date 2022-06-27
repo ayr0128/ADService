@@ -1,5 +1,4 @@
-﻿using ADService.Configuration;
-using ADService.Details;
+﻿using ADService.Details;
 using ADService.Environments;
 using ADService.Media;
 using ADService.Protocol;
@@ -16,49 +15,49 @@ namespace ADService.Foundation
         /// <summary>
         /// 搜尋物件時使用的特性鍵值
         /// </summary>
-        internal static string[] PropertiesToLoad => new string[] { Properties.C_DISTINGGUISHEDNAME, "allowedAttributes", "allowedChildClasses" };
+        internal static string[] PropertiesToLoad => new string[] { Properties.C_DISTINGGUISHEDNAME, Properties.C_ALLOWEDATTRIBUTES, Properties.C_ALLOWEDCHILDCLASSES };
 
         #region 創建物件以及創建描述
         /// <summary>
         /// ADService 物件的工廠模式
         /// </summary>
         /// <param name="entry">入口物件</param>
-        /// <param name="entriesMedia">入口物件創建器</param>
+        /// <param name="dispatcher">入口物件創建器</param>
         /// <param name="propertiesResult">透過找尋取得字的屬性</param>
         /// <returns>使用 object 封裝對外提供的物件</returns>
         /// <exception cref="LDAPExceptions">物件未實作工廠模式或實作過程中出現錯誤時丟出例外</exception>
-        internal static LDAPObject ToObject(in DirectoryEntry entry, in LDAPEntriesMedia entriesMedia, in ResultPropertyCollection propertiesResult)
+        internal static LDAPObject ToObject(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher, in ResultPropertyCollection propertiesResult)
         {
             // 解析物件類型
-            CategoryTypes type = LDAPEntries.ParseCategory(entry.Properties);
+            CategoryTypes type = LDAPConfiguration.ParseCategory(entry.Properties);
             // 使用物件類型製作對應的物件
             switch (type)
             {
                 case CategoryTypes.CONTAINER: // 容器
                     {
                         // 對外提供 '容器'
-                        return new LDAPContainer(entry, entriesMedia, propertiesResult);
+                        return new LDAPContainer(entry, dispatcher, propertiesResult);
                     }
                 case CategoryTypes.DOMAIN_DNS: // 網域
                     {
                         // 對外提供 '網域' 結構
-                        return new LDAPDomainDNS(entry, entriesMedia, propertiesResult);
+                        return new LDAPDomainDNS(entry, dispatcher, propertiesResult);
                     }
                 case CategoryTypes.ORGANIZATION_UNIT: // 組織單位
                     {
                         // 對外提供 '組織單位' 結構
-                        return new LDAPOrganizationUnit(entry, entriesMedia, propertiesResult);
+                        return new LDAPOrganizationUnit(entry, dispatcher, propertiesResult);
                     }
                 case CategoryTypes.ForeignSecurityPrincipals: // 內部安全性群組
                 case CategoryTypes.GROUP:                     // 群組
                     {
                         // 對外提供 '群組' 結構
-                        return new LDAPGroup(entry, entriesMedia, propertiesResult);
+                        return new LDAPGroup(entry, dispatcher, propertiesResult);
                     }
                 case CategoryTypes.PERSON: // 成員
                     {
                         // 對外提供 '成員' 結構
-                        return new LDAPPerson(entry, entriesMedia, propertiesResult);
+                        return new LDAPPerson(entry, dispatcher, propertiesResult);
                     }
                 default:
                     {
@@ -71,17 +70,17 @@ namespace ADService.Foundation
         /// <summary>
         /// 內部使用: 取得主要隸屬群組
         /// </summary>
-        /// <param name="entriesMedia">入口物件創建器</param>
+        /// <param name="dispatcher">入口物件創建器</param>
         /// <param name="primaryGroupToken">主要隸屬群組的 Token</param>
-        internal static Dictionary<string, LDAPRelationship> ToRelationshipByToken(in LDAPEntriesMedia entriesMedia, in int primaryGroupToken)
+        internal static Dictionary<string, LDAPRelationship> ToRelationshipByToken(in LDAPConfigurationDispatcher dispatcher, in int primaryGroupToken)
         {
             // 找到須限制的物件類型
             Dictionary<CategoryTypes, string> dictionaryLimitedCategory = LDAPCategory.GetValuesByTypes(CategoryTypes.PERSON);
             // 使用根目錄
-            using (DirectoryEntry root = entriesMedia.DomainRoot())
+            using (DirectoryEntry root = dispatcher.DomainRoot())
             {
                 // 加密避免 LDAP 注入式攻擊: 透過主要隸屬群組關聯的物件必定圍成員
-                string encoderFiliter = $"(&{LDAPEntries.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}({Properties.C_PRIMARYGROUPID}={primaryGroupToken}))";
+                string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}({Properties.C_PRIMARYGROUPID}={primaryGroupToken}))";
 
                 // 搜尋主要隸屬群組關聯的物件
                 using (DirectorySearcher searcher = new DirectorySearcher(root, encoderFiliter, PropertiesToLoad))
@@ -120,12 +119,12 @@ namespace ADService.Foundation
         /// <summary>
         /// 內部使用: 取得主要隸屬群組
         /// </summary>
-        /// <param name="entriesMedia">入口物件創建器</param>
+        /// <param name="dispatcher">入口物件創建器</param>
         /// <param name="primaryGroupSID">主要隸屬群組的 SID</param>
-        internal static LDAPRelationship ToRelationshipBySID(in LDAPEntriesMedia entriesMedia, in string primaryGroupSID)
+        internal static LDAPRelationship ToRelationshipBySID(in LDAPConfigurationDispatcher dispatcher, in string primaryGroupSID)
         {
             // 使用 SID 取得指定物件
-            using (DirectoryEntry entry = entriesMedia.BySID(primaryGroupSID))
+            using (DirectoryEntry entry = dispatcher.BySID(primaryGroupSID))
             {
                 // 主要隸屬的物件一定是群組
                 return new LDAPRelationship(entry, true);
@@ -135,10 +134,10 @@ namespace ADService.Foundation
         /// <summary>
         /// 內部使用: 取得指定區分名稱
         /// </summary>
-        /// <param name="entriesMedia">入口物件創建器</param>
+        /// <param name="dispatcher">入口物件創建器</param>
         /// <param name="distinguishedNames">所有欲找尋的區分名稱 (memberOf)</param>
         /// <returns>指定區分名稱的物件, 結構如右: Dictionary '區分名稱, 物件' </returns>
-        internal static Dictionary<string, LDAPRelationship> ToRelationshipByDNs(in LDAPEntriesMedia entriesMedia, params string[] distinguishedNames)
+        internal static Dictionary<string, LDAPRelationship> ToRelationshipByDNs(in LDAPConfigurationDispatcher dispatcher, params string[] distinguishedNames)
         {
             // 沒有隸屬群組時
             if (distinguishedNames == null)
@@ -153,7 +152,7 @@ namespace ADService.Foundation
             foreach (string distinguishedName in distinguishedNames)
             {
                 // 指定區分名稱取得物件
-                using (DirectoryEntry entry = entriesMedia.ByDistinguisedName(distinguishedName))
+                using (DirectoryEntry entry = dispatcher.ByDistinguisedName(distinguishedName))
                 {
                     // 推入字典
                     dictionaryDNWithGroup.Add(distinguishedName, new LDAPRelationship(entry, false));
@@ -237,7 +236,7 @@ namespace ADService.Foundation
                 // 取得 類別 不存在應丟出例外
                 string storedValue = StoredProperties.GetPropertySingle<string>(Properties.C_OBJECTCATEGORY);
                 // 轉換物件類型
-                return LDAPEntries.GetObjectType(storedValue);
+                return LDAPConfiguration.GetObjectType(storedValue);
             }
         }
 
@@ -245,15 +244,13 @@ namespace ADService.Foundation
         /// 使用鍵值參數初始化
         /// </summary>
         /// <param name="entry">入口物件</param>
-        /// <param name="entriesMedia">入口物件創建器</param>
+        /// <param name="dispatcher">入口物件創建器</param>
         /// <param name="propertiesResult">透過找尋取得字的屬性</param>
         /// <exception cref="LDAPExceptions">解析鍵值不符合規則時對外丟出</exception>
-        internal LDAPObject(in DirectoryEntry entry, in LDAPEntriesMedia entriesMedia, in ResultPropertyCollection propertiesResult)
+        internal LDAPObject(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher, in ResultPropertyCollection propertiesResult)
         {
-            // 腳本物件找尋
-            LDAPConfiguration configuration = new LDAPConfiguration(entriesMedia);
             // 初始化可用屬性
-            StoredProperties = new LDAPProperties(configuration, entry, propertiesResult);
+            StoredProperties = new LDAPProperties(dispatcher, entry, propertiesResult);
         }
 
         /// <summary>

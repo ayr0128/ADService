@@ -61,11 +61,11 @@ namespace ADService.Certification
         /// <summary>
         /// 檢查持有權限能否觸發此方法
         /// </summary>
-        /// <param name="entriesMedia">入口物件製作器</param>
+        /// <param name="dispatcher">入口物件製作器</param>
         /// <param name="invoker">喚起物件</param>
         /// <param name="destination">目標物件</param>
         /// <returns>是否可使用</returns>
-        internal abstract (bool, InvokeCondition, string) Invokable(in LDAPEntriesMedia entriesMedia, in LDAPObject invoker, in LDAPObject destination);
+        internal abstract (bool, InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination);
         /// <summary>
         /// 驗證提供的協議內容是否可用
         /// </summary>
@@ -120,7 +120,7 @@ namespace ADService.Certification
             }
 
             // 整合所有權縣
-           List<AccessRuleInformation> accessRuleInformations = new List<AccessRuleInformation>();
+            List<AccessRuleInformation> accessRuleInformations = new List<AccessRuleInformation>();
             // 遍歷想要限制的 SID
             foreach (string SID in SIDs)
             {

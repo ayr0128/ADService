@@ -6,7 +6,6 @@ using ADService.Protocol;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.DirectoryServices;
 
 namespace ADService.Certification
 {
@@ -20,7 +19,7 @@ namespace ADService.Certification
         /// </summary>
         internal AnalyticalResetPassword() : base(Methods.M_RESETPWD) { }
 
-        internal override (bool, InvokeCondition, string) Invokable(in LDAPEntriesMedia entriesMedia, in LDAPObject invoker, in LDAPObject destination)
+        internal override (bool, InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
         {
             // 根目錄不應重新命名
             if (destination.Type != CategoryTypes.PERSON)

@@ -38,7 +38,7 @@ namespace ADService.Certification
         /// <summary>
         /// 用來製作入口物件的介面ˇ
         /// </summary>
-        internal readonly LDAPEntriesMedia EntriesMedia;
+        internal readonly LDAPConfigurationDispatcher Dispatcher;
         /// <summary>
         /// 喚起行為的物件: 通常為登入者
         /// </summary>
@@ -51,12 +51,12 @@ namespace ADService.Certification
         /// <summary>
         /// 集合可供外部使用的功能即和類別: 只有 DLL 內部能夠繼承予宣告
         /// </summary>
-        /// <param name="entriesMedia">入口物件創建器</param>
+        /// <param name="dispatcher">入口物件創建器</param>
         /// <param name="invoker">針對目標物件進行行為的喚起物件: 一般為登入者</param>
         /// <param name="destination">目標物件: 可能為喚起物件本身</param>
-        internal LDAPCertification(in LDAPEntriesMedia entriesMedia, in LDAPObject invoker, in LDAPObject destination)
+        internal LDAPCertification(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
         {
-            EntriesMedia = entriesMedia;
+            Dispatcher = dispatcher;
             Invoker = invoker;
             Destination = destination;
         }
@@ -90,7 +90,7 @@ namespace ADService.Certification
                     }
 
                     // 取得結果
-                    (bool invokable, InvokeCondition condition, _) = analyticalRights.Invokable(EntriesMedia, Invoker, Destination);
+                    (bool invokable, InvokeCondition condition, _) = analyticalRights.Invokable(Dispatcher, Invoker, Destination);
                     // 無法啟動代表無法呼叫
                     if (!invokable)
                     {
@@ -146,7 +146,7 @@ namespace ADService.Certification
                 }
 
                 // 取得結果
-                (bool invokable, InvokeCondition condition, _) = analytical.Invokable(EntriesMedia, Invoker, Destination);
+                (bool invokable, InvokeCondition condition, _) = analytical.Invokable(Dispatcher, Invoker, Destination);
                 // 無法啟動代表無法呼叫
                 if (!invokable)
                 {
@@ -192,7 +192,7 @@ namespace ADService.Certification
             try
             {
                 // 推入並設置入口物件
-                CertificationProperties certification = new CertificationProperties(EntriesMedia, Destination.DistinguishedName);
+                CertificationProperties certification = new CertificationProperties(Dispatcher, Destination.DistinguishedName);
 
                 // 轉換成釋放用介面
                 iRelease = certification;
@@ -240,7 +240,7 @@ namespace ADService.Certification
             try
             {
                 // 檢查一下是否可以喚起: 列出功能至正式喚醒之間, 有可能權限已改變
-                (bool invokable, _, string message) = analytical.Invokable(EntriesMedia, Invoker, Destination);
+                (bool invokable, _, string message) = analytical.Invokable(Dispatcher, Invoker, Destination);
                 // 若已無法喚醒
                 if (!invokable)
                 {
@@ -249,7 +249,7 @@ namespace ADService.Certification
                 }
 
                 // 推入並設置入口物件
-                CertificationProperties certification = new CertificationProperties(EntriesMedia, Destination.DistinguishedName);
+                CertificationProperties certification = new CertificationProperties(Dispatcher, Destination.DistinguishedName);
 
                 // 轉換成釋放用介面
                 iRelease = certification;
@@ -276,7 +276,7 @@ namespace ADService.Certification
                     // 異動資料
                     RequiredCommitSet set = pair.Value;
                     // 重新製作目標物件
-                    LDAPObject reflashObject = LDAPObject.ToObject(set.Entry, EntriesMedia, set.Properties);
+                    LDAPObject reflashObject = LDAPObject.ToObject(set.Entry, Dispatcher, set.Properties);
                     // 轉換物件為空
                     if (reflashObject == null)
                     {

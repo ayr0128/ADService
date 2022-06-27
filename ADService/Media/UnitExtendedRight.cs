@@ -1,9 +1,7 @@
-﻿using ADService.Media;
-using ADService.Protocol;
-using System;
+﻿using System;
 using System.DirectoryServices;
 
-namespace ADService.Configuration
+namespace ADService.Media
 {
     /// <summary>
     /// 額萬權限用資料格式
@@ -32,23 +30,22 @@ namespace ADService.Configuration
         };
 
         /// <summary>
-        /// 取得擴展權限的指定欄位名稱
+        /// 取得擴展權限
         /// </summary>
-        /// <param name="entries">入口物件製作器</param>
+        /// <param name="dispatcher">入口物件製作器</param>
         /// <param name="value">目標 GUID</param>
-        /// <param name="configurationContext">設定位置</param>
         /// <returns>額外權限結構</returns>
-        internal static UnitExtendedRight Get(in LDAPEntriesMedia entries, in Guid value, in string configurationContext)
+        internal static UnitExtendedRight Get(in LDAPConfigurationDispatcher dispatcher, in Guid value)
         {
             // 是空的 GUID
-            if (value.Equals(Guid.Empty))
+            if (LDAPConfiguration.IsGUIDEmpty(value))
             {
                 // 空 GUID
                 return null;
             }
 
             // 新建立藍本入口物件
-            using (DirectoryEntry extendedRight = entries.ByDistinguisedName($"{CONTEXT_EXTENDEDRIGHT},{configurationContext}"))
+            using (DirectoryEntry extendedRight = dispatcher.ByDistinguisedName($"{CONTEXT_EXTENDEDRIGHT},{dispatcher.ConfigurationDistinguishedName}"))
             {
                 // 輸出成 GUID 格式字串
                 string valueGUID = value.ToString("D");
@@ -73,13 +70,12 @@ namespace ADService.Configuration
         }
 
         /// <summary>
-        /// 取得藍本的 GUID
+        /// 透過額外全縣
         /// </summary>
-        /// <param name="entries">入口物件製作器</param>
+        /// <param name="dispatcher">入口物件製作器</param>
         /// <param name="value">展示名稱</param>
-        /// <param name="configurationContext">設定位置</param>
         /// <returns>額外權限結構</returns>
-        internal static UnitExtendedRight Get(in LDAPEntriesMedia entries, in string value, in string configurationContext)
+        internal static UnitExtendedRight Get(in LDAPConfigurationDispatcher dispatcher, in string value)
         {
             // 是空的字串
             if (string.IsNullOrWhiteSpace(value))
@@ -89,7 +85,7 @@ namespace ADService.Configuration
             }
 
             // 新建立藍本入口物件
-            using (DirectoryEntry entry = entries.ByDistinguisedName($"{CONTEXT_EXTENDEDRIGHT},{configurationContext}"))
+            using (DirectoryEntry entry = dispatcher.ByDistinguisedName($"{CONTEXT_EXTENDEDRIGHT},{dispatcher.ConfigurationDistinguishedName}"))
             {
                 // 需使用加密避免 LDAP 注入式攻擊
                 string filiter = $"({ATTRIBUTE_EXTENDEDRIGHT_PROPERTY}={value})";
@@ -123,13 +119,20 @@ namespace ADService.Configuration
         internal readonly string RightsGUID;
 
         /// <summary>
+        /// 啟用時間
+        /// </summary>
+        internal DateTime EnableTime;
+
+        /// <summary>
         /// 實作額外權限結構
         /// </summary>
         /// <param name="properties">入口物件持有的屬性</param>
         internal UnitExtendedRight(in ResultPropertyCollection properties)
         {
-            Name       = LDAPEntries.ParseSingleValue<string>(ATTRIBUTE_EXTENDEDRIGHT_PROPERTY, properties).ToLower();
-            RightsGUID = LDAPEntries.ParseSingleValue<string>(ATTRIBUTE_EXTENDEDRIGHT_GUID, properties).ToLower();
+            Name = LDAPConfiguration.ParseSingleValue<string>(ATTRIBUTE_EXTENDEDRIGHT_PROPERTY, properties).ToLower();
+            RightsGUID = LDAPConfiguration.ParseSingleValue<string>(ATTRIBUTE_EXTENDEDRIGHT_GUID, properties).ToLower();
+
+            EnableTime = DateTime.UtcNow;
         }
     }
 }

@@ -79,7 +79,7 @@ namespace ADService.Details
         internal AccessRuleInformation(in string name, in HashSet<string> propertySet, in ActiveDirectoryAccessRule accessRule)
         {
             NameAttribute = name;
-            PropertySet   = propertySet ?? new HashSet<string>(0);
+            PropertySet = propertySet ?? new HashSet<string>(0);
 
             WasAllow = accessRule.AccessControlType == AccessControlType.Allow;
             IsInherited = accessRule.IsInherited;
@@ -103,7 +103,7 @@ namespace ADService.Details
         internal static AccessRuleRightFlags CombineAccessRuleRightFlags(in string attributeName, in bool wasInherited, params AccessRuleInformation[] accessRuleInformations)
         {
             // 紀錄允許的權限
-            AccessRuleRightFlags accessRuleRightFlagsIsAllow    = AccessRuleRightFlags.None;
+            AccessRuleRightFlags accessRuleRightFlagsIsAllow = AccessRuleRightFlags.None;
             // 紀錄不允許的權限
             AccessRuleRightFlags accessRuleRightFlagsIsDisallow = AccessRuleRightFlags.None;
             // 遍歷所有存取權限

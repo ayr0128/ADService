@@ -20,7 +20,7 @@ namespace ADService.Certification
         /// </summary>
         internal AnalyticalReName() : base(Methods.M_RENAME) { }
 
-        internal override (bool, InvokeCondition, string) Invokable(in LDAPEntriesMedia entriesMedia, in LDAPObject invoker, in LDAPObject destination)
+        internal override (bool, InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
         {
             // 根目錄不應重新命名
             if (!destination.GetOrganizationUnit(out _))
@@ -116,7 +116,7 @@ namespace ADService.Certification
                         string receivedNameFormat = $"{Properties.P_OU}={name}";
 
                         // 組織單位時: 父層底下不應有任何其他新名稱物件
-                        using (DirectoryEntry entryRoot = certification.EntriesMedia.ByDistinguisedName(distinguishedName))
+                        using (DirectoryEntry entryRoot = certification.Dispatcher.ByDistinguisedName(distinguishedName))
                         {
                             // [TODO] 應使用加密字串避免注入式攻擊
                             string encoderFiliter = $"(&({receivedNameFormat}))";
@@ -137,7 +137,7 @@ namespace ADService.Certification
                         // 重新命名用的結構
                         string receivedNameFormat = $"{Properties.P_CN}={name}";
                         // 群組, 電腦, 成員時: 根目錄底下不應有任何其他新名稱的相同物件
-                        using (DirectoryEntry entryRoot = certification.EntriesMedia.DomainRoot())
+                        using (DirectoryEntry entryRoot = certification.Dispatcher.DomainRoot())
                         {
                             // [TODO] 應使用加密字串避免注入式攻擊
                             string encoderFiliter = $"(&({receivedNameFormat}))";

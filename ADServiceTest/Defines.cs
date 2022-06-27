@@ -2,7 +2,6 @@
 using ADService.Certification;
 using ADService.Environments;
 using ADService.Foundation;
-using ADService.Media;
 using ADService.Protocol;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
@@ -135,10 +134,10 @@ namespace ADServiceFrameworkTest
     {
         // 登入使用者的資訊
         internal const string AccountUser = "黃彥程";
-        internal const string Password    = "@7847SRX";
+        internal const string Password = "@7847SRX";
 
         // 根網域的 DNS 資訊
-        internal const string RootDCSimple  = "ayr.test.idv";
+        internal const string RootDCSimple = "ayr.test.idv";
         internal const string RootDCComplex = "DC=ayr,DC=test,DC=idv";
 
         // 用來測試的部門區分名稱與相關資料
@@ -149,9 +148,9 @@ namespace ADServiceFrameworkTest
         internal const string OriginPERSON1 = "CN=HuangYanChangYC,DC=ayr,DC=test,DC=idv";
 
         // 用來測試的群組
-        internal const string OriginGROUP1     = "CN=w1,OU=新北分部,DC=ayr,DC=test,DC=idv";
+        internal const string OriginGROUP1 = "CN=w1,OU=新北分部,DC=ayr,DC=test,DC=idv";
         internal const string ModifyGROUP1Name = "m1";
-        internal const string OriginGROUP2     = "CN=w2,OU=台中分部,DC=ayr,DC=test,DC=idv";
+        internal const string OriginGROUP2 = "CN=w2,OU=台中分部,DC=ayr,DC=test,DC=idv";
         internal const string OriginGROUP2Name = "w2";
 
         // 登入伺服器位置
@@ -417,28 +416,36 @@ namespace ADServiceFrameworkTest
             }
             #endregion
             #region 模擬客戶端可發送協議至伺服器端進行的異動行為
-            // 模擬客戶端發送的異動封包格式
-            JToken modifiedProtocol = JToken.FromObject(dictionaryModify);
-
-            // 驗證目標協議是否可透過方法進行異動
-            bool isAuthenicatableModified = certificate.AuthenicateMethod(method, modifiedProtocol);
-            // 驗證
-            Assert.IsTrue(isAuthenicatableModified, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時執行異動的驗證方法時:{method} 應通過 ");
-
             // 不論是否經過驗證都可以呼叫執行方法, 但是如果驗證不通過將不產生任何影響
-            Dictionary<string, LDAPObject> dictionaryDNWithModified = certificate.InvokeMethod(method, modifiedProtocol);
+            Dictionary<string, LDAPObject> dictionaryDNWithModified = new Dictionary<string, LDAPObject>();
+            // 有異動項目時產生異動
+            if (dictionaryModify.Count != 0)
+            {
+                // 模擬客戶端發送的異動封包格式
+                JToken modifiedProtocol = JToken.FromObject(dictionaryModify);
+                // 驗證目標協議是否可透過方法進行異動
+                bool isAuthenicatableModified = certificate.AuthenicateMethod(method, modifiedProtocol);
+                // 驗證
+                Assert.IsTrue(isAuthenicatableModified, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時執行異動的驗證方法時:{method} 應通過 ");
+                // 不論是否經過驗證都可以呼叫執行方法, 但是如果驗證不通過將不產生任何影響
+                dictionaryDNWithModified = certificate.InvokeMethod(method, modifiedProtocol);
+            }
             #endregion
             #region 還原剛剛的異動行為
-            // 模擬客戶端發送的異動封包格式
-            JToken recoverProtocol = JToken.FromObject(dictionaryOrigin);
-
-            // 驗證目標協議是否可透過方法進行異動
-            bool isAuthenicatableRecover = certificate.AuthenicateMethod(method, recoverProtocol);
-            // 驗證
-            Assert.IsTrue(isAuthenicatableRecover, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時執行還原的驗證方法時:{method} 應通過 ");
-
             // 不論是否經過驗證都可以呼叫執行方法, 但是如果驗證不通過將不產生任何影響
-            Dictionary<string, LDAPObject> dictionaryDNWithRecover = certificate.InvokeMethod(method, recoverProtocol);
+            Dictionary<string, LDAPObject> dictionaryDNWithRecover = new Dictionary<string, LDAPObject>();
+            // 有異動項目時產生異動
+            if (dictionaryModify.Count != 0)
+            {
+                // 模擬客戶端發送的異動封包格式
+                JToken recoverProtocol = JToken.FromObject(dictionaryOrigin);
+                // 驗證目標協議是否可透過方法進行異動
+                bool isAuthenicatableRecover = certificate.AuthenicateMethod(method, recoverProtocol);
+                // 驗證
+                Assert.IsTrue(isAuthenicatableRecover, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時執行還原的驗證方法時:{method} 應通過 ");
+                // 不論是否經過驗證都可以呼叫執行方法, 但是如果驗證不通過將不產生任何影響
+                dictionaryDNWithRecover = certificate.InvokeMethod(method, recoverProtocol);
+            }
             #endregion
             #region 驗證異動與還原行為
             // 驗證
@@ -595,7 +602,7 @@ namespace ADServiceFrameworkTest
             // 指定方法應支援
             Assert.IsTrue(isAuthenicateRecoverMoveTo, $"使用者:{user.DistinguishedName} 應能還原指定目標物件:{distinguishedNameMove} 至原始位置:{distinguishedNameParent} ");
             // 還原目標物件
-            Dictionary<string, LDAPObject> dictionaryDNWithRecover = certificate.InvokeMethod( methodSupported, recoverMoveTo);
+            Dictionary<string, LDAPObject> dictionaryDNWithRecover = certificate.InvokeMethod(methodSupported, recoverMoveTo);
             // 須包含目標物件
             Assert.IsTrue(dictionaryDNWithRecover.ContainsKey(newDistinguishedName), $"異動的影響結果應包含:{newDistinguishedName} ");
             #endregion
@@ -662,7 +669,7 @@ namespace ADServiceFrameworkTest
             // 指定方法應支援
             Assert.IsTrue(isAuthenicateRecoverPWD, $"使用者:{user.DistinguishedName} 應能還原指定目標物件:{distinguishedNameMove} 至原始位置:{distinguishedNameParent} ");
             // 還原目標物件
-            Dictionary<string, LDAPObject> dictionaryDNWithRecover = certificate.InvokeMethod( methodSupported, recoverPWD);
+            Dictionary<string, LDAPObject> dictionaryDNWithRecover = certificate.InvokeMethod(methodSupported, recoverPWD);
             // 須包含目標物件
             Assert.IsTrue(dictionaryDNWithRecover.ContainsKey(distinguishedNameMove), $"還原的影響結果應包含:{distinguishedNameMove} ");
             #endregion

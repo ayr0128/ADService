@@ -39,7 +39,7 @@ namespace ADService.Certification
         {
             RequiredCommit = false; // 預設: 沒有被異動不須簽入\
 
-            Entry      = entry;
+            Entry = entry;
             Properties = one.Properties;
         }
 
@@ -58,6 +58,8 @@ namespace ADService.Certification
             {
                 // 需要推入異動
                 Entry.CommitChanges();
+                // 刷新快取: 獲取之前推入的部分
+                Entry.RefreshCache();
             }
 
             // 喚起完成行為
@@ -75,21 +77,21 @@ namespace ADService.Certification
         /// <summary>
         /// 紀錄外部提供的入口物件創建器
         /// </summary>
-        internal readonly LDAPEntriesMedia EntriesMedia;
+        internal readonly LDAPConfigurationDispatcher Dispatcher;
 
         /// <summary>
         /// 初始化時須提供持有此簽證的持有者入口物件
         /// </summary>
-        /// <param name="entriesMedia">物件分析氣</param>
+        /// <param name="dispatcher">物件分析氣</param>
         /// <param name="distinguishedName">持有者區分名稱</param>
-        internal CertificationProperties(in LDAPEntriesMedia entriesMedia, in string distinguishedName)
+        internal CertificationProperties(in LDAPConfigurationDispatcher dispatcher, in string distinguishedName)
         {
-            EntriesMedia = entriesMedia;
+            Dispatcher = dispatcher;
 
             // 取得入口物件
-            DirectoryEntry entry = EntriesMedia.ByDistinguisedName(distinguishedName);
+            DirectoryEntry entry = Dispatcher.ByDistinguisedName(distinguishedName);
             // [TODO] 應使用加密字串避免注入式攻擊
-            string encoderFiliter = LDAPEntries.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, distinguishedName);
+            string encoderFiliter = LDAPConfiguration.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, distinguishedName);
             // 找尋某些額外參數
             using (DirectorySearcher searcher = new DirectorySearcher(entry, encoderFiliter, LDAPObject.PropertiesToLoad, SearchScope.Base))
             {

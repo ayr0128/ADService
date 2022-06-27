@@ -17,12 +17,12 @@ namespace ADService.Certification
         /// </summary>
         internal AnalyticalShowDetail() : base(Methods.M_SHOWDETAIL, true) { }
 
-        internal override (bool, InvokeCondition, string) Invokable(in LDAPEntriesMedia entriesMedia, in LDAPObject invoker, in LDAPObject destination)
+        internal override (bool, InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
         {
             // 宣告異動細節分析氣
             AnalyticalModifyDetail analyticalModifyDetail = new AnalyticalModifyDetail();
             // 是否能展示須根據是否能異動決定
-            (bool invokable, _, string message) = analyticalModifyDetail.Invokable(entriesMedia, invoker, destination);
+            (bool invokable, _, string message) = analyticalModifyDetail.Invokable(dispatcher, invoker, destination);
             // 若不可呼叫
             if (!invokable)
             {

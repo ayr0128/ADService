@@ -61,7 +61,7 @@ namespace ADService.Protocol
         /// 協議內容: 根據旗標可得知如何解析
         /// </summary>
 
-        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)] 
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public Dictionary<string, object> Details { get; private set; }
 
         /// <summary>

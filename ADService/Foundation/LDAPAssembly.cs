@@ -15,16 +15,16 @@ namespace ADService.Foundation
         /// 找尋目標入口下所有的組織單位與成員和群組並組成組織單位對外回傳
         /// </summary>
         /// <param name="entry">入口物件</param>
-        /// <param name="entriesMedia">入口物件創建器</param>
+        /// <param name="dispatcher">入口物件創建器</param>
         /// <param name="extendFlags">找尋 <see cref="CategoryTypes">旗標</see>, 必須指定至少一種物件類型</param>
         /// <returns>組織單位</returns>
         /// <exception cref="LDAPExceptions">非支援物件類型或特性鍵值解析發生錯誤時對外丟出</exception>
-        internal static List<LDAPObject> WithChild(in DirectoryEntry entry, in LDAPEntriesMedia entriesMedia, in CategoryTypes extendFlags)
+        internal static List<LDAPObject> WithChild(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher, in CategoryTypes extendFlags)
         {
             // 找到須限制的物件類型
             Dictionary<CategoryTypes, string> dictionaryLimitedCategory = LDAPCategory.GetValuesByTypes(extendFlags);
             // [TODO] 應使用加密字串避免注入式攻擊
-            string encoderFiliter = LDAPEntries.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values);
+            string encoderFiliter = LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values);
             // 沒有指定找尋組織單位底下物件類型
             if (string.IsNullOrEmpty(encoderFiliter))
             {
@@ -46,7 +46,7 @@ namespace ADService.Foundation
                         using (DirectoryEntry entryOne = one.GetDirectoryEntry())
                         {
                             // 轉換為基礎物件: 不可能轉換失敗
-                            LDAPObject objectSearched = ToObject(entryOne, entriesMedia, one.Properties);
+                            LDAPObject objectSearched = ToObject(entryOne, dispatcher, one.Properties);
                             // 推入轉換完成的物件
                             objectMixedLists.Add(objectSearched);
                         }
@@ -76,10 +76,10 @@ namespace ADService.Foundation
         /// </summary>
         /// <param name="entry">入口物件</param>
         /// <param name="limitedType">限制類型</param>
-        /// <param name="entriesMedia">入口物件創建器</param>
+        /// <param name="dispatcher">入口物件創建器</param>
         /// <param name="propertiesResult">透過找尋取得字的屬性</param>
         /// <exception cref="LDAPExceptions">移除外部整理過屬於此組織單位的成員或組織單位後還有其他剩餘資料時丟出</exception>
-        internal LDAPAssembly(in DirectoryEntry entry, in CategoryTypes limitedType, in LDAPEntriesMedia entriesMedia, in ResultPropertyCollection propertiesResult) : base(entry, entriesMedia, propertiesResult)
+        internal LDAPAssembly(in DirectoryEntry entry, in CategoryTypes limitedType, in LDAPConfigurationDispatcher dispatcher, in ResultPropertyCollection propertiesResult) : base(entry, dispatcher, propertiesResult)
         {
             // 不是允許類型的其中一種
             if ((limitedType & Type & CategoryTypes.ALL_CONTAINERS) == CategoryTypes.NONE)

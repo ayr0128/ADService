@@ -74,7 +74,7 @@ namespace ADService.Certification
         /// <param name="isShowed">是否展示在功能列表</param>
         internal AnalyticalModifyDetail(in string name, in bool isShowed) : base(name, isShowed) { }
 
-        internal override (bool, InvokeCondition, string) Invokable(in LDAPEntriesMedia entriesMedia, in LDAPObject invoker, in LDAPObject destination)
+        internal override (bool, InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
         {
             // 整合各 SID 權向狀態
             AccessRuleInformation[] accessRuleInformations = GetAccessRuleInformations(invoker, destination);
@@ -470,7 +470,7 @@ namespace ADService.Certification
                             if (researchDNHashSet.Count != 0)
                             {
                                 // 取得根目錄
-                                using (DirectoryEntry entryRoot = certification.EntriesMedia.DomainRoot())
+                                using (DirectoryEntry entryRoot = certification.Dispatcher.DomainRoot())
                                 {
                                     // 找到須限制的物件類型
                                     Dictionary<CategoryTypes, string> dictionaryLimitedCategory = LDAPCategory.GetValuesByTypes(CategoryTypes.GROUP | CategoryTypes.PERSON);
@@ -479,7 +479,7 @@ namespace ADService.Certification
                                         - 限制只找尋特定區分名稱
                                         [TODO] 應使用加密字串避免注入式攻擊
                                     */
-                                    string encoderFiliter = $"(&{LDAPEntries.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}{LDAPEntries.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, researchDNHashSet)})";
+                                    string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, researchDNHashSet)})";
                                     // 應從根目錄進行搜尋
                                     using (DirectorySearcher seacher = new DirectorySearcher(entryRoot, encoderFiliter, LDAPObject.PropertiesToLoad))
                                     {
@@ -501,7 +501,7 @@ namespace ADService.Certification
                                             foreach (SearchResult one in all)
                                             {
                                                 // 取得區分名稱
-                                                string distinguishedName = LDAPEntries.ParseSingleValue<string>(Properties.C_DISTINGGUISHEDNAME, one.Properties);
+                                                string distinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGGUISHEDNAME, one.Properties);
                                                 /* 根據異動目標判斷異動權限是否不可用
                                                      1. 異動資料是自己, 不包含異動自己的權限
                                                      2. 異動資料不是自己, 不包含異動的權限
@@ -581,7 +581,7 @@ namespace ADService.Certification
                             if (researchDNHashSet.Count != 0)
                             {
                                 // 取得根目錄
-                                using (DirectoryEntry entryRoot = certification.EntriesMedia.DomainRoot())
+                                using (DirectoryEntry entryRoot = certification.Dispatcher.DomainRoot())
                                 {
                                     // 找到須限制的物件類型
                                     Dictionary<CategoryTypes, string> dictionaryLimitedCategory = LDAPCategory.GetValuesByTypes(CategoryTypes.GROUP);
@@ -590,7 +590,7 @@ namespace ADService.Certification
                                         - 限制只找尋特定區分名稱
                                         [TODO] 應使用加密字串避免注入式攻擊
                                     */
-                                    string encoderFiliter = $"(&{LDAPEntries.GetORFiliter(Properties.C_OBJECTCATEGORY,dictionaryLimitedCategory.Values)}{LDAPEntries.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, researchDNHashSet)})";
+                                    string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY,dictionaryLimitedCategory.Values)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, researchDNHashSet)})";
                                     // 應從根目錄進行搜尋
                                     using (DirectorySearcher seacher = new DirectorySearcher(entryRoot, encoderFiliter, LDAPObject.PropertiesToLoad))
                                     {
@@ -610,7 +610,7 @@ namespace ADService.Certification
                                             foreach (SearchResult one in all)
                                             {
                                                 // 取得區分名稱
-                                                string distinguishedName = LDAPEntries.ParseSingleValue<string>(Properties.C_DISTINGGUISHEDNAME, one.Properties);
+                                                string distinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGGUISHEDNAME, one.Properties);
                                                 // 設定並轉換成入口物件
                                                 certification.SetEntry(one, distinguishedName);
                                             }
@@ -634,7 +634,7 @@ namespace ADService.Certification
                                 }
 
                                 // 轉換成基礎物件
-                                LDAPObject entryObject = LDAPObject.ToObject(set.Entry, certification.EntriesMedia, set.Properties);
+                                LDAPObject entryObject = LDAPObject.ToObject(set.Entry, certification.Dispatcher, set.Properties);
 
                                 // 整合各 SID 權向狀態
                                 AccessRuleInformation[] accessRuleInformationsMember = GetAccessRuleInformations(invoker, entryObject);

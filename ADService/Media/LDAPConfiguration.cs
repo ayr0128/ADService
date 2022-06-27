@@ -1,17 +1,17 @@
 ﻿using ADService.Environments;
 using ADService.Protocol;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.DirectoryServices;
-using System.Runtime.InteropServices;
 using System.Security.Principal;
 
 namespace ADService.Media
 {
     /// <summary>
-    /// 創建伺服器連線資訊時同步宣告, 儲存伺服器連線相關資訊並提供呼叫方法
+    /// 內部使用的存取權限轉換器
     /// </summary>
-    internal class LDAPEntries
+    internal sealed class LDAPConfiguration
     {
         #region 通用搜尋字串
         /// <summary>
@@ -285,6 +285,28 @@ namespace ADService.Media
         #endregion
 
         /// <summary>
+        /// 設定入口物件位置
+        /// </summary>
+        internal const string CONTEXT_CONFIGURATION = "configurationNamingContext";
+        /// <summary>
+        /// 資料過期時間, 可以考慮由外部設置
+        /// </summary>
+        internal const long EXPIRES_TIME = TimeSpan.TicksPerMinute * 5;
+
+        /// <summary>
+        /// 是否為空 GUID
+        /// </summary>
+        /// <param name="value">檢查 GUID </param>
+        /// <returns>是否為空</returns>
+        internal static bool IsGUIDEmpty(in Guid value) => value.Equals(Guid.Empty);
+        /// <summary>
+        /// 是否為空 GUID
+        /// </summary>
+        /// <param name="value">檢查 GUID </param>
+        /// <returns>是否為空</returns>
+        internal static bool IsGUIDEmpty(in string value) => !Guid.TryParse(value, out Guid convertedValue) || IsGUIDEmpty(convertedValue);
+
+        /// <summary>
         /// 連線網域: 可用 IP 或 網址, 根據實作方式限制
         /// </summary>
         internal readonly string Domain;
@@ -298,188 +320,194 @@ namespace ADService.Media
         /// </summary>
         /// <param name="domain">指定網域</param>
         /// <param name="port">指定埠</param>
-        internal LDAPEntries(string domain, ushort port)
+        internal LDAPConfiguration(string domain, ushort port)
         {
             Domain = domain;
             Port = port;
         }
 
         /// <summary>
-        /// 提供使用者名稱與密碼, 將透過此使用者的權限與伺服器聯繫並取得相關物件
+        /// 創建一個獨立的執行續安全分配器
         /// </summary>
         /// <param name="userName">使用者名稱</param>
         /// <param name="password">使用者密碼</param>
-        /// <returns>提供透過使用者權限與伺服器聯繫並取得入口物件相關功能的介面</returns>
-        internal LDAPEntriesMedia GetCreator(in string userName, in string password) => new LDAPEntriesMedia(userName, password, Domain, Port);
-    }
+        /// <returns>執行續安全的設定取得結構</returns>
+        internal LDAPConfigurationDispatcher Dispatch(in string userName, in string password) => new LDAPConfigurationDispatcher(userName, password, this);
 
-    /// <summary>
-    /// 繼承了取得入口物件方法的媒介類別
-    /// </summary>
-    internal sealed class LDAPEntriesMedia 
-    {
+        #region 取得藍本物件
         /// <summary>
-        /// 使用者名稱
+        /// 藍本物件陣列
         /// </summary>
-        internal readonly string UserName;
-        /// <summary>
-        /// 使用者密碼
-        /// </summary>
-        internal readonly string Password;
-        /// <summary>
-        /// 往玉
-        /// </summary>
-        internal readonly string Domain;
-        /// <summary>
-        /// 埠
-        /// </summary>
-        internal readonly ushort Port;
+        private readonly ConcurrentDictionary<string, UnitSchema> dictionaryGUIDWithUnitSchema = new ConcurrentDictionary<string, UnitSchema>();
 
         /// <summary>
-        /// 創建實體用來對外提供創建入口功能
+        /// 使用 GUID 進行搜尋指定目標藍本物件
         /// </summary>
-        /// <param name="userName">使用者名稱</param>
-        /// <param name="password">密碼</param>
-        /// <param name="domain">目標網域</param>
-        /// <param name="port">目標埠</param>
-        internal LDAPEntriesMedia(in string userName, in string password, in string domain, in ushort port)
+        /// <param name="dispatcher">入口物件製作器</param>
+        /// <param name="value">目標 GUID</param>
+        /// <returns>指定藍本物件, 可能不存在</returns>
+        internal UnitSchema GetSchema(in LDAPConfigurationDispatcher dispatcher, in Guid value)
         {
-            UserName = userName;
-            Password = password;
-            Domain = domain;
-            Port = port;
-        }
-
-        /// <summary>
-        /// 透過使用者的權限取得網域入口物件, 注意如果無法創建會丟出各種例外, 取得的入口物件也需進行 <see cref="IDisposable">釋放</see> 行為
-        /// </summary>
-        /// <returns>入口物件, 使用完畢務必<see cref="IDisposable">釋放</see> </returns>
-        /// <exception cref="COMException">使用者無法連線至目標網域伺服器時對外丟出</exception>
-        /// <exception cref="DirectoryServicesCOMException">可以連線至目標網域伺服器, 但是帳號或密碼不正確...等相關錯誤</exception>
-        internal DirectoryEntry DomainRoot()
-        {
-            // 使用提供的使用者帳號密碼連線至根網域物件: 此時有可能丟出的例外: 伺服器無法連線
-            DirectoryEntry entryRoot = new DirectoryEntry($"LDAP://{Domain}:{Port}", UserName, Password);
-            /* 使用其中一個物件用以判斷是有正確取得資料, 此時有可能丟出的例外:
-                 - 帳號密碼錯誤
-                 - 帳號禁用
-                 - 密碼過期
-                 - 非可登入時間
+            // 由於儲存結構中醫慮採用小寫, 所以搜尋參數於搜尋前須改為小寫
+            string valueGUID = value.ToString("D").ToLower();
+            /* 符合下述規則時重新搜尋
+                 1. 資料不存在
+                 2. 存在超過預計時間
             */
-            _ = entryRoot.NativeGuid;
-            // 運行至此應可正常取得相關入口物件
-            return entryRoot;
-        }
-
-        /// <summary>
-        /// 透過使用者的權限取得網域設定物件, 注意如果無法創建會丟出各種例外, 取得的入口物件也需進行 <see cref="IDisposable">釋放</see> 行為
-        /// </summary>
-        /// <returns>設定物件, 使用完畢務必<see cref="IDisposable">釋放</see> </returns>
-        /// <exception cref="COMException">使用者無法連線至目標網域伺服器時對外丟出</exception>
-        /// <exception cref="DirectoryServicesCOMException">可以連線至目標網域伺服器, 但是帳號或密碼不正確...等相關錯誤</exception>
-        internal DirectoryEntry DSERoot()
-        {
-            // 使用提供的使用者帳號密碼連線至根網域設定物件: 此時有可能丟出的例外: 伺服器無法連線
-            DirectoryEntry entryRoot = new DirectoryEntry($"LDAP://{Domain}:{Port}/rootDSE", UserName, Password);
-            /* 使用其中一個物件用以判斷是有正確取得資料, 此時有可能丟出的例外:
-                 - 帳號密碼錯誤
-                 - 帳號禁用
-                 - 密碼過期
-                 - 非可登入時間
-            */
-            _ = entryRoot.NativeGuid;
-            // 運行至此應可正常取得相關入口物件
-            return entryRoot;
-        }
-
-        /// <summary>
-        /// 透過使用者的權限取得指定區分名稱物件作為入口物件, 注意如果無法創建會丟出各種例外, 取得的入口物件也需進行 <see cref="IDisposable">釋放</see> 行為
-        /// </summary>
-        /// <param name="distinguisedName">指定物件的區分名稱</param>
-        /// <returns>入口物件, 使用完畢務必<see cref="IDisposable">釋放</see> </returns>
-        /// <exception cref="COMException">使用者無法連線至目標網域伺服器時對外丟出</exception>
-        /// <exception cref="DirectoryServicesCOMException">可以連線至目標網域伺服器, 但是帳號或密碼不正確, 指定物件不存在...等相關錯誤</exception>
-        internal DirectoryEntry ByDistinguisedName(in string distinguisedName)
-        {
-            // 區分名稱為空或不存在: 簡易防呆
-            if (string.IsNullOrWhiteSpace(distinguisedName))
+            bool needResearch = !dictionaryGUIDWithUnitSchema.TryGetValue(valueGUID, out UnitSchema result) || (DateTime.UtcNow - result.EnableTime).Ticks > EXPIRES_TIME;
+            // 找尋目標藍本結構
+            if (!IsGUIDEmpty(value) && needResearch)
             {
-                // 對外丟出 ArgumentException
-                throw new ArgumentException($"'{nameof(distinguisedName)}' 不得為 Null 或空白字元。", nameof(distinguisedName));
+                // 重新建立藍本結構
+                UnitSchema newValue = UnitSchema.Get(dispatcher, value);
+                // 籌溝死得時
+                if (newValue != null)
+                {
+                    // 先移除舊的資料
+                    dictionaryGUIDWithUnitSchema.TryRemove(valueGUID, out _);
+                    // 使用新增過更新動作
+                    dictionaryGUIDWithUnitSchema.TryAdd(valueGUID, newValue);
+                }
+                // 將舊有資料換成新的
+                result = newValue;
+            }
+            // 對外提供取得的資料: 注意可能為空
+            return result;
+        }
+
+        /// <summary>
+        /// 使用展示名稱 進行搜尋指定目標藍本物件
+        /// </summary>
+        /// <param name="dispatcher">入口物件製作器</param>
+        /// <param name="value">展示名稱</param>
+        /// <returns>指定藍本物件, 可能不存在</returns>
+        internal UnitSchema GetSchema(in LDAPConfigurationDispatcher dispatcher, in string value)
+        {
+            // 由於儲存結構中醫慮採用小寫, 所以搜尋參數於搜尋前須改為小寫
+            string valueLower = value.ToLower();
+            // 透過本身持有的功能轉換成陣列, 避免多執行續狀況下的錯誤
+            KeyValuePair<string, UnitSchema>[] pairs = dictionaryGUIDWithUnitSchema.ToArray();
+            // 轉換成根據查詢結構: 若此處出現錯誤則必定是羅錯誤導致加入重複物件
+            Dictionary<string, UnitSchema> dictionaryNameWithUnitSchema = new Dictionary<string, UnitSchema>(pairs.Length);
+            // 初始化使用展示名稱作為鍵值的字典
+            foreach (KeyValuePair<string, UnitSchema> pair in pairs)
+            {
+                // 設置舊資料至本次茶燻需使用的字典
+                dictionaryNameWithUnitSchema.Add(pair.Key, pair.Value);
             }
 
-            // 使用提供的使用者帳號密碼連線至根網域物件: 此時有可能丟出的例外: 伺服器無法連線
-            DirectoryEntry entryRoot = new DirectoryEntry($"LDAP://{Domain}:{Port}/{distinguisedName}", UserName, Password, AuthenticationTypes.Secure | AuthenticationTypes.ServerBind);
-            /* 使用其中一個物件用以判斷是有正確取得資料, 此時有可能丟出的例外:
-                 - 帳號密碼錯誤
-                 - 帳號禁用
-                 - 密碼過期
-                 - 非可登入時間
-                 - 指定物件不存在
+            /* 符合下述規則時重新搜尋
+                 1. 資料不存在
+                 2. 存在超過預計時間
             */
-            _ = entryRoot.NativeGuid;
-            // 運行至此應可正常取得相關入口物件
-            return entryRoot;
+            bool needResearch = !dictionaryNameWithUnitSchema.TryGetValue(valueLower, out UnitSchema result) || (DateTime.UtcNow - result.EnableTime).Ticks > EXPIRES_TIME;
+            // 找尋目標藍本結構
+            if (!string.IsNullOrWhiteSpace(valueLower) && needResearch)
+            {
+                // 重新建立藍本結構
+                UnitSchema newValue = UnitSchema.Get(dispatcher, valueLower);
+                // 籌溝死得時
+                if (newValue != null)
+                {
+                    // 先移除舊的資料
+                    dictionaryGUIDWithUnitSchema.TryRemove(newValue.SchemaGUID, out _);
+                    // 使用新增過更新動作
+                    dictionaryGUIDWithUnitSchema.TryAdd(newValue.SchemaGUID, newValue);
+                }
+                // 將舊有資料換成新的
+                result = newValue;
+            }
+            // 對外提供取得的資料: 注意可能為空
+            return result;
+        }
+        #endregion
+
+        #region 取得額外權限
+        /// <summary>
+        /// 額外權限陣列
+        /// </summary>
+        private readonly ConcurrentDictionary<string, UnitExtendedRight> dictionaryGUIDWithUnitExtendedRight = new ConcurrentDictionary<string, UnitExtendedRight>();
+
+        /// <summary>
+        /// 使用 GUID 進行搜尋指定目標額外權限物件
+        /// </summary>
+        /// <param name="dispatcher">入口物件製作器</param>
+        /// <param name="value">目標 GUID</param>
+        /// <returns>指定額外權限物件, 可能不存在</returns>
+        internal UnitExtendedRight GetExtendedRight(in LDAPConfigurationDispatcher dispatcher, in Guid value)
+        {
+            // 由於儲存結構中醫慮採用小寫, 所以搜尋參數於搜尋前須改為小寫
+            string valueGUID = value.ToString("D").ToLower();
+            /* 符合下述規則時重新搜尋
+                 1. 資料不存在
+                 2. 存在超過預計時間
+            */
+            bool needResearch = !dictionaryGUIDWithUnitExtendedRight.TryGetValue(valueGUID, out UnitExtendedRight result) || (DateTime.UtcNow - result.EnableTime).Ticks > EXPIRES_TIME;
+            // 找尋目標額外權限
+            if (!IsGUIDEmpty(value) && needResearch)
+            {
+                // 重新建立藍本結構
+                UnitExtendedRight newValue = UnitExtendedRight.Get(dispatcher, value);
+                // 籌溝死得時
+                if (newValue != null)
+                {
+                    // 先移除舊的資料
+                    dictionaryGUIDWithUnitExtendedRight.TryRemove(valueGUID, out _);
+                    // 使用新增過更新動作
+                    dictionaryGUIDWithUnitExtendedRight.TryAdd(valueGUID, newValue);
+                }
+                // 將舊有資料換成新的
+                result = newValue;
+            }
+            // 對外提供取得的資料: 注意可能為空
+            return result;
         }
 
         /// <summary>
-        /// 透過使用者的權限取得指定 GUID 物件作為入口物件, 注意如果無法創建會丟出各種例外, 取得的入口物件也需進行 <see cref="IDisposable">釋放</see> 行為
+        /// 透過展示名稱取額指定額外全縣
         /// </summary>
-        /// <param name="GUID">指定物件的 GUID</param>
-        /// <returns>入口物件, 使用完畢務必<see cref="IDisposable">釋放</see> </returns>
-        /// <exception cref="COMException">使用者無法連線至目標網域伺服器時對外丟出</exception>
-        /// <exception cref="DirectoryServicesCOMException">可以連線至目標網域伺服器, 但是帳號或密碼不正確, 指定物件不存在...等相關錯誤</exception>
-        internal DirectoryEntry ByGUID(in string GUID)
+        /// <param name="dispatcher">入口物件製作器</param>
+        /// <param name="value">展示名稱</param>
+        /// <returns>指定額外權限物件, 可能不存在</returns>
+        internal UnitExtendedRight GetExtendedRight(in LDAPConfigurationDispatcher dispatcher, in string value)
         {
-            // 區分名稱為空或不存在: 簡易防呆
-            if (string.IsNullOrWhiteSpace(GUID))
+            // 由於儲存結構中醫慮採用小寫, 所以搜尋參數於搜尋前須改為小寫
+            string valueLower = value.ToLower();
+            // 透過本身持有的功能轉換成陣列, 避免多執行續狀況下的錯誤
+            KeyValuePair<string, UnitExtendedRight>[] pairs = dictionaryGUIDWithUnitExtendedRight.ToArray();
+            // 轉換成根據查詢結構: 若此處出現錯誤則必定是羅錯誤導致加入重複物件
+            Dictionary<string, UnitExtendedRight> dictionaryNameWithUnitExtendedRight = new Dictionary<string, UnitExtendedRight>(pairs.Length);
+            // 初始化使用展示名稱作為鍵值的字典
+            foreach (KeyValuePair<string, UnitExtendedRight> pair in pairs)
             {
-                // 對外丟出 ArgumentException
-                throw new ArgumentException($"'{nameof(GUID)}' 不得為 Null 或空白字元。", nameof(GUID));
+                // 設置舊資料至本次茶燻需使用的字典
+                dictionaryNameWithUnitExtendedRight.Add(pair.Key, pair.Value);
             }
 
-            // 使用提供的使用者帳號密碼連線至根網域物件: 此時有可能丟出的例外: 伺服器無法連線
-            DirectoryEntry entryRoot = new DirectoryEntry($"LDAP://{Domain}:{Port}/<GUID={GUID}>", UserName, Password);
-            /* 使用其中一個物件用以判斷是有正確取得資料, 此時有可能丟出的例外:
-                 - 帳號密碼錯誤
-                 - 帳號禁用
-                 - 密碼過期
-                 - 非可登入時間
-                 - 指定物件不存在
+            /* 符合下述規則時重新搜尋
+                 1. 資料不存在
+                 2. 存在超過預計時間
             */
-            _ = entryRoot.NativeGuid;
-            // 運行至此應可正常取得相關入口物件
-            return entryRoot;
-        }
-
-        /// <summary>
-        /// 透過使用者的權限取得指定 SID 物件作為入口物件, 注意如果無法創建會丟出各種例外, 取得的入口物件也需進行 <see cref="IDisposable">釋放</see> 行為
-        /// </summary>
-        /// <param name="SID">指定物件的 SID</param>
-        /// <returns>入口物件, 使用完畢務必<see cref="IDisposable">釋放</see> </returns>
-        /// <exception cref="COMException">使用者無法連線至目標網域伺服器時對外丟出</exception>
-        /// <exception cref="DirectoryServicesCOMException">可以連線至目標網域伺服器, 但是帳號或密碼不正確, 指定物件不存在...等相關錯誤</exception>
-        internal DirectoryEntry BySID(in string SID)
-        {
-            // 區分名稱為空或不存在: 簡易防呆
-            if (string.IsNullOrWhiteSpace(SID))
+            bool needResearch = !dictionaryNameWithUnitExtendedRight.TryGetValue(valueLower, out UnitExtendedRight result) || (DateTime.UtcNow - result.EnableTime).Ticks > EXPIRES_TIME;
+            // 找尋目標藍本結構
+            if (!string.IsNullOrWhiteSpace(valueLower) && needResearch)
             {
-                // 對外丟出 ArgumentException
-                throw new ArgumentException($"'{nameof(SID)}' 不得為 Null 或空白字元。", nameof(SID));
+                // 重新建立藍本結構
+                UnitExtendedRight newValue = UnitExtendedRight.Get(dispatcher, valueLower);
+                // 籌溝死得時
+                if (newValue != null)
+                {
+                    // 先移除舊的資料
+                    dictionaryGUIDWithUnitExtendedRight.TryRemove(newValue.RightsGUID, out _);
+                    // 使用新增過更新動作
+                    dictionaryGUIDWithUnitExtendedRight.TryAdd(newValue.RightsGUID, newValue);
+                }
+                // 將舊有資料換成新的
+                result = newValue;
             }
-
-            // 使用提供的使用者帳號密碼連線至根網域物件: 此時有可能丟出的例外: 伺服器無法連線
-            DirectoryEntry entryRoot = new DirectoryEntry($"LDAP://{Domain}:{Port}/<SID={SID}>", UserName, Password);
-            /* 使用其中一個物件用以判斷是有正確取得資料, 此時有可能丟出的例外:
-                 - 帳號密碼錯誤
-                 - 帳號禁用
-                 - 密碼過期
-                 - 非可登入時間
-                 - 指定物件不存在
-            */
-            _ = entryRoot.NativeGuid;
-            // 運行至此應可正常取得相關入口物件
-            return entryRoot;
+            // 對外提供取得的資料: 注意可能為空
+            return result;
         }
+        #endregion
     }
 }

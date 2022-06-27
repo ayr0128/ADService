@@ -1,5 +1,4 @@
-﻿using ADService.Environments;
-using ADService.Features;
+﻿using ADService.Features;
 using ADService.Media;
 using ADService.Protocol;
 using System.Collections.Generic;
@@ -33,14 +32,14 @@ namespace ADService.Foundation
         /// 透過建構子解析內容資料
         /// </summary>
         /// <param name="entry">入口物件</param>
-        /// <param name="entriesMedia">入口物件創建器</param>
+        /// <param name="dispatcher">入口物件創建器</param>
         /// <param name="propertiesResult">透過找尋取得字的屬性</param>
-        internal LDAPEntity(in DirectoryEntry entry, in LDAPEntriesMedia entriesMedia, in ResultPropertyCollection propertiesResult) : base(entry, entriesMedia, propertiesResult)
+        internal LDAPEntity(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher, in ResultPropertyCollection propertiesResult) : base(entry, dispatcher, propertiesResult)
         {
             // 取得 memberOf: 不存在應丟出例外
             string[] memberOf = StoredProperties.GetPropertyMultiple<string>(Properties.P_MEMBEROF);
             // 初始化隸屬群組
-            MemberOf = ToRelationshipByDNs(entriesMedia, memberOf);
+            MemberOf = ToRelationshipByDNs(dispatcher, memberOf);
         }
     }
 }

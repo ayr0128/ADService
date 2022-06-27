@@ -46,9 +46,9 @@ namespace ADService.Foundation
         /// 建構新的群組
         /// </summary>
         /// <param name="entry">入口物件</param>
-        /// <param name="entriesMedia">入口物件創建器</param>
+        /// <param name="dispatcher">入口物件創建器</param>
         /// <param name="propertiesResult">透過找尋取得字的屬性</param>
-        internal LDAPGroup(in DirectoryEntry entry, in LDAPEntriesMedia entriesMedia, in ResultPropertyCollection propertiesResult) : base(entry, entriesMedia, propertiesResult)
+        internal LDAPGroup(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher, in ResultPropertyCollection propertiesResult) : base(entry, dispatcher, propertiesResult)
         {
             // 限制應為: 成員, 內部安全性群組
             const CategoryTypes TypeLimited = CategoryTypes.GROUP | CategoryTypes.ForeignSecurityPrincipals;
@@ -62,12 +62,12 @@ namespace ADService.Foundation
             // 取得 member 不存在應丟出例外
             string[] member = StoredProperties.GetPropertyMultiple<string>(Properties.P_MEMBER);
             // 初始化成員
-            Member = ToRelationshipByDNs(entriesMedia, member);
+            Member = ToRelationshipByDNs(dispatcher, member);
 
             // 初始化主要隸屬群組成員
-            Dictionary<string, LDAPRelationship> primaryRelationship = ToRelationshipByToken(entriesMedia, PrimaryGroupyToken);
+            Dictionary<string, LDAPRelationship> primaryRelationship = ToRelationshipByToken(dispatcher, PrimaryGroupyToken);
             // 將主要隸屬物件加入成員
-            Array.ForEach( primaryRelationship.Values.ToArray(), (relationship) => Member.Add(relationship.DistinguishedName, relationship) );
+            Array.ForEach(primaryRelationship.Values.ToArray(), (relationship) => Member.Add(relationship.DistinguishedName, relationship));
         }
 
         internal override LDAPObject SwapFrom(in LDAPObject newObject)

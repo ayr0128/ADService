@@ -1,10 +1,8 @@
-﻿using ADService.Media;
-using ADService.Protocol;
-using System;
+﻿using System;
 using System.DirectoryServices;
 using System.Text;
 
-namespace ADService.Configuration
+namespace ADService.Media
 {
     /// <summary>
     /// 此藍本物件相關資料
@@ -43,16 +41,15 @@ namespace ADService.Configuration
         };
 
         /// <summary>
-        /// 取得藍本的指定欄位名稱
+        /// 取得藍本
         /// </summary>
-        /// <param name="entries">入口物件製作器</param>
+        /// <param name="dispatcher">入口物件製作器</param>
         /// <param name="value">目標 GUID</param>
-        /// <param name="configurationContext">設定位置</param>
         /// <returns>藍本結構</returns>
-        internal static UnitSchema Get(in LDAPEntriesMedia entries, in Guid value, in string configurationContext)
+        internal static UnitSchema Get(in LDAPConfigurationDispatcher dispatcher, in Guid value)
         {
             // 藍本入口物件不存在
-            using (DirectoryEntry entrySchema = entries.ByDistinguisedName($"{CONTEXT_SCHEMA},{configurationContext}"))
+            using (DirectoryEntry entrySchema = dispatcher.ByDistinguisedName($"{CONTEXT_SCHEMA},{dispatcher.ConfigurationDistinguishedName}"))
             {
                 // 使用文字串流
                 StringBuilder sb = new StringBuilder();
@@ -84,16 +81,15 @@ namespace ADService.Configuration
         }
 
         /// <summary>
-        /// 取得藍本的 GUID
+        /// 取得藍本
         /// </summary>
-        /// <param name="entries">入口物件製作器</param>
+        /// <param name="dispatcher">入口物件製作器</param>
         /// <param name="value">展示名稱</param>
-        /// <param name="configurationContext">設定位置</param>
         /// <returns>藍本結構</returns>
-        internal static UnitSchema Get(in LDAPEntriesMedia entries, in string value, in string configurationContext)
+        internal static UnitSchema Get(in LDAPConfigurationDispatcher dispatcher, in string value)
         {
             // 新建立藍本入口物件
-            using (DirectoryEntry entrySchema = entries.ByDistinguisedName($"{CONTEXT_SCHEMA},{configurationContext}"))
+            using (DirectoryEntry entrySchema = dispatcher.ByDistinguisedName($"{CONTEXT_SCHEMA},{dispatcher.ConfigurationDistinguishedName}"))
             {
                 // 需使用加密避免 LDAP 注入式攻擊
                 string filiter = $"({ATTRIBUTE_SCHEMA_PROPERTY}={value})";
@@ -137,19 +133,26 @@ namespace ADService.Configuration
         internal readonly bool IsSingleValued;
 
         /// <summary>
+        /// 啟用時間
+        /// </summary>
+        internal DateTime EnableTime;
+
+        /// <summary>
         /// 實作藍本結構
         /// </summary>
         /// <param name="properties">入口物件持有的屬性</param>
         internal UnitSchema(in ResultPropertyCollection properties)
         {
             // 將名稱轉換成小寫
-            Name = LDAPEntries.ParseSingleValue<string>(ATTRIBUTE_SCHEMA_PROPERTY, properties).ToLower();
+            Name = LDAPConfiguration.ParseSingleValue<string>(ATTRIBUTE_SCHEMA_PROPERTY, properties).ToLower();
 
             // 將 GUID 轉換成小寫
-            SchemaGUID   = LDAPEntries.ParseGUID(ATTRIBUTE_SCHEMA_GUID, properties).ToLower();
-            SecurityGUID = LDAPEntries.ParseGUID(ATTRIBUTE_SCHEMA_SECURITY_GUID, properties).ToLower();
+            SchemaGUID = LDAPConfiguration.ParseGUID(ATTRIBUTE_SCHEMA_GUID, properties).ToLower();
+            SecurityGUID = LDAPConfiguration.ParseGUID(ATTRIBUTE_SCHEMA_SECURITY_GUID, properties).ToLower();
 
-            IsSingleValued = LDAPEntries.ParseSingleValue<bool>(ATTRIBUTE_SCHEMA_IS_SINGLEVALUED, properties);
+            IsSingleValued = LDAPConfiguration.ParseSingleValue<bool>(ATTRIBUTE_SCHEMA_IS_SINGLEVALUED, properties);
+
+            EnableTime = DateTime.UtcNow;
         }
     }
 }

@@ -61,7 +61,7 @@ namespace ADService.Environments
         /// </summary>
         /// <param name="message">傳遞給外部的錯誤訊息</param>
         /// <param name="errorCode">自定義錯誤編碼</param>
-        public LDAPExceptions(in string message, in ErrorCodes errorCode) : base(message) => ErrorCode  = errorCode;
+        public LDAPExceptions(in string message, in ErrorCodes errorCode) : base(message) => ErrorCode = errorCode;
 
         /// <summary>
         /// 於登入使用者發現例外時使用
@@ -71,7 +71,7 @@ namespace ADService.Environments
         public static LDAPExceptions OnNormalException(in string message)
         {
             // 包含這個特殊字串: "problem 2001 (NO_OBJECT)"
-            if ( message.IndexOf("problem 2001 (NO_OBJECT)") != -1 )
+            if (message.IndexOf("problem 2001 (NO_OBJECT)") != -1)
             {
                 // 例外: 無法找到指定物件
                 return new LDAPExceptions($"指定找尋物件但物件並不存在", ErrorCodes.OBJECT_NOTFOUND);
