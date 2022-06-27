@@ -192,10 +192,8 @@ namespace ADService.Details
         /// <exception cref="LDAPExceptions">當內部儲存資料為多筆時將拋出例外</exception>
         internal T GetPropertySingle<T>(in string propertyName)
         {
-            // 查詢的資料鍵值須為小姐
-            string nameLower = propertyName.ToLower();
             // 嘗試取得內容
-            bool isAllowed = GetProperty(nameLower, out PropertyDetail detail);
+            bool isAllowed = GetProperty(propertyName, out PropertyDetail detail);
             /* 下述任意情況出現時對外丟出例外
                  1. 不支援且資料不存在
                  2. 資料是單一述值十
@@ -220,10 +218,8 @@ namespace ADService.Details
         /// <exception cref="LDAPExceptions">當內部儲存資料為多筆時將拋出例外</exception>
         internal long GetPropertyInterval(in string propertyName)
         {
-            // 查詢的資料鍵值須為小姐
-            string nameLower = propertyName.ToLower();
             // 嘗試取得內容
-            bool isAllowed = GetProperty(nameLower, out PropertyDetail detail);
+            bool isAllowed = GetProperty(propertyName, out PropertyDetail detail);
             /* 下述任意情況出現時對外丟出例外
                  1. 不支援且資料不存在
                  2. 資料是單一述值十
@@ -260,10 +256,8 @@ namespace ADService.Details
         /// <exception cref="LDAPExceptions">當內部儲存資料為多筆時將拋出例外</exception>
         internal string GetPropertySID(in string propertyName)
         {
-            // 查詢的資料鍵值須為小姐
-            string nameLower = propertyName.ToLower();
             // 嘗試取得內容
-            bool isAllowed = GetProperty(nameLower, out PropertyDetail detail);
+            bool isAllowed = GetProperty(propertyName, out PropertyDetail detail);
             /* 下述任意情況出現時對外丟出例外
                  1. 不支援且資料不存在
                  2. 資料是單一述值十
@@ -289,10 +283,8 @@ namespace ADService.Details
         /// <exception cref="LDAPExceptions">當內部儲存資料為多筆時將拋出例外</exception>
         internal string GetPropertyGUID(in string propertyName)
         {
-            // 查詢的資料鍵值須為小姐
-            string nameLower = propertyName.ToLower();
             // 嘗試取得內容
-            bool isAllowed = GetProperty(nameLower, out PropertyDetail detail);
+            bool isAllowed = GetProperty(propertyName, out PropertyDetail detail);
             /* 下述任意情況出現時對外丟出例外
                  1. 不支援且資料不存在
                  2. 資料是單一述值十
@@ -319,10 +311,8 @@ namespace ADService.Details
         /// <exception cref="LDAPExceptions">當內部儲存資料為多筆時將拋出例外</exception>
         internal T[] GetPropertyMultiple<T>(in string propertyName)
         {
-            // 查詢的資料鍵值須為小姐
-            string nameLower = propertyName.ToLower();
             // 嘗試取得內容
-            bool isAllowed = GetProperty(nameLower, out PropertyDetail detail);
+            bool isAllowed = GetProperty(propertyName, out PropertyDetail detail);
             /* 下述任意情況出現時對外丟出例外
                  1. 不支援且資料不存在
                  2. 資料是單一述值十
@@ -335,7 +325,13 @@ namespace ADService.Details
             }
 
             // 提供查詢結果
-            return detail == null ? Array.Empty<T>() : Array.ConvertAll((object[])detail.PropertyValue, converted => (T)converted);
+            if (detail == null || detail.SizeOf == 0)
+            {
+                return Array.Empty<T>();
+            }
+
+            // 只有一個時需慘用特例處理
+            return detail.SizeOf == 1 ? new T[] { (T)detail.PropertyValue } : Array.ConvertAll((object[])detail.PropertyValue, converted => (T)converted);
         }
 
         /// <summary>
@@ -349,9 +345,9 @@ namespace ADService.Details
             // 查詢的資料鍵值須為小姐
             string nameLower = propertyName.ToLower();
             // 取得資料
-            dictionaryNameWithPorpertyDetail.TryGetValue(nameLower, out detail);
+            bool isAttributeExist = dictionaryNameWithPorpertyDetail.TryGetValue(nameLower, out detail);
             // 是否支援: 支援與否和資料是否存在沒有直接關係
-            return AllowedAttributes.Contains(nameLower);
+            return isAttributeExist || AllowedAttributes.Contains(propertyName);
         }
 
         /// <summary>

@@ -160,6 +160,8 @@ namespace ADService.Details
         /// <returns>符合規則的所有全縣</returns>
         internal static AccessRuleRightFlags CombineAccessRuleRightFlags(in string attributeName, params AccessRuleInformation[] accessRuleInformations)
         {
+            // 將需求參數改為小寫
+            string attributeNameToLower = attributeName.ToLower();
             // 紀錄允許的權限
             AccessRuleRightFlags accessRuleRightFlagsIsAllow = AccessRuleRightFlags.None;
             // 紀錄不允許的權限
@@ -168,9 +170,9 @@ namespace ADService.Details
             foreach (AccessRuleInformation accessRuleInformation in accessRuleInformations)
             {
                 // 是否為指定的存取鍵值
-                bool isAttributeName = attributeName == accessRuleInformation.NameAttribute;
+                bool isAttributeName = attributeNameToLower == accessRuleInformation.NameAttribute;
                 // 是否於關聯群組內
-                bool isInPropertySet = accessRuleInformation.PropertySet.Contains(attributeName);
+                bool isInPropertySet = accessRuleInformation.PropertySet.Contains(attributeNameToLower);
                 /* 符合下述規則時不對外提供
                      - 不是指定的存取鍵值
                      - 不在關聯群組內

@@ -239,15 +239,6 @@ namespace ADService.Certification
             // 過程若出現任何錯誤應被截取會並處理
             try
             {
-                // 檢查一下是否可以喚起: 列出功能至正式喚醒之間, 有可能權限已改變
-                (bool invokable, _, string message) = analytical.Invokable(Dispatcher, Invoker, Destination);
-                // 若已無法喚醒
-                if (!invokable)
-                {
-                    // 丟出例外: 呼叫喚醒時必須可以被執行
-                    throw new LDAPExceptions($"類型:{Destination.Type} 的物件:{Destination.DistinguishedName} 於喚醒功能:{attributeName} 時發現因:{message} 無法喚醒, 有可能遭受網路攻擊", ErrorCodes.LOGIC_ERROR);
-                }
-
                 // 推入並設置入口物件
                 CertificationProperties certification = new CertificationProperties(Dispatcher, Destination.DistinguishedName);
 
