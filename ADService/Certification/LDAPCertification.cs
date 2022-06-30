@@ -1,8 +1,6 @@
 ﻿using ADService.Environments;
-using ADService.Features;
 using ADService.Foundation;
 using ADService.Media;
-using ADService.Permissions;
 using ADService.Protocol;
 using Newtonsoft.Json.Linq;
 using System;
@@ -21,11 +19,6 @@ namespace ADService.Certification
         #region 存取規則描述對照表
         /// <summary>
         /// 右建功能對應的權限解析方法
-        /// <list type="table|bullet">
-        ///     <item> <see href="https://docs.microsoft.com/en-us/windows/win32/adschema/property-sets">組合式權限</see> </item>
-        ///     <item> <see href="https://docs.microsoft.com/en-us/windows/win32/adschema/attributes">屬性定義</see> </item>
-        ///     <item> <see href="https://docs.microsoft.com/en-us/windows/win32/adschema/extended-rights">額外權限定義</see> </item>
-        /// </list>
         /// </summary>
         internal static readonly Dictionary<string, Analytical> dictionaryMethodWithAnalytical = new List<Analytical>() {
             new AnalyticalReName(),         // 重新命名
@@ -40,7 +33,7 @@ namespace ADService.Certification
         /// <summary>
         /// 用來製作入口物件的介面ˇ
         /// </summary>
-        internal readonly LDAPEntriesMedia EntriesMedia;
+        internal readonly LDAPConfigurationDispatcher Dispatcher;
         /// <summary>
         /// 喚起行為的物件: 通常為登入者
         /// </summary>
@@ -53,12 +46,12 @@ namespace ADService.Certification
         /// <summary>
         /// 集合可供外部使用的功能即和類別: 只有 DLL 內部能夠繼承予宣告
         /// </summary>
-        /// <param name="entriesMedia">入口物件創建器</param>
+        /// <param name="dispatcher">入口物件創建器</param>
         /// <param name="invoker">針對目標物件進行行為的喚起物件: 一般為登入者</param>
         /// <param name="destination">目標物件: 可能為喚起物件本身</param>
-        internal LDAPCertification(in LDAPEntriesMedia entriesMedia, in LDAPObject invoker, in LDAPObject destination)
+        internal LDAPCertification(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
         {
-            EntriesMedia = entriesMedia;
+            Dispatcher = dispatcher;
             Invoker = invoker;
             Destination = destination;
         }
@@ -66,11 +59,11 @@ namespace ADService.Certification
         /// <summary>
         /// 透過指定的證書提供可用方法與其動作協議描述, 如何使用需解析 <see cref="InvokeCondition">協議描述</see>, 目前支援下述項目
         /// <list type="table|number">
-        ///    <item> <see cref="LDAPMethods.M_RENAME">重新命名</see> </item>
-        ///    <item> <see cref="LDAPMethods.M_MOVETO">移動至</see> </item>
-        ///    <item> <see cref="LDAPMethods.M_SHOWDETAIL">物件細節參數</see> </item>
-        ///    <item> <see cref="LDAPMethods.M_CHANGEPWD">重置密碼</see> </item>
-        ///    <item> <see cref="LDAPMethods.M_RESETPWD">強制重設密碼</see> </item>
+        ///    <item> <see cref="Methods.M_RENAME">重新命名</see> </item>
+        ///    <item> <see cref="Methods.M_MOVETO">移動至</see> </item>
+        ///    <item> <see cref="Methods.M_SHOWDETAIL">物件細節參數</see> </item>
+        ///    <item> <see cref="Methods.M_CHANGEPWD">重置密碼</see> </item>
+        ///    <item> <see cref="Methods.M_RESETPWD">強制重設密碼</see> </item>
         /// </list>
         /// </summary>
         /// <returns>可用方法與預期接收參數, 格式如右 Dictionary '功能, 協議描述' </returns>
@@ -92,9 +85,9 @@ namespace ADService.Certification
                     }
 
                     // 取得結果
-                    (bool invokable, InvokeCondition condition, _) = analyticalRights.Invokable(EntriesMedia, Invoker, Destination);
+                    (InvokeCondition condition, _) = analyticalRights.Invokable(Dispatcher, Invoker, Destination);
                     // 無法啟動代表無法呼叫
-                    if (!invokable)
+                    if (condition == null)
                     {
                         // 跳過
                         continue;
@@ -123,7 +116,7 @@ namespace ADService.Certification
         /// <summary>
         /// 透過指定的證書與可用方法取得對應協定描述, 如何使用需解析 <see cref="InvokeCondition">協議描述</see>, 目前支援下述項目
         /// <list type="table|number">
-        ///    <item> <see cref="LDAPMethods.M_MODIFYDETAIL">異動細節</see> </item>
+        ///    <item> <see cref="Methods.M_MODIFYDETAIL">異動細節</see> </item>
         /// </list>
         /// </summary>
         /// <param name="attributeName">目標屬性</param>
@@ -148,9 +141,9 @@ namespace ADService.Certification
                 }
 
                 // 取得結果
-                (bool invokable, InvokeCondition condition, _) = analytical.Invokable(EntriesMedia, Invoker, Destination);
+                (InvokeCondition condition, _) = analytical.Invokable(Dispatcher, Invoker, Destination);
                 // 無法啟動代表無法呼叫
-                if (!invokable)
+                if (condition == null)
                 {
                     // 此時提供空的條件
                     return null;
@@ -194,7 +187,7 @@ namespace ADService.Certification
             try
             {
                 // 推入並設置入口物件
-                CertificationProperties certification = new CertificationProperties(EntriesMedia, Destination.DistinguishedName);
+                CertificationProperties certification = new CertificationProperties(Dispatcher, Destination.DistinguishedName);
 
                 // 轉換成釋放用介面
                 iRelease = certification;
@@ -241,17 +234,8 @@ namespace ADService.Certification
             // 過程若出現任何錯誤應被截取會並處理
             try
             {
-                // 檢查一下是否可以喚起: 列出功能至正式喚醒之間, 有可能權限已改變
-                (bool invokable, _, string message) = analytical.Invokable(EntriesMedia, Invoker, Destination);
-                // 若已無法喚醒
-                if (!invokable)
-                {
-                    // 丟出例外: 呼叫喚醒時必須可以被執行
-                    throw new LDAPExceptions($"類型:{Destination.Type} 的物件:{Destination.DistinguishedName} 於喚醒功能:{attributeName} 時發現因:{message} 無法喚醒, 有可能遭受網路攻擊", ErrorCodes.LOGIC_ERROR);
-                }
-
                 // 推入並設置入口物件
-                CertificationProperties certification = new CertificationProperties(EntriesMedia, Destination.DistinguishedName);
+                CertificationProperties certification = new CertificationProperties(Dispatcher, Destination.DistinguishedName);
 
                 // 轉換成釋放用介面
                 iRelease = certification;
@@ -269,14 +253,16 @@ namespace ADService.Certification
                 analytical.Invoke(ref certification, Invoker, Destination, protocol);
 
                 // 推入修改
-                Dictionary<string, DirectoryEntry> dictionaryDistinguishedNameWithEntry = certification.Commited();
+                Dictionary<string, RequiredCommitSet> dictionaryDistinguishedNameWitSet = certification.Commited();
                 // 對外提供所有影響的物件
-                Dictionary<string, LDAPObject> dictionaryDistinguishedNameWithLDAPObject = new Dictionary<string, LDAPObject>(dictionaryDistinguishedNameWithEntry.Count);
+                Dictionary<string, LDAPObject> dictionaryDistinguishedNameWithLDAPObject = new Dictionary<string, LDAPObject>(dictionaryDistinguishedNameWitSet.Count);
                 // 遍歷修改內容
-                foreach (KeyValuePair<string, DirectoryEntry> pair in dictionaryDistinguishedNameWithEntry)
+                foreach (KeyValuePair<string, RequiredCommitSet> pair in dictionaryDistinguishedNameWitSet)
                 {
+                    // 異動資料
+                    RequiredCommitSet set = pair.Value;
                     // 重新製作目標物件
-                    LDAPObject reflashObject = LDAPObject.ToObject(pair.Value, EntriesMedia);
+                    LDAPObject reflashObject = LDAPObject.ToObject(set.Entry, Dispatcher, set.Properties);
                     // 轉換物件為空
                     if (reflashObject == null)
                     {

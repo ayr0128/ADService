@@ -2,84 +2,51 @@
 
 namespace ADService.Environments
 {
-
     /// <summary>
-    /// 錯誤編碼
+    /// 關聯類型
     /// </summary>
-    public enum ErrorCodes : ushort
+    [Flags]
+    internal enum PropertytFlags : byte
     {
         /// <summary>
-        /// 保留 0 不做任何用途
+        /// 預設, 無使用
         /// </summary>
-        NONE_ERROR,
+        NONE,
         /// <summary>
-        /// 伺服器錯誤
+        /// 是關聯屬性
         /// </summary>
-        SERVER_ERROR,
+        SET = 0x01,
         /// <summary>
-        /// 邏輯錯誤
+        /// 是寫入有效
         /// </summary>
-        LOGIC_ERROR,
+        WRITE = 0x02,
         /// <summary>
-        /// 預期資料內容錯誤
+        /// 是可套用
         /// </summary>
-        DATA_ERROR,
+        APPLIES = 0x04,
+    }
+
+    /// <summary>
+    /// 描述目標 GUID 適合種類型
+    /// </summary>
+    internal enum UnitType : byte
+    {
         /// <summary>
-        /// 帳號已遭禁用
+        /// 預設, 通常不使用
         /// </summary>
-        ACCOUNT_DISABLE,
+        NONE,
         /// <summary>
-        /// 帳號遭鎖定
+        /// 類別
         /// </summary>
-        ACCOUNT_LOCKED,
+        CLASS,
         /// <summary>
-        /// 帳號已過期
+        /// 屬性
         /// </summary>
-        ACCOUNT_EXPIRED,
+        ATTRIBUTE,
         /// <summary>
-        /// 帳號不正確 (無此使用者)
+        /// 額外權限
         /// </summary>
-        ACCOUNT_INCORRECT,
-        /// <summary>
-        /// 密碼已過期
-        /// </summary>
-        PASSWORD_EXPIRED,
-        /// <summary>
-        /// 密碼不正確
-        /// </summary>
-        PASSWORD_INCORRECT,
-        /// <summary>
-        /// 密碼需重新設置
-        /// </summary>
-        PASSWORD_LOGON_RESET,
-        /// <summary>
-        /// 工作站禁止登入
-        /// </summary>
-        REJECT_LOGIN_AT_WORKSTATION,
-        /// <summary>
-        /// 時間段禁止登入
-        /// </summary>
-        REJECT_LOGIN_AT_TIME,
-        /// <summary>
-        /// 名稱重複
-        /// </summary>
-        NAME_DUPLICATE,
-        /// <summary>
-        /// 提供參數取得的資料有誤
-        /// </summary>
-        ARG_DATA_ERROR,
-        /// <summary>
-        /// 無法找到指定物件
-        /// </summary>
-        OBJECT_NOTFOUND,
-        /// <summary>
-        /// 執行動作時權限不足
-        /// </summary>
-        PERMISSION_DENIED,
-        /// <summary>
-        /// 執行動作不吻合 AD 規則而失敗
-        /// </summary>
-        ACTION_FAILURE,
+        EXTENDEDRIGHT,
     }
 
     /// <summary>

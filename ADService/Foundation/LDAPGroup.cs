@@ -33,10 +33,7 @@ namespace ADService.Foundation
             get
             {
                 // 取得 SID: 不存在應丟出例外
-                if (!StoredProperties.GetPropertyValue(LDAPAttributes.C_OBJECTSID, out string primarySID) || string.IsNullOrEmpty(primarySID))
-                {
-                    throw new LDAPExceptions($"嘗試取得物件:{DistinguishedName} 的:{LDAPAttributes.C_OBJECTSID} 但資料不存在, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
-                }
+                string primarySID = StoredProperties.GetPropertySID(Properties.C_OBJECTSID);
 
                 // 已知群組 SID 最後一個 '-' 後的資料就是 PrimaryGroupToken
                 int index = primarySID.LastIndexOf('-');
@@ -49,8 +46,9 @@ namespace ADService.Foundation
         /// 建構新的群組
         /// </summary>
         /// <param name="entry">入口物件</param>
-        /// <param name="entriesMedia">入口物件創建器</param>
-        internal LDAPGroup(in DirectoryEntry entry, in LDAPEntriesMedia entriesMedia) : base(entry, entriesMedia)
+        /// <param name="dispatcher">入口物件創建器</param>
+        /// <param name="propertiesResult">透過找尋取得字的屬性</param>
+        internal LDAPGroup(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher, in ResultPropertyCollection propertiesResult) : base(entry, dispatcher, propertiesResult)
         {
             // 限制應為: 成員, 內部安全性群組
             const CategoryTypes TypeLimited = CategoryTypes.GROUP | CategoryTypes.ForeignSecurityPrincipals;
@@ -61,24 +59,15 @@ namespace ADService.Foundation
                 throw new LDAPExceptions($"基礎物件類型:{Type} 不是期望的群組類型:{TypeLimited}", ErrorCodes.LOGIC_ERROR);
             }
 
-            // 設定支援鍵值
-            StoredProperties.SetPropertiesSupported(
-                entry.Properties,       // 搜尋得到的結果
-                LDAPAttributes.P_MEMBER // 支援: 成員
-            );
-
             // 取得 member 不存在應丟出例外
-            if (!StoredProperties.GetPropertyValue(LDAPAttributes.P_MEMBER, out string[] member))
-            {
-                throw new LDAPExceptions($"嘗試取得物件:{DistinguishedName} 的:{LDAPAttributes.P_MEMBER} 但資料不存在, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
-            }
-
+            string[] member = StoredProperties.GetPropertyMultiple<string>(Properties.P_MEMBER);
             // 初始化成員
-            Member = ToRelationshipByDNs(entriesMedia, member);
+            Member = ToRelationshipByDNs(dispatcher, member);
+
             // 初始化主要隸屬群組成員
-            Dictionary<string, LDAPRelationship> primaryRelationship = ToRelationshipByToken(entriesMedia, PrimaryGroupyToken);
+            Dictionary<string, LDAPRelationship> primaryRelationship = ToRelationshipByToken(dispatcher, PrimaryGroupyToken);
             // 將主要隸屬物件加入成員
-            Array.ForEach( primaryRelationship.Values.ToArray(), (relationship) => Member.Add(relationship.DistinguishedName, relationship) );
+            Array.ForEach(primaryRelationship.Values.ToArray(), (relationship) => Member.Add(relationship.DistinguishedName, relationship));
         }
 
         internal override LDAPObject SwapFrom(in LDAPObject newObject)

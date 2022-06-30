@@ -1,12 +1,11 @@
-﻿using ADService.Environments;
+﻿using ADService.Details;
+using ADService.Environments;
 using ADService.Foundation;
 using ADService.Media;
-using ADService.Permissions;
 using ADService.Protocol;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.DirectoryServices;
 
 namespace ADService.Certification
 {
@@ -18,27 +17,24 @@ namespace ADService.Certification
         /// <summary>
         /// 呼叫基底建構子
         /// </summary>
-        internal AnalyticalResetPassword() : base(LDAPMethods.M_RESETPWD) { }
+        internal AnalyticalResetPassword() : base(Methods.M_RESETPWD) { }
 
-        internal override (bool, InvokeCondition, string) Invokable(in LDAPEntriesMedia entriesMedia, in LDAPObject invoker, in LDAPObject destination)
+        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
         {
             // 根目錄不應重新命名
             if (destination.Type != CategoryTypes.PERSON)
             {
                 // 對外提供失敗
-                return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 是不能重新命名");
+                return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 是不能重新命名");
             }
 
             // 整合各 SID 權向狀態
-            AccessRuleInformation[] accessRuleInformations = GetAccessRuleInformations(invoker, destination);
-            // 權限混和
-            AccessRuleRightFlags mixedProcessedRightsProperty = AccessRuleInformation.CombineAccessRuleRightFlags(LDAPAttributes.EX_RESETPASSWORD, accessRuleInformations);
-
-            // 不存在 '名稱' 的寫入權限
-            if ((mixedProcessedRightsProperty & AccessRuleRightFlags.RightExtended) == AccessRuleRightFlags.None)
+            LDAPPermissions permissions = GetPermissions(dispatcher, invoker, destination);
+            // 不存在 '重製密碼' 的額外權限
+            if (!permissions.IsAllow(Properties.EX_RESETPASSWORD, null, AccessRuleRightFlags.RightExtended))
             {
                 // 對外提供失敗
-                return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{LDAPAttributes.EX_RESETPASSWORD} 的額外權限");
+                return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{Properties.EX_RESETPASSWORD} 的額外權限");
             }
 
             // 具有修改名稱權限
@@ -52,7 +48,7 @@ namespace ADService.Certification
             };
 
             // 只要有寫入權限就可以進行修改
-            return (true, new InvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside), string.Empty);
+            return (new InvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside), string.Empty);
         }
 
         internal override bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol)
@@ -75,21 +71,24 @@ namespace ADService.Certification
             }
 
             // 取得修改目標的入口物件
-            DirectoryEntry entry = certification.GetEntry(destination.DistinguishedName);
+            RequiredCommitSet set = certification.GetEntry(destination.DistinguishedName);
             // 應存在修改目標
-            if (entry == null)
+            if (set == null)
             {
                 // 若觸發此處例外必定為程式漏洞
                 return;
             }
 
             // 呼叫改變密碼的動作
-            object invokeResult = entry.Invoke("SetPassword", setPWDProtocol);
+            object invokeResult = set.Entry.Invoke("SetPassword", setPWDProtocol);
             // 此時會鳩收到的回覆格式必定為字串
             if (Convert.ToUInt64(invokeResult) != 0)
             {
                 throw new LDAPExceptions($"類型:{destination.Type} 的物件:{destination.DistinguishedName} 於重置密碼時因錯誤代碼:{invokeResult} 而失敗", ErrorCodes.ACTION_FAILURE);
             }
+
+            // 重製密碼會即刻產生影響, 因此只需要刷新即可
+            set.InvokedReflash();
         }
     }
 }

@@ -1,7 +1,7 @@
-﻿using ADService.Environments;
+﻿using ADService.Details;
+using ADService.Environments;
 using ADService.Foundation;
 using ADService.Media;
-using ADService.Permissions;
 using ADService.Protocol;
 using Newtonsoft.Json.Linq;
 using System;
@@ -18,15 +18,15 @@ namespace ADService.Certification
         /// <summary>
         /// 呼叫基底建構子
         /// </summary>
-        internal AnalyticalMoveTo() : base(LDAPMethods.M_MOVETO) { }
+        internal AnalyticalMoveTo() : base(Methods.M_MOVETO) { }
 
-        internal override (bool, InvokeCondition, string) Invokable(in LDAPEntriesMedia entriesMedia, in LDAPObject invoker, in LDAPObject destination)
+        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
         {
             // 無法取得父層的組織單位時, 代表為跟目錄
             if (!destination.GetOrganizationUnit(out string organizationUnitDN))
             {
                 // 對外提供失敗
-                return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 不能作為移動物件");
+                return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 不能作為移動物件");
             }
 
             // 取得目標物件類型的名稱
@@ -35,37 +35,32 @@ namespace ADService.Certification
             if (!dictionaryCategoryTypeWithValue.TryGetValue(destination.Type, out string categoryValue))
             {
                 // 對外提供失敗
-                return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 不具有類型資料");
+                return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 不具有類型資料");
             }
 
             // 整合各 SID 權向狀態
-            AccessRuleInformation[] accessRuleInformations = GetAccessRuleInformations(invoker, destination);
+            LDAPPermissions permissions = GetPermissions(dispatcher, invoker, destination);
 
-            // 取得不是透過繼承額來的權限
-            AccessRuleRightFlags accessRuleRightFlagsNotInherited = AccessRuleInformation.CombineAccessRuleRightFlags(categoryValue, false, accessRuleInformations);
             // 目標物件是否具有 '刪除' 的寫入權限
-            bool isValueDelete = (accessRuleRightFlagsNotInherited & AccessRuleRightFlags.Delete) != AccessRuleRightFlags.None;
-            // 取得透過繼承額來的權限
-            AccessRuleRightFlags accessRuleRightFlagsInherited = AccessRuleInformation.CombineAccessRuleRightFlags(categoryValue, true, accessRuleInformations);
+            bool isValueDelete = permissions.IsAllow(categoryValue, false, AccessRuleRightFlags.Delete);
             // 目標物件的父層組織單位是否具有 '刪除子物件' 的寫入權限
-            bool isParentChileDelete = (accessRuleRightFlagsInherited & (AccessRuleRightFlags.ChildrenDelete | AccessRuleRightFlags.Delete)) != AccessRuleRightFlags.None;
-
+            bool isParentChileDelete = permissions.IsAllow(categoryValue, true, AccessRuleRightFlags.ChildrenDelete | AccessRuleRightFlags.Delete);
             // 兩種權限都不具備時
             if (!isValueDelete && !isParentChileDelete)
             {
                 // 對外提供失敗
-                return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有目標:{categoryValue} 的刪除權限且父層:{organizationUnitDN} 需具有子物件刪除權限");
+                return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有目標:{categoryValue} 的刪除權限且父層:{organizationUnitDN} 需具有子物件刪除權限");
             }
 
             // 宣告重新命名分析氣
             AnalyticalReName analyticalReName = new AnalyticalReName();
             // 檢查是否可以喚醒重新命名: 只需要查看是否成功
-            (bool invokable, _, string message) = analyticalReName.Invokable(entriesMedia, invoker, destination);
+            (InvokeCondition condition, string message) = analyticalReName.Invokable(dispatcher, invoker, destination);
             // 若不可呼叫
-            if (!invokable)
+            if (condition == null)
             {
                 // 對外提供失敗: 使用重新命名的錯誤描述
-                return (false, null, message);
+                return (null, message);
             }
 
             // 預期項目: 必定是字串
@@ -89,12 +84,12 @@ namespace ADService.Certification
             Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object>
             {
                 { InvokeCondition.CATEGORYLIMITED, CategoryTypes.ORGANIZATION_UNIT },
-                { InvokeCondition.PROPERTIES, new string[]{ LDAPAttributes.C_DISTINGGUISHEDNAME } },
-                { LDAPAttributes.C_DISTINGGUISHEDNAME, new InvokeCondition(commonFlagsDistinguishedName, dictionaryProtocolWithDistinguishedName) },
+                { InvokeCondition.PROPERTIES, new string[]{ Properties.C_DISTINGGUISHEDNAME } },
+                { Properties.C_DISTINGGUISHEDNAME, new InvokeCondition(commonFlagsDistinguishedName, dictionaryProtocolWithDistinguishedName) },
             };
 
             // 對外提供成功必須是組織單位的區分名稱
-            return (true, new InvokeCondition(commonFlags, dictionaryProtocolWithDetail), string.Empty);
+            return (new InvokeCondition(commonFlags, dictionaryProtocolWithDetail), string.Empty);
         }
 
         internal override bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol)
@@ -122,16 +117,18 @@ namespace ADService.Certification
             }
 
             // 取得根目錄物件: 
-            using (DirectoryEntry entryRoot = certification.EntriesMedia.DomainRoot())
+            using (DirectoryEntry entryRoot = certification.Dispatcher.DomainRoot())
             {
+                // 找到須限制的物件類型
+                Dictionary<CategoryTypes, string> dictionaryLimitedCategory = LDAPCategory.GetValuesByTypes(CategoryTypes.ORGANIZATION_UNIT | CategoryTypes.DOMAIN_DNS);
                 /*轉換成實際過濾字串: 取得符合下述所有條件的物件
                     - 物件類型是組織單位
                     - 區分名稱與限制目標符合
                     [TODO] 應使用加密字串避免注入式攻擊
                 */
-                string encoderFiliter = $"(&{LDAPAttributes.GetOneOfCategoryFiliter(CategoryTypes.ORGANIZATION_UNIT | CategoryTypes.DOMAIN_DNS)}{LDAPAttributes.GetOneOfDNFiliter(distinguishedName)})";
+                string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, distinguishedName)})";
                 // 找尋符合條件的物件
-                using (DirectorySearcher searcher = new DirectorySearcher(entryRoot, encoderFiliter, LDAPAttributes.PropertiesToLoad))
+                using (DirectorySearcher searcher = new DirectorySearcher(entryRoot, encoderFiliter, LDAPObject.PropertiesToLoad))
                 {
                     // 應能找尋到一筆
                     SearchResult one = searcher.FindOne();
@@ -151,13 +148,13 @@ namespace ADService.Certification
                         return false;
                     }
 
-                    // 轉換成入口物件
-                    DirectoryEntry entry = one.GetDirectoryEntry();
                     // 推入快取
-                    certification.SetEntry(entry, distinguishedName);
+                    certification.SetEntry(one, distinguishedName);
 
+                    // 取得內部入口物件
+                    RequiredCommitSet set = certification.GetEntry(distinguishedName);
                     // 取得入口物件: 稍後用來轉換可用權限
-                    LDAPObject entryObject = LDAPObject.ToObject(entry, certification.EntriesMedia);
+                    LDAPObject entryObject = LDAPObject.ToObject(set.Entry, certification.Dispatcher, set.Properties);
                     // 入口物件必須是組織單位或根目錄
                     if ((entryObject.Type & (CategoryTypes.ORGANIZATION_UNIT | CategoryTypes.DOMAIN_DNS)) == CategoryTypes.NONE)
                     {
@@ -166,14 +163,11 @@ namespace ADService.Certification
                     }
 
                     // 整合各 SID 權向狀態
-                    AccessRuleInformation[] accessRuleInformations = GetAccessRuleInformations(invoker, destination);
-                    // 權限混和
-                    AccessRuleRightFlags mixedProcessedRightsProperty = AccessRuleInformation.CombineAccessRuleRightFlags(categoryValue, accessRuleInformations);
-
+                    LDAPPermissions permissionsProtocol = GetPermissions(certification.Dispatcher, invoker, entryObject);
                     /* 下述認依條件成立, 驗證失敗
                          - 不具備 '子物件類型' 的創建權限
                     */
-                    return (mixedProcessedRightsProperty & AccessRuleRightFlags.ChildrenCreate) != AccessRuleRightFlags.None;
+                    return permissionsProtocol.IsAllow(categoryValue, null, AccessRuleRightFlags.ChildrenCreate);
                 }
             }
         }
@@ -190,27 +184,27 @@ namespace ADService.Certification
             }
 
             // 取得是否具有目標物件
-            DirectoryEntry entryProtocol = certification.GetEntry(distinguishedName);
+            RequiredCommitSet setProcessed = certification.GetEntry(distinguishedName);
             // 若入口物件不存在
-            if (entryProtocol == null)
+            if (setProcessed == null)
             {
                 // 若觸發此處例外必定為程式漏洞
                 return;
             }
 
             // 取得修改目標的入口物件
-            DirectoryEntry entry = certification.GetEntry(destination.DistinguishedName);
+            RequiredCommitSet setDestination = certification.GetEntry(destination.DistinguishedName);
             // 應存在修改目標
-            if (entry == null)
+            if (setDestination == null)
             {
                 // 若觸發此處例外必定為程式漏洞
                 return;
             }
 
             // 將目標物件移動至目標
-            entry.MoveTo(entryProtocol);
+            setDestination.Entry.MoveTo(setProcessed.Entry);
             // 設定物件需要被推入
-            certification.RequiredCommit(destination.DistinguishedName);
+            setDestination.CommitRequired();
         }
     }
 }

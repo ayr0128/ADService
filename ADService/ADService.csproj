@@ -75,14 +75,23 @@
     <Compile Include="Certification\AnalyticalShowDetail.cs" />
     <Compile Include="Certification\LDAPCertification.cs" />
     <Compile Include="Certification\CertificationProperties.cs" />
-    <Compile Include="Environments\LDAPAttributes.cs" />
+    <Compile Include="Certification\LDAPPermissions.cs" />
+    <Compile Include="Media\UnitDetail.cs" />
+    <Compile Include="Details\PropertyDetail.cs" />
+    <Compile Include="Features\IRevealerSID.cs" />
+    <Compile Include="Features\IRevealerSecuritySIDs.cs" />
+    <Compile Include="Media\LDAPConfigurationDispatcher.cs" />
+    <Compile Include="Media\UnitSchemaClass.cs" />
+    <Compile Include="Media\UnitExtendedRight.cs" />
+    <Compile Include="Media\UnitSchemaAttribute.cs" />
+    <Compile Include="Media\UnitSchema.cs" />
+    <Compile Include="Protocol\Properties.cs" />
     <Compile Include="Environments\LDAPCategory.cs" />
     <Compile Include="Environments\LDAPConst.cs" />
     <Compile Include="Environments\LDAPExceptions.cs" />
-    <Compile Include="Environments\LDAPMethods.cs" />
+    <Compile Include="Protocol\Methods.cs" />
     <Compile Include="Features\IRevealerMember.cs" />
     <Compile Include="Features\IRevealerMemberOf.cs" />
-    <Compile Include="Features\IRevealerSID.cs" />
     <Compile Include="Foundation\LDAPAssembly.cs" />
     <Compile Include="Foundation\LDAPContainer.cs" />
     <Compile Include="Foundation\LDAPDomainDNS.cs" />
@@ -95,26 +104,18 @@
     <Compile Include="LDAPSecurity.cs" />
     <Compile Include="LDAPServe.cs" />
     <Compile Include="LDAPUnsecurity.cs" />
-    <Compile Include="Media\LDAPEntries.cs" />
-    <Compile Include="Permissions\AccessRuleInformation.cs" />
-    <Compile Include="Permissions\LDAPPermissions.cs" />
-    <Compile Include="Permissions\LDAPSchema.cs" />
+    <Compile Include="Details\AccessRuleConverted.cs" />
+    <Compile Include="Media\LDAPConfiguration.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Protocol\ChangePWD.cs" />
     <Compile Include="Protocol\Consts.cs" />
     <Compile Include="Protocol\InvokeCondition.cs" />
-    <Compile Include="Protocol\LDAPRelationship.cs" />
-    <Compile Include="Revealer\LDAPPropertiesRevealer.cs" />
-    <Compile Include="Revealer\RevealerEnumProperties.cs" />
-    <Compile Include="Revealer\RevealerGUIDProperties.cs" />
-    <Compile Include="Revealer\RevealerMultipleProperties.cs" />
-    <Compile Include="Revealer\RevealerProperties.cs" />
-    <Compile Include="Revealer\RevealerSIDProperties.cs" />
-    <Compile Include="Revealer\RevealerSingleLongProperties.cs" />
-    <Compile Include="Revealer\RevealerSingleProperties.cs" />
+    <Compile Include="Media\LDAPRelationship.cs" />
+    <Compile Include="Details\LDAPProperties.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

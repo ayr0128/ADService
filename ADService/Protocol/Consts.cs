@@ -5,6 +5,85 @@ using System.DirectoryServices;
 namespace ADService.Protocol
 {
     /// <summary>
+    /// 錯誤編碼
+    /// </summary>
+    public enum ErrorCodes : ushort
+    {
+        /// <summary>
+        /// 保留 0 不做任何用途
+        /// </summary>
+        NONE_ERROR,
+        /// <summary>
+        /// 伺服器錯誤
+        /// </summary>
+        SERVER_ERROR,
+        /// <summary>
+        /// 邏輯錯誤
+        /// </summary>
+        LOGIC_ERROR,
+        /// <summary>
+        /// 預期資料內容錯誤
+        /// </summary>
+        DATA_ERROR,
+        /// <summary>
+        /// 帳號已遭禁用
+        /// </summary>
+        ACCOUNT_DISABLE,
+        /// <summary>
+        /// 帳號遭鎖定
+        /// </summary>
+        ACCOUNT_LOCKED,
+        /// <summary>
+        /// 帳號已過期
+        /// </summary>
+        ACCOUNT_EXPIRED,
+        /// <summary>
+        /// 帳號不正確 (無此使用者)
+        /// </summary>
+        ACCOUNT_INCORRECT,
+        /// <summary>
+        /// 密碼已過期
+        /// </summary>
+        PASSWORD_EXPIRED,
+        /// <summary>
+        /// 密碼不正確
+        /// </summary>
+        PASSWORD_INCORRECT,
+        /// <summary>
+        /// 密碼需重新設置
+        /// </summary>
+        PASSWORD_LOGON_RESET,
+        /// <summary>
+        /// 工作站禁止登入
+        /// </summary>
+        REJECT_LOGIN_AT_WORKSTATION,
+        /// <summary>
+        /// 時間段禁止登入
+        /// </summary>
+        REJECT_LOGIN_AT_TIME,
+        /// <summary>
+        /// 名稱重複
+        /// </summary>
+        NAME_DUPLICATE,
+        /// <summary>
+        /// 提供參數取得的資料有誤
+        /// </summary>
+        ARG_DATA_ERROR,
+        /// <summary>
+        /// 無法找到指定物件
+        /// </summary>
+        OBJECT_NOTFOUND,
+        /// <summary>
+        /// 執行動作時權限不足
+        /// </summary>
+        PERMISSION_DENIED,
+        /// <summary>
+        /// 執行動作不吻合 AD 規則而失敗
+        /// </summary>
+        ACTION_FAILURE,
+    }
+
+    /// <summary>
     /// 提供給客戶端進行設置的帳號控制旗標
     /// </summary>
     [Flags]

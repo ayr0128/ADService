@@ -1,47 +1,16 @@
-﻿using System;
+﻿using ADService.Environments;
+using ADService.Protocol;
+using System;
+using System.Collections.Generic;
 using System.DirectoryServices;
-using System.Runtime.InteropServices;
+using System.Linq;
 
 namespace ADService.Media
 {
     /// <summary>
-    /// 創建伺服器連線資訊時同步宣告, 儲存伺服器連線相關資訊並提供呼叫方法
+    /// 執行續安全的設定取得結構
     /// </summary>
-    internal class LDAPEntries
-    {
-        /// <summary>
-        /// 連線網域: 可用 IP 或 網址, 根據實作方式限制
-        /// </summary>
-        internal readonly string Domain;
-        /// <summary>
-        /// 連線埠
-        /// </summary>
-        internal readonly ushort Port;
-
-        /// <summary>
-        /// 初始化伺服器連線用方法
-        /// </summary>
-        /// <param name="domain">指定網域</param>
-        /// <param name="port">指定埠</param>
-        internal LDAPEntries(string domain, ushort port)
-        {
-            Domain = domain;
-            Port = port;
-        }
-
-        /// <summary>
-        /// 提供使用者名稱與密碼, 將透過此使用者的權限與伺服器聯繫並取得相關物件
-        /// </summary>
-        /// <param name="userName">使用者名稱</param>
-        /// <param name="password">使用者密碼</param>
-        /// <returns>提供透過使用者權限與伺服器聯繫並取得入口物件相關功能的介面</returns>
-        internal LDAPEntriesMedia GetCreator(in string userName, in string password) => new LDAPEntriesMedia(userName, password, Domain, Port);
-    }
-
-    /// <summary>
-    /// 繼承了取得入口物件方法的媒介類別
-    /// </summary>
-    internal sealed class LDAPEntriesMedia 
+    internal class LDAPConfigurationDispatcher
     {
         /// <summary>
         /// 使用者名稱
@@ -51,30 +20,127 @@ namespace ADService.Media
         /// 使用者密碼
         /// </summary>
         internal readonly string Password;
-        /// <summary>
-        /// 往玉
-        /// </summary>
-        internal readonly string Domain;
-        /// <summary>
-        /// 埠
-        /// </summary>
-        internal readonly ushort Port;
 
         /// <summary>
-        /// 創建實體用來對外提供創建入口功能
+        /// 紀錄外部提供的入口物件創建器
+        /// </summary>
+        internal readonly LDAPConfiguration Configuration;
+
+        /// <summary>
+        /// 設定區分名稱
+        /// </summary>
+        internal readonly string ConfigurationDistinguishedName;
+
+        /// <summary>
+        /// 取得 DSE 中的設定區分名稱位置, 並建構連線用相關暫存
         /// </summary>
         /// <param name="userName">使用者名稱</param>
         /// <param name="password">密碼</param>
-        /// <param name="domain">目標網域</param>
-        /// <param name="port">目標埠</param>
-        internal LDAPEntriesMedia(in string userName, in string password, in string domain, in ushort port)
+        /// <param name="configuration">資料分配與調度者</param>
+        internal LDAPConfigurationDispatcher(in string userName, in string password, in LDAPConfiguration configuration)
         {
             UserName = userName;
             Password = password;
-            Domain = domain;
-            Port = port;
+            Configuration = configuration;
+
+            // 取得設定位置
+            using (DirectoryEntry root = DSERoot())
+            {
+                // 取得內部設定位置
+                ConfigurationDistinguishedName = LDAPConfiguration.ParseSingleValue<string>(LDAPConfiguration.CONTEXT_CONFIGURATION, root.Properties);
+            }
         }
 
+        #region 設定取得
+        /// <summary>
+        /// 透過透過額外權限取得所有關聯屬性組
+        /// </summary>
+        /// <param name="unitExtendedRight">額外權限</param>
+        /// <returns>此額外權限需求的藍本群組</returns>
+        internal UnitSchema[] GetPropertySet(in UnitExtendedRight unitExtendedRight) => Configuration.GetPropertySet(this, unitExtendedRight);
+
+        /// <summary>
+        /// 取得藍本
+        /// </summary>
+        /// <param name="guids">目標 GUID 陣列</param>
+        /// <returns>藍本結構</returns>
+        internal UnitSchema[] GetSchema(params Guid[] guids) => Configuration.GetSchema(this, guids);
+
+        /// <summary>
+        /// 使用展示名稱 進行搜尋指定目標藍本物件
+        /// </summary>
+        /// <param name="attributeNames">屬性名稱</param>
+        /// <returns>指定藍本物件, 可能不存在</returns>
+        internal UnitSchema[] GetSchema(params string[] attributeNames) => Configuration.GetSchema(this, attributeNames);
+
+        /// <summary>
+        /// 取得相關 GUID 的
+        /// </summary>
+        /// <param name="guids">目標 GUID 陣列</param>
+        /// <returns>藍本結構</returns>
+        internal UnitExtendedRight GetExtendedRight(in Guid guid) => Configuration.GetExtendedRight(this, guid);
+
+        /// <summary>
+        /// 使用依賴類別 GUID 找尋相關的額外權限
+        /// </summary>
+        /// <param name="unitSchemas">查詢的藍本</param>
+        /// <returns>指定額外權限物件, 可能不存在</returns>
+        internal UnitExtendedRight[] GetExtendedRight(params UnitSchema[] unitSchemas) => Configuration.GetExtendedRight(this, unitSchemas);
+
+        /// <summary>
+        /// 提供存取權限中目標物件的 GUID 查詢對應的資料
+        /// </summary>
+        /// <param name="accessRuleGUIDs">目標 GUID 陣列</param>
+        /// <returns>返回各 GUID 的詳細資料, 格式如右: Dictiobary 'Guid 字串(小寫), 存取規則描述' </returns>
+        internal Dictionary<string, UnitDetail> GetUnitDetail(in IEnumerable<Guid> accessRuleGUIDs)
+        {
+            // 轉換成袋查詢的資料
+            Dictionary<string, Guid> dictionaryGUIDLowerWithGUID = accessRuleGUIDs.ToDictionary(accessRuleGUID => accessRuleGUID.ToString("D").ToLower());
+            // 長度最多為外部宣告的 GUID 大小
+            Dictionary<string, UnitDetail> dictionaryGuidWithAUnitDetail = new Dictionary<string, UnitDetail>(dictionaryGUIDLowerWithGUID.Count);
+            // 遍歷所有取得的額外權限
+            foreach (UnitExtendedRight unitExtendedRight in Configuration.GetExtendedRight(this, dictionaryGUIDLowerWithGUID.Values))
+            {
+                // 交查詢到的 GUID 轉為小寫
+                string unitExtendedRightGUIDLower = unitExtendedRight.GUID.ToLower();
+                // 強型別宣告方便閱讀
+                UnitDetail accessRuleObjectDetail = new UnitDetail(unitExtendedRight.Name, UnitType.EXTENDEDRIGHT);
+                // 推入查詢物件
+                dictionaryGuidWithAUnitDetail.Add(unitExtendedRightGUIDLower, accessRuleObjectDetail);
+
+                // 將查詢到的藍本移除
+                dictionaryGUIDLowerWithGUID.Remove(unitExtendedRightGUIDLower);
+            }
+
+            // 遍歷所有取得的藍本
+            foreach (UnitSchema unitSchema in Configuration.GetSchema(this, dictionaryGUIDLowerWithGUID.Values))
+            {
+                // 交查詢到的 GUID 轉為小寫
+                string unitSchemaGUIDLower = unitSchema.SchemaGUID.ToLower();
+                // 取得類型
+                UnitType accessRuleObjectType = unitSchema is UnitSchemaAttribute _ ? UnitType.ATTRIBUTE : UnitType.CLASS;
+                // 強型別宣告方便閱讀
+                UnitDetail accessRuleObjectDetail = new UnitDetail(unitSchema.Name, accessRuleObjectType);
+                // 推入查詢物件
+                dictionaryGuidWithAUnitDetail.Add(unitSchemaGUIDLower, accessRuleObjectDetail);
+
+                // 將查詢到的藍本移除
+                dictionaryGUIDLowerWithGUID.Remove(unitSchemaGUIDLower);
+            }
+
+            // 安全防呆: 所有指定的 GUID 都應該要能被找到
+            if (dictionaryGUIDLowerWithGUID.Count != 0)
+            {
+                // 此時拋出例外: 因為 GUID 應被晚整取得, 此處對外提供邏輯錯誤
+                throw new LDAPExceptions($"預期應找尋的 GUID 中還有剩餘的部分:{string.Join(",", dictionaryGUIDLowerWithGUID.Keys)} 因而拋出例外, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
+            }
+
+            // 無錯誤情況下對外提供資料
+            return dictionaryGuidWithAUnitDetail;
+        }
+        #endregion
+
+        #region 入口物件取得
         /// <summary>
         /// 透過使用者的權限取得網域入口物件, 注意如果無法創建會丟出各種例外, 取得的入口物件也需進行 <see cref="IDisposable">釋放</see> 行為
         /// </summary>
@@ -84,7 +150,7 @@ namespace ADService.Media
         internal DirectoryEntry DomainRoot()
         {
             // 使用提供的使用者帳號密碼連線至根網域物件: 此時有可能丟出的例外: 伺服器無法連線
-            DirectoryEntry entryRoot = new DirectoryEntry($"LDAP://{Domain}:{Port}", UserName, Password);
+            DirectoryEntry entryRoot = new DirectoryEntry($"LDAP://{Configuration.Domain}:{Configuration.Port}", UserName, Password);
             /* 使用其中一個物件用以判斷是有正確取得資料, 此時有可能丟出的例外:
                  - 帳號密碼錯誤
                  - 帳號禁用
@@ -105,7 +171,7 @@ namespace ADService.Media
         internal DirectoryEntry DSERoot()
         {
             // 使用提供的使用者帳號密碼連線至根網域設定物件: 此時有可能丟出的例外: 伺服器無法連線
-            DirectoryEntry entryRoot = new DirectoryEntry($"LDAP://{Domain}:{Port}/rootDSE", UserName, Password);
+            DirectoryEntry entryRoot = new DirectoryEntry($"LDAP://{Configuration.Domain}:{Configuration.Port}/rootDSE", UserName, Password);
             /* 使用其中一個物件用以判斷是有正確取得資料, 此時有可能丟出的例外:
                  - 帳號密碼錯誤
                  - 帳號禁用
@@ -134,7 +200,7 @@ namespace ADService.Media
             }
 
             // 使用提供的使用者帳號密碼連線至根網域物件: 此時有可能丟出的例外: 伺服器無法連線
-            DirectoryEntry entryRoot = new DirectoryEntry($"LDAP://{Domain}:{Port}/{distinguisedName}", UserName, Password, AuthenticationTypes.Secure | AuthenticationTypes.ServerBind);
+            DirectoryEntry entryRoot = new DirectoryEntry($"LDAP://{Configuration.Domain}:{Configuration.Port}/{distinguisedName}", UserName, Password, AuthenticationTypes.Secure | AuthenticationTypes.ServerBind);
             /* 使用其中一個物件用以判斷是有正確取得資料, 此時有可能丟出的例外:
                  - 帳號密碼錯誤
                  - 帳號禁用
@@ -164,7 +230,7 @@ namespace ADService.Media
             }
 
             // 使用提供的使用者帳號密碼連線至根網域物件: 此時有可能丟出的例外: 伺服器無法連線
-            DirectoryEntry entryRoot = new DirectoryEntry($"LDAP://{Domain}:{Port}/<GUID={GUID}>", UserName, Password);
+            DirectoryEntry entryRoot = new DirectoryEntry($"LDAP://{Configuration.Domain}:{Configuration.Port}/<GUID={GUID}>", UserName, Password);
             /* 使用其中一個物件用以判斷是有正確取得資料, 此時有可能丟出的例外:
                  - 帳號密碼錯誤
                  - 帳號禁用
@@ -194,7 +260,7 @@ namespace ADService.Media
             }
 
             // 使用提供的使用者帳號密碼連線至根網域物件: 此時有可能丟出的例外: 伺服器無法連線
-            DirectoryEntry entryRoot = new DirectoryEntry($"LDAP://{Domain}:{Port}/<SID={SID}>", UserName, Password);
+            DirectoryEntry entryRoot = new DirectoryEntry($"LDAP://{Configuration.Domain}:{Configuration.Port}/<SID={SID}>", UserName, Password);
             /* 使用其中一個物件用以判斷是有正確取得資料, 此時有可能丟出的例外:
                  - 帳號密碼錯誤
                  - 帳號禁用
@@ -206,5 +272,6 @@ namespace ADService.Media
             // 運行至此應可正常取得相關入口物件
             return entryRoot;
         }
+        #endregion
     }
 }
