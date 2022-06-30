@@ -20,7 +20,7 @@ namespace ADService.Certification
         /// </summary>
         internal AnalyticalMoveTo() : base(Methods.M_MOVETO) { }
 
-        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
+        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination, LDAPPermissions permissions)
         {
             // 無法取得父層的組織單位時, 代表為跟目錄
             if (!destination.GetOrganizationUnit(out string organizationUnitDN))
@@ -38,9 +38,6 @@ namespace ADService.Certification
                 return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 不具有類型資料");
             }
 
-            // 整合各 SID 權向狀態
-            LDAPPermissions permissions = GetPermissions(dispatcher, invoker, destination);
-
             // 目標物件是否具有 '刪除' 的寫入權限
             bool isValueDelete = permissions.IsAllow(categoryValue, false, AccessRuleRightFlags.Delete);
             // 目標物件的父層組織單位是否具有 '刪除子物件' 的寫入權限
@@ -55,7 +52,7 @@ namespace ADService.Certification
             // 宣告重新命名分析氣
             AnalyticalReName analyticalReName = new AnalyticalReName();
             // 檢查是否可以喚醒重新命名: 只需要查看是否成功
-            (InvokeCondition condition, string message) = analyticalReName.Invokable(dispatcher, invoker, destination);
+            (InvokeCondition condition, string message) = analyticalReName.Invokable(dispatcher, invoker, destination, permissions);
             // 若不可呼叫
             if (condition == null)
             {
@@ -92,7 +89,7 @@ namespace ADService.Certification
             return (new InvokeCondition(commonFlags, dictionaryProtocolWithDetail), string.Empty);
         }
 
-        internal override bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol)
+        internal override bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions)
         {
             // 取得區分名稱
             string distinguishedName = protocol?.ToObject<string>() ?? string.Empty;
@@ -163,7 +160,7 @@ namespace ADService.Certification
                     }
 
                     // 整合各 SID 權向狀態
-                    LDAPPermissions permissionsProtocol = GetPermissions(certification.Dispatcher, invoker, entryObject);
+                    LDAPPermissions permissionsProtocol = LDAPPermissions.GetPermissions(certification.Dispatcher, invoker, entryObject);
                     /* 下述認依條件成立, 驗證失敗
                          - 不具備 '子物件類型' 的創建權限
                     */
@@ -172,7 +169,7 @@ namespace ADService.Certification
             }
         }
 
-        internal override void Invoke(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol)
+        internal override void Invoke(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions)
         {
             // 將重新命名的新名字
             string distinguishedName = protocol?.ToObject<string>() ?? string.Empty;

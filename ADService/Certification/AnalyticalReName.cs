@@ -20,7 +20,7 @@ namespace ADService.Certification
         /// </summary>
         internal AnalyticalReName() : base(Methods.M_RENAME) { }
 
-        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
+        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination, LDAPPermissions permissions)
         {
             // 根目錄不應重新命名
             if (!destination.GetOrganizationUnit(out _))
@@ -29,8 +29,6 @@ namespace ADService.Certification
                 return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 是根目錄不應嘗試進行重新命名");
             }
 
-            // 整合各 SID 權向狀態
-            LDAPPermissions permissions = GetPermissions(dispatcher, invoker, destination);
             // 不存在 '名稱' 的寫入權限
             if (!permissions.IsAllow(Properties.P_NAME, null, AccessRuleRightFlags.PropertyWrite))
             {
@@ -86,7 +84,7 @@ namespace ADService.Certification
             return (new InvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside), string.Empty);
         }
 
-        internal override bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol)
+        internal override bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions)
         {
             // 將重新命名的新名字
             string name = protocol?.ToObject<string>() ?? string.Empty;
@@ -167,7 +165,7 @@ namespace ADService.Certification
             return !string.IsNullOrEmpty(nameInFormat);
         }
 
-        internal override void Invoke(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol)
+        internal override void Invoke(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions)
         {
             // 將重新命名的新名字
             string name = protocol?.ToObject<string>() ?? string.Empty;

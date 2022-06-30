@@ -73,10 +73,8 @@ namespace ADService.Certification
         /// <param name="isShowed">是否展示在功能列表</param>
         internal AnalyticalModifyDetail(in string name, in bool isShowed) : base(name, isShowed) { }
 
-        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
+        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination, LDAPPermissions permissions)
         {
-            // 整合各 SID 權向狀態
-            LDAPPermissions permissions = GetPermissions(dispatcher, invoker, destination);
             // 要對外回傳的所有項目: 預設容器大小等於所有需要轉換的項目
             Dictionary<string, InvokeCondition> dictionaryAttributesNameWithCondition = new Dictionary<string, InvokeCondition>(AttributeNames.Count);
             #region 整理可對外提供的項目
@@ -371,7 +369,7 @@ namespace ADService.Certification
             return (new InvokeCondition(commonFlags, dictionaryProtocolWithDetailOutside), string.Empty);
         }
 
-        internal override bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol)
+        internal override bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions)
         {
             // 紀錄處理目標的區分名稱
             string distinguishedNameDestination = destination.DistinguishedName;
@@ -394,8 +392,6 @@ namespace ADService.Certification
                 throw new LDAPExceptions($"類型:{destination.Type} 的物件:{distinguishedNameDestination} 於異動細節內容時發現傳輸的協議:{protocol} 不符合規則, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
             }
 
-            // 整合各 SID 權向狀態
-            LDAPPermissions permissions = GetPermissions(certification.Dispatcher, invoker, destination);
             // 紀錄未處理的項目
             Dictionary<string, string> dictionaryFailureAttributeNameWithMessage = new Dictionary<string, string>(AttributeNames.Count);
             // 遍歷所有需求的項目是否有在支援列表內
@@ -630,7 +626,7 @@ namespace ADService.Certification
                                 LDAPObject entryObject = LDAPObject.ToObject(set.Entry, certification.Dispatcher, set.Properties);
 
                                 // 整合各 SID 權向狀態
-                                LDAPPermissions permissionsProtocol = GetPermissions(certification.Dispatcher, invoker, entryObject);
+                                LDAPPermissions permissionsProtocol = LDAPPermissions.GetPermissions(certification.Dispatcher, invoker, entryObject);
                                 // 是否可異動
                                 bool isProcessedEditable = permissionsProtocol.IsAllow(Properties.P_MEMBER, null, AccessRuleRightFlags.PropertyWrite);
                                 // 異動能否包含自身
@@ -773,7 +769,7 @@ namespace ADService.Certification
             return dictionaryFailureAttributeNameWithMessage.Count == 0;
         }
 
-        internal override void Invoke(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol)
+        internal override void Invoke(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions)
         {
             // 紀錄目標的區分名稱
             string distinguishedNameDestination = destination.DistinguishedName;
