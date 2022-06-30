@@ -65,7 +65,7 @@ namespace ADService.Certification
         /// <param name="invoker">喚起物件</param>
         /// <param name="destination">目標物件</param>
         /// <returns>是否可使用</returns>
-        internal abstract (bool, InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination);
+        internal abstract (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination);
         /// <summary>
         /// 驗證提供的協議內容是否可用
         /// </summary>

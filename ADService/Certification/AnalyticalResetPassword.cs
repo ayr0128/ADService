@@ -19,13 +19,13 @@ namespace ADService.Certification
         /// </summary>
         internal AnalyticalResetPassword() : base(Methods.M_RESETPWD) { }
 
-        internal override (bool, InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
+        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
         {
             // 根目錄不應重新命名
             if (destination.Type != CategoryTypes.PERSON)
             {
                 // 對外提供失敗
-                return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 是不能重新命名");
+                return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 是不能重新命名");
             }
 
             // 整合各 SID 權向狀態
@@ -34,7 +34,7 @@ namespace ADService.Certification
             if (!permissions.IsAllow(Properties.EX_RESETPASSWORD, null, AccessRuleRightFlags.RightExtended))
             {
                 // 對外提供失敗
-                return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{Properties.EX_RESETPASSWORD} 的額外權限");
+                return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{Properties.EX_RESETPASSWORD} 的額外權限");
             }
 
             // 具有修改名稱權限
@@ -48,7 +48,7 @@ namespace ADService.Certification
             };
 
             // 只要有寫入權限就可以進行修改
-            return (true, new InvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside), string.Empty);
+            return (new InvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside), string.Empty);
         }
 
         internal override bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol)

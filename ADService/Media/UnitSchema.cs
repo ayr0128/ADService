@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ADService.Environments;
+using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
 using System.Security.Principal;
@@ -70,8 +71,7 @@ namespace ADService.Media
                     sb.Append($"\\{convertRequired:X2}");
                 }
                 // 需使用加密避免 LDAP 注入式攻擊
-                string filiter = $"({ATTRIBUTE_SCHEMA_SECURITY_GUID}={sb})";
-
+                string filiter = $"(|({ATTRIBUTE_SCHEMA_SECURITY_GUID}={sb})({ATTRIBUTE_SCHEMA_GUID}={sb}))";
                 // 從入口物件中找尋到指定物件
                 using (DirectorySearcher searcher = new DirectorySearcher(entrySchema, filiter, PROPERTIES))
                 {
@@ -242,7 +242,7 @@ namespace ADService.Media
         /// <summary>
         /// 啟用時間
         /// </summary>
-        private readonly DateTime EnableTime;
+        private readonly DateTime EnableTime = DateTime.UtcNow;
 
         /// <summary>
         /// 是否已經超過保留時間
@@ -265,8 +265,8 @@ namespace ADService.Media
         /// 檢查此額外權限是否為此藍本物件的屬性組別
         /// </summary>
         /// <param name="unitExtendedRight">額外權限</param>
-        /// <returns>是否為屬性組</returns>
-        internal abstract bool IsPropertySet(in UnitExtendedRight unitExtendedRight);
+        /// <returns>2對於目標額萬權限而言, 此藍本為何種用途</returns>
+        internal abstract PropertytFlags GetPorpertyType(in UnitExtendedRight unitExtendedRight);
 
         /// <summary>
         /// 實作藍本結構
@@ -277,7 +277,6 @@ namespace ADService.Media
             // 將名稱轉換成小寫
             Name = LDAPConfiguration.ParseSingleValue<string>(ATTRIBUTE_SCHEMA_PROPERTY, properties);
             SchemaGUID = LDAPConfiguration.ParseGUID(ATTRIBUTE_SCHEMA_GUID, properties);
-            EnableTime = DateTime.UtcNow;
         }
     }
 }

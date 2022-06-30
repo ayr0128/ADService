@@ -20,13 +20,13 @@ namespace ADService.Certification
         /// </summary>
         internal AnalyticalReName() : base(Methods.M_RENAME) { }
 
-        internal override (bool, InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
+        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
         {
             // 根目錄不應重新命名
             if (!destination.GetOrganizationUnit(out _))
             {
                 // 對外提供失敗
-                return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 是根目錄不應嘗試進行重新命名");
+                return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 是根目錄不應嘗試進行重新命名");
             }
 
             // 整合各 SID 權向狀態
@@ -35,7 +35,7 @@ namespace ADService.Certification
             if (!permissions.IsAllow(Properties.P_NAME, null, AccessRuleRightFlags.PropertyWrite))
             {
                 // 對外提供失敗
-                return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{Properties.P_NAME} 的寫入權限");
+                return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{Properties.P_NAME} 的寫入權限");
             }
 
 
@@ -53,7 +53,7 @@ namespace ADService.Certification
                         if (!permissions.IsAllow(attributeName, null, AccessRuleRightFlags.PropertyWrite))
                         {
                             // 對外提供失敗
-                            return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{attributeName} 的寫入權限");
+                            return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{attributeName} 的寫入權限");
                         }
                     }
                     break;
@@ -66,7 +66,7 @@ namespace ADService.Certification
                         if (!permissions.IsAllow(attributeName, null, AccessRuleRightFlags.PropertyWrite))
                         {
                             // 對外提供失敗
-                            return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{attributeName} 的寫入權限");
+                            return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{attributeName} 的寫入權限");
                         }
                     }
                     break;
@@ -83,7 +83,7 @@ namespace ADService.Certification
             };
 
             // 只要有寫入權限就可以進行修改: 重新命名動作考慮提供正則表達式進行額外限制
-            return (true, new InvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside), string.Empty);
+            return (new InvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside), string.Empty);
         }
 
         internal override bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol)

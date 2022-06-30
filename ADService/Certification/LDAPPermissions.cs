@@ -92,11 +92,11 @@ namespace ADService.Certification
         /// <summary>
         /// 允許的存取權限
         /// </summary>
-        private InheritedAccessRuleRight InheritedAccessRuleRightAllowed = new InheritedAccessRuleRight();
+        private readonly InheritedAccessRuleRight InheritedAccessRuleRightAllowed = new InheritedAccessRuleRight();
         /// <summary>
         /// 拒絕的存取權限
         /// </summary>
-        private InheritedAccessRuleRight InheritedAccessRuleRightDisallowed = new InheritedAccessRuleRight();
+        private readonly InheritedAccessRuleRight InheritedAccessRuleRightDisallowed = new InheritedAccessRuleRight();
 
         /// <summary>
         /// 建構子: 取得指定影響類型的存取權限
@@ -123,47 +123,49 @@ namespace ADService.Certification
 
                 // 將資料轉換成小寫
                 string attributeGUIDLower = accessRuleConverted.AttributeGUID.ToString("D").ToLower();
-                // 預設為全域可用
-                string name = string.Empty;
                 // 除了全域權限之外都應取得對應的權限資料
-                if (dictionaryGUIDWithAccessRuleObjectDetail.TryGetValue(attributeGUIDLower, out UnitDetail unitDetail))
+                bool isExist = dictionaryGUIDWithAccessRuleObjectDetail.TryGetValue(attributeGUIDLower, out UnitDetail unitDetail);
+                // 譨取得時須使用找尋到的目標轉換名稱
+                switch (isExist ? unitDetail.UnitType : UnitType.NONE)
                 {
-                    // 譨取得時須使用找尋到的目標轉換名稱
-                    switch (unitDetail.UnitType)
-                    {
-                        // 屬性
-                        case UnitType.ATTRIBUTE:
-                        // 類型
-                        case UnitType.CLASS:
+                    // 屬性
+                    case UnitType.ATTRIBUTE:
+                    // 類型
+                    case UnitType.CLASS:
+                        {
+                            // 設置參數
+                            inheritedAccessRuleRight.Set(unitDetail.Name, isInherited, accessRuleRightFlags);
+                        }
+                        break;
+                    // 額萬權限
+                    case UnitType.EXTENDEDRIGHT:
+                        {
+                            // 取得指定目標額外權限
+                            UnitExtendedRight unitExtendedRight = dispatcher.GetExtendedRight(accessRuleConverted.AttributeGUID);
+                            // 取得此額外權限依賴的藍本
+                            UnitSchema[] unitSchemas = dispatcher.GetPropertySet(unitExtendedRight);
+                            // 取得此安全屬性的關聯物件並設置相關權限
+                            foreach (UnitSchema unitSchema in unitSchemas)
                             {
                                 // 設置參數
-                                name = unitDetail.Name;
+                                inheritedAccessRuleRight.Set(unitSchema.Name, isInherited, accessRuleRightFlags);
                             }
-                            break;
-                        // 額萬權限
-                        case UnitType.EXTENDEDRIGHT:
-                            {
-                                // 設置參數
-                                name = unitDetail.Name;
 
-                                // 取得此安全屬性的關聯物件並設置相關權限
-                                foreach (UnitSchema unitSchema in dispatcher.GetPropertySet(accessRuleConverted.AttributeGUID))
-                                {
-                                    // 設置參數
-                                    inheritedAccessRuleRight.Set(unitSchema.Name, isInherited, accessRuleRightFlags);
-                                }
-                            }
-                            break;
-                        default:
+                            // 不依賴任何藍本的權限是需要觸發額外判斷的權限
+                            if (unitSchemas.Length == 0)
                             {
-                                // 丟出例外: 因為此狀態沒有實作, 基本上也不應被呼叫
-                                throw new LDAPExceptions($"因物件類型:{unitDetail.UnitType} 未實作而於接受權限處理丟出例外, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
+                                // 設置參數
+                                inheritedAccessRuleRight.Set(unitDetail.Name, isInherited, accessRuleRightFlags);
                             }
-                    }
+                        }
+                        break;
+                    default:
+                        {
+                            // 設置為全域
+                            inheritedAccessRuleRight.Set(string.Empty, isInherited, accessRuleRightFlags);
+                        }
+                        break;
                 }
-
-                // 設置參數
-                inheritedAccessRuleRight.Set(name, isInherited, accessRuleRightFlags);
             }
         }
 

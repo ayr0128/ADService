@@ -85,9 +85,9 @@ namespace ADService.Certification
                     }
 
                     // 取得結果
-                    (bool invokable, InvokeCondition condition, _) = analyticalRights.Invokable(Dispatcher, Invoker, Destination);
+                    (InvokeCondition condition, _) = analyticalRights.Invokable(Dispatcher, Invoker, Destination);
                     // 無法啟動代表無法呼叫
-                    if (!invokable)
+                    if (condition == null)
                     {
                         // 跳過
                         continue;
@@ -141,9 +141,9 @@ namespace ADService.Certification
                 }
 
                 // 取得結果
-                (bool invokable, InvokeCondition condition, _) = analytical.Invokable(Dispatcher, Invoker, Destination);
+                (InvokeCondition condition, _) = analytical.Invokable(Dispatcher, Invoker, Destination);
                 // 無法啟動代表無法呼叫
-                if (!invokable)
+                if (condition == null)
                 {
                     // 此時提供空的條件
                     return null;

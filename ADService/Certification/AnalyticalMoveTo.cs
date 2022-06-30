@@ -20,13 +20,13 @@ namespace ADService.Certification
         /// </summary>
         internal AnalyticalMoveTo() : base(Methods.M_MOVETO) { }
 
-        internal override (bool, InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
+        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
         {
             // 無法取得父層的組織單位時, 代表為跟目錄
             if (!destination.GetOrganizationUnit(out string organizationUnitDN))
             {
                 // 對外提供失敗
-                return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 不能作為移動物件");
+                return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 不能作為移動物件");
             }
 
             // 取得目標物件類型的名稱
@@ -35,7 +35,7 @@ namespace ADService.Certification
             if (!dictionaryCategoryTypeWithValue.TryGetValue(destination.Type, out string categoryValue))
             {
                 // 對外提供失敗
-                return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 不具有類型資料");
+                return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 不具有類型資料");
             }
 
             // 整合各 SID 權向狀態
@@ -49,18 +49,18 @@ namespace ADService.Certification
             if (!isValueDelete && !isParentChileDelete)
             {
                 // 對外提供失敗
-                return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有目標:{categoryValue} 的刪除權限且父層:{organizationUnitDN} 需具有子物件刪除權限");
+                return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有目標:{categoryValue} 的刪除權限且父層:{organizationUnitDN} 需具有子物件刪除權限");
             }
 
             // 宣告重新命名分析氣
             AnalyticalReName analyticalReName = new AnalyticalReName();
             // 檢查是否可以喚醒重新命名: 只需要查看是否成功
-            (bool invokable, _, string message) = analyticalReName.Invokable(dispatcher, invoker, destination);
+            (InvokeCondition condition, string message) = analyticalReName.Invokable(dispatcher, invoker, destination);
             // 若不可呼叫
-            if (!invokable)
+            if (condition == null)
             {
                 // 對外提供失敗: 使用重新命名的錯誤描述
-                return (false, null, message);
+                return (null, message);
             }
 
             // 預期項目: 必定是字串
@@ -89,7 +89,7 @@ namespace ADService.Certification
             };
 
             // 對外提供成功必須是組織單位的區分名稱
-            return (true, new InvokeCondition(commonFlags, dictionaryProtocolWithDetail), string.Empty);
+            return (new InvokeCondition(commonFlags, dictionaryProtocolWithDetail), string.Empty);
         }
 
         internal override bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol)

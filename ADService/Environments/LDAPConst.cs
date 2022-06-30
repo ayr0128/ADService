@@ -3,6 +3,30 @@
 namespace ADService.Environments
 {
     /// <summary>
+    /// 關聯類型
+    /// </summary>
+    [Flags]
+    internal enum PropertytFlags : byte
+    {
+        /// <summary>
+        /// 預設, 無使用
+        /// </summary>
+        NONE,
+        /// <summary>
+        /// 是關聯屬性
+        /// </summary>
+        SET = 0x01,
+        /// <summary>
+        /// 是寫入有效
+        /// </summary>
+        WRITE = 0x02,
+        /// <summary>
+        /// 是可套用
+        /// </summary>
+        APPLIES = 0x04,
+    }
+
+    /// <summary>
     /// 描述目標 GUID 適合種類型
     /// </summary>
     internal enum UnitType : byte

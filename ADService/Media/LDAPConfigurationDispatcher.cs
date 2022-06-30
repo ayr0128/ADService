@@ -55,9 +55,9 @@ namespace ADService.Media
         /// <summary>
         /// 透過透過額外權限取得所有關聯屬性組
         /// </summary>
-        /// <param name="securityGUID">額外權限的 GUID, 用來匹配藍本的安全屬性 GUID</param>
+        /// <param name="unitExtendedRight">額外權限</param>
         /// <returns>此額外權限需求的藍本群組</returns>
-        internal UnitSchema[] GetPropertySet(in Guid securityGUID) => Configuration.GetPropertySet(this, securityGUID);
+        internal UnitSchema[] GetPropertySet(in UnitExtendedRight unitExtendedRight) => Configuration.GetPropertySet(this, unitExtendedRight);
 
         /// <summary>
         /// 取得藍本
@@ -78,7 +78,7 @@ namespace ADService.Media
         /// </summary>
         /// <param name="guids">目標 GUID 陣列</param>
         /// <returns>藍本結構</returns>
-        internal UnitExtendedRight[] GetExtendedRight(params Guid[] guids) => Configuration.GetExtendedRight(this, guids);
+        internal UnitExtendedRight GetExtendedRight(in Guid guid) => Configuration.GetExtendedRight(this, guid);
 
         /// <summary>
         /// 使用依賴類別 GUID 找尋相關的額外權限
@@ -98,6 +98,20 @@ namespace ADService.Media
             Dictionary<string, Guid> dictionaryGUIDLowerWithGUID = accessRuleGUIDs.ToDictionary(accessRuleGUID => accessRuleGUID.ToString("D").ToLower());
             // 長度最多為外部宣告的 GUID 大小
             Dictionary<string, UnitDetail> dictionaryGuidWithAUnitDetail = new Dictionary<string, UnitDetail>(dictionaryGUIDLowerWithGUID.Count);
+            // 遍歷所有取得的額外權限
+            foreach (UnitExtendedRight unitExtendedRight in Configuration.GetExtendedRight(this, dictionaryGUIDLowerWithGUID.Values))
+            {
+                // 交查詢到的 GUID 轉為小寫
+                string unitExtendedRightGUIDLower = unitExtendedRight.GUID.ToLower();
+                // 強型別宣告方便閱讀
+                UnitDetail accessRuleObjectDetail = new UnitDetail(unitExtendedRight.Name, UnitType.EXTENDEDRIGHT);
+                // 推入查詢物件
+                dictionaryGuidWithAUnitDetail.Add(unitExtendedRightGUIDLower, accessRuleObjectDetail);
+
+                // 將查詢到的藍本移除
+                dictionaryGUIDLowerWithGUID.Remove(unitExtendedRightGUIDLower);
+            }
+
             // 遍歷所有取得的藍本
             foreach (UnitSchema unitSchema in Configuration.GetSchema(this, dictionaryGUIDLowerWithGUID.Values))
             {
@@ -112,20 +126,6 @@ namespace ADService.Media
 
                 // 將查詢到的藍本移除
                 dictionaryGUIDLowerWithGUID.Remove(unitSchemaGUIDLower);
-            }
-            
-            // 遍歷所有取得的額外權限
-            foreach (UnitExtendedRight unitExtendedRight in Configuration.GetExtendedRight(this, dictionaryGUIDLowerWithGUID.Values))
-            {
-                // 交查詢到的 GUID 轉為小寫
-                string unitExtendedRightGUIDLower = unitExtendedRight.RightsGUID.ToLower();
-                // 強型別宣告方便閱讀
-                UnitDetail accessRuleObjectDetail = new UnitDetail(unitExtendedRight.Name, UnitType.EXTENDEDRIGHT);
-                // 推入查詢物件
-                dictionaryGuidWithAUnitDetail.Add(unitExtendedRightGUIDLower, accessRuleObjectDetail);
-
-                // 將查詢到的藍本移除
-                dictionaryGUIDLowerWithGUID.Remove(unitExtendedRightGUIDLower);
             }
 
             // 安全防呆: 所有指定的 GUID 都應該要能被找到

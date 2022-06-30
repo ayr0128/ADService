@@ -17,16 +17,16 @@ namespace ADService.Certification
         /// </summary>
         internal AnalyticalShowDetail() : base(Methods.M_SHOWDETAIL, true) { }
 
-        internal override (bool, InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
+        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
         {
             // 宣告異動細節分析氣
             AnalyticalModifyDetail analyticalModifyDetail = new AnalyticalModifyDetail();
             // 是否能展示須根據是否能異動決定
-            (bool invokable, _, string message) = analyticalModifyDetail.Invokable(dispatcher, invoker, destination);
+            (InvokeCondition condition, string message) = analyticalModifyDetail.Invokable(dispatcher, invoker, destination);
             // 若不可呼叫
-            if (!invokable)
+            if (condition == null)
             {
-                return (false, null, message);
+                return (null, message);
             }
 
             /* 一般需求參數限制如下所述:
@@ -42,7 +42,7 @@ namespace ADService.Certification
             };
 
             // 持有項目時就外部就能夠異動
-            return (true, new InvokeCondition(commonFlags, dictionaryProtocolWithDetail), string.Empty);
+            return (new InvokeCondition(commonFlags, dictionaryProtocolWithDetail), string.Empty);
         }
 
         internal override bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol) => false;

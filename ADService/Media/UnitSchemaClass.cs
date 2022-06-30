@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using ADService.Environments;
+using System.Collections.Generic;
 using System.DirectoryServices;
 
 namespace ADService.Media
@@ -41,6 +42,6 @@ namespace ADService.Media
             combineValues.Add(SchemaGUID);
         }
 
-        internal override bool IsPropertySet(in UnitExtendedRight unitExtendedRight) => unitExtendedRight.WasAppliedWith(SchemaGUID);
+        internal override PropertytFlags GetPorpertyType(in UnitExtendedRight unitExtendedRight) => unitExtendedRight.WasAppliedWith(SchemaGUID) ? PropertytFlags.APPLIES : PropertytFlags.NONE;
     }
 }

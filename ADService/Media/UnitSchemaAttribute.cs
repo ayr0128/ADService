@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using ADService.Environments;
+using System.Collections.Generic;
 using System.DirectoryServices;
 
 namespace ADService.Media
@@ -64,6 +65,18 @@ namespace ADService.Media
             combineValues.Add(SecurityGUID);
         }
 
-        internal override bool IsPropertySet(in UnitExtendedRight unitExtendedRight) => unitExtendedRight.RightsGUID.ToLower() == SecurityGUID.ToLower();
+        internal override PropertytFlags GetPorpertyType(in UnitExtendedRight unitExtendedRight)
+        {
+            // 先轉為小寫
+            string unitExtendedRightGUIDLower = unitExtendedRight.GUID.ToLower();
+            // 對外提供類型
+            PropertytFlags setType = PropertytFlags.NONE;
+            // 安全屬性 GUID 相等時
+            setType |= unitExtendedRightGUIDLower == SecurityGUID.ToLower() ? PropertytFlags.SET : PropertytFlags.NONE; ;
+            // 與 GUID 相等時
+            setType |= unitExtendedRightGUIDLower == SchemaGUID.ToLower() ? PropertytFlags.WRITE : PropertytFlags.NONE; ;
+            // 對外提供有效資訊
+            return setType;
+        }
     }
 }

@@ -40,7 +40,7 @@ namespace ADService.Media
         /// 取得擴展權限
         /// </summary>
         /// <param name="dispatcher">入口物件製作器</param>
-        /// <param name="value">目標 GUID</param>
+        /// <param name="convertedGUIDs">目標 GUID</param>
         /// <returns>額外權限結構</returns>
         internal static UnitExtendedRight[] GetWithGUID(in LDAPConfigurationDispatcher dispatcher, in IEnumerable<string> convertedGUIDs)
         {
@@ -75,6 +75,37 @@ namespace ADService.Media
                         // 返回查詢到的資料
                         return unitExtendedRights.ToArray();
                     }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 取得擴展權限
+        /// </summary>
+        /// <param name="dispatcher">入口物件製作器</param>
+        /// <param name="extendedRightGUIDLower">目標 GUID</param>
+        /// <returns>額外權限結構</returns>
+        internal static UnitExtendedRight GetWithGUID(in LDAPConfigurationDispatcher dispatcher, in string extendedRightGUIDLower)
+        {
+            // 新建立藍本入口物件
+            using (DirectoryEntry extendedRight = dispatcher.ByDistinguisedName($"{CONTEXT_EXTENDEDRIGHT},{dispatcher.ConfigurationDistinguishedName}"))
+            {
+                // 需使用加密避免 LDAP 注入式攻擊
+                string filiter = LDAPConfiguration.GetORFiliter(ATTRIBUTE_EXTENDEDRIGHT_GUID, extendedRightGUIDLower);
+                // 從入口物件中找尋到指定物件
+                using (DirectorySearcher searcher = new DirectorySearcher(extendedRight, filiter, PROPERTIES))
+                {
+                    // 取得指定物件
+                    SearchResult one = searcher.FindOne();
+                    // 簡易防呆
+                    if (one == null)
+                    {
+                        // 無法找到資料交由外部判斷是否錯誤
+                        return null;
+                    }
+
+                    // 返回查詢到的資料
+                    return new UnitExtendedRight(one.Properties);
                 }
             }
         }
@@ -142,7 +173,7 @@ namespace ADService.Media
         /// <summary>
         /// 使用欄位 <see cref="ATTRIBUTE_EXTENDEDRIGHT_GUID"> GUID </see> 取得的相關字串
         /// </summary>
-        internal readonly string RightsGUID;
+        internal readonly string GUID;
 
         /// <summary>
         /// 使用欄位 <see cref="ATTRIBUTE_EXTENDEDRIGHT_APPLIESTO"> GUID </see> 取得的相關字串
@@ -158,7 +189,7 @@ namespace ADService.Media
         /// <summary>
         /// 啟用時間
         /// </summary>
-        private readonly DateTime EnableTime;
+        private readonly DateTime EnableTime = DateTime.UtcNow;
 
         /// <summary>
         /// 是否已經超過保留時間
@@ -174,7 +205,7 @@ namespace ADService.Media
         internal UnitExtendedRight(in ResultPropertyCollection properties)
         {
             Name = LDAPConfiguration.ParseSingleValue<string>(ATTRIBUTE_EXTENDEDRIGHT_PROPERTY, properties);
-            RightsGUID = LDAPConfiguration.ParseSingleValue<string>(ATTRIBUTE_EXTENDEDRIGHT_GUID, properties);
+            GUID = LDAPConfiguration.ParseSingleValue<string>(ATTRIBUTE_EXTENDEDRIGHT_GUID, properties);
 
             // 避免意外情況先改成統一小寫
             string[] appliesToGUID = LDAPConfiguration.ParseMutipleValue<string>(ATTRIBUTE_EXTENDEDRIGHT_APPLIESTO, properties);
@@ -182,8 +213,6 @@ namespace ADService.Media
             AppliesTo = new HashSet<string>(appliesToGUID.Length);
             // 轉乘小血後推入 HashSet 中
             Array.ForEach(appliesToGUID, (schemaGUID) => AppliesTo.Add(schemaGUID.ToLower()));
-
-            EnableTime = DateTime.UtcNow;
         }
     }
 }
