@@ -19,7 +19,7 @@ namespace ADService.Certification
         /// </summary>
         internal AnalyticalResetPassword() : base(Methods.M_RESETPWD) { }
 
-        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
+        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination, LDAPPermissions permissions)
         {
             // 根目錄不應重新命名
             if (destination.Type != CategoryTypes.PERSON)
@@ -28,8 +28,6 @@ namespace ADService.Certification
                 return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 是不能重新命名");
             }
 
-            // 整合各 SID 權向狀態
-            LDAPPermissions permissions = GetPermissions(dispatcher, invoker, destination);
             // 不存在 '重製密碼' 的額外權限
             if (!permissions.IsAllow(Properties.EX_RESETPASSWORD, null, AccessRuleRightFlags.RightExtended))
             {
@@ -51,7 +49,7 @@ namespace ADService.Certification
             return (new InvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside), string.Empty);
         }
 
-        internal override bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol)
+        internal override bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions)
         {
             // 將協議轉換成改變密碼用格式
             string setPWDProtocol = protocol?.ToObject<string>();
@@ -59,7 +57,7 @@ namespace ADService.Certification
             return !string.IsNullOrEmpty(setPWDProtocol);
         }
 
-        internal override void Invoke(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol)
+        internal override void Invoke(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions)
         {
             // 將協議轉換成改變密碼用格式
             string setPWDProtocol = protocol?.ToObject<string>();

@@ -1,12 +1,7 @@
-﻿using ADService.Details;
-using ADService.Features;
 using ADService.Foundation;
 using ADService.Media;
 using ADService.Protocol;
 using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.Security.Principal;
 
 namespace ADService.Certification
 {
@@ -15,29 +10,6 @@ namespace ADService.Certification
     /// </summary>
     internal abstract class Analytical
     {
-        /// <summary>
-        /// 系統自訂群組 SELF 的安全性 SID
-        /// </summary>
-        internal static string SID_SELF
-        {
-            get
-            {
-                SecurityIdentifier self = new SecurityIdentifier(WellKnownSidType.SelfSid, null);
-                return self.Translate(typeof(SecurityIdentifier)).ToString();
-            }
-        }
-        /// <summary>
-        /// 系統自訂群組 EVERYONE 的安全性 SID
-        /// </summary>
-        internal static string SID_EVERYONE
-        {
-            get
-            {
-                SecurityIdentifier everyone = new SecurityIdentifier(WellKnownSidType.WorldSid, null);
-                return everyone.Translate(typeof(SecurityIdentifier)).ToString();
-            }
-        }
-
         /// <summary>
         /// 註冊給外部使用的方法或功能索引
         /// </summary>
@@ -65,7 +37,7 @@ namespace ADService.Certification
         /// <param name="invoker">喚起物件</param>
         /// <param name="destination">目標物件</param>
         /// <returns>是否可使用</returns>
-        internal abstract (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination);
+        internal abstract (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination, LDAPPermissions permissions);
         /// <summary>
         /// 驗證提供的協議內容是否可用
         /// </summary>
@@ -74,7 +46,7 @@ namespace ADService.Certification
         /// <param name="destination">目標物件</param>
         /// <param name="protocol">外部傳遞的協定內容</param>
         /// <returns>此協定是否可用</returns>
-        internal abstract bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol);
+        internal abstract bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions);
         /// <summary>
         /// 觸發此方法
         /// </summary>
@@ -82,7 +54,7 @@ namespace ADService.Certification
         /// <param name="invoker">喚起物件</param>
         /// <param name="destination">目標物件</param>
         /// <param name="protocol">外部傳遞的協定內容</param>
-        internal abstract void Invoke(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol);
+        internal abstract void Invoke(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions);
 
         /// <summary>
         /// 取得換取者對於目標物件的權限

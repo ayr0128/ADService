@@ -72,6 +72,8 @@ namespace ADService.Certification
             // 過程若出現任何錯誤應被截取會並處理
             try
             {
+                // 整合各 SID 權向狀態
+                LDAPPermissions permissions = LDAPPermissions.GetPermissions(Dispatcher, Invoker, Destination);
                 // 最多回傳的長度是所有的項目都支援
                 Dictionary<string, InvokeCondition> dictionaryAttributeNameWithProtocol = new Dictionary<string, InvokeCondition>(dictionaryMethodWithAnalytical.Count);
                 // 遍歷權限並檢查是否可以喚醒
@@ -85,7 +87,7 @@ namespace ADService.Certification
                     }
 
                     // 取得結果
-                    (InvokeCondition condition, _) = analyticalRights.Invokable(Dispatcher, Invoker, Destination);
+                    (InvokeCondition condition, _) = analyticalRights.Invokable(Dispatcher, Invoker, Destination, permissions);
                     // 無法啟動代表無法呼叫
                     if (condition == null)
                     {
@@ -140,8 +142,10 @@ namespace ADService.Certification
                     throw new LDAPExceptions($"類型:{Destination.Type} 的物件:{Destination.DistinguishedName} 於檢驗功能:{attributeName} 時發現不能直接呼叫, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
                 }
 
+                // 整合各 SID 權向狀態
+                LDAPPermissions permissions = LDAPPermissions.GetPermissions(Dispatcher, Invoker, Destination);
                 // 取得結果
-                (InvokeCondition condition, _) = analytical.Invokable(Dispatcher, Invoker, Destination);
+                (InvokeCondition condition, _) = analytical.Invokable(Dispatcher, Invoker, Destination, permissions);
                 // 無法啟動代表無法呼叫
                 if (condition == null)
                 {
@@ -192,8 +196,11 @@ namespace ADService.Certification
                 // 轉換成釋放用介面
                 iRelease = certification;
 
+                // 整合各 SID 權向狀態
+                LDAPPermissions permissions = LDAPPermissions.GetPermissions(Dispatcher, Invoker, Destination);
+
                 // 遍歷權限驗證協議是否可用
-                return analytical.Authenicate(ref certification, Invoker, Destination, protocol);
+                return analytical.Authenicate(ref certification, Invoker, Destination, protocol, permissions);
             }
             // 發生時機: 使用者登入時發現例外錯誤
             catch (DirectoryServicesCOMException exception)
@@ -240,8 +247,11 @@ namespace ADService.Certification
                 // 轉換成釋放用介面
                 iRelease = certification;
 
+                // 整合各 SID 權向狀態
+                LDAPPermissions permissions = LDAPPermissions.GetPermissions(Dispatcher, Invoker, Destination);
+
                 // 驗證是否可用
-                bool authenicateSuccess = analytical.Authenicate(ref certification, Invoker, Destination, protocol);
+                bool authenicateSuccess = analytical.Authenicate(ref certification, Invoker, Destination, protocol, permissions);
                 // 檢查驗證是否成功
                 if (!authenicateSuccess)
                 {
@@ -250,7 +260,7 @@ namespace ADService.Certification
                 }
 
                 // 執行異動或呼叫
-                analytical.Invoke(ref certification, Invoker, Destination, protocol);
+                analytical.Invoke(ref certification, Invoker, Destination, protocol, permissions);
 
                 // 推入修改
                 Dictionary<string, RequiredCommitSet> dictionaryDistinguishedNameWitSet = certification.Commited();

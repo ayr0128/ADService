@@ -17,12 +17,12 @@ namespace ADService.Certification
         /// </summary>
         internal AnalyticalShowDetail() : base(Methods.M_SHOWDETAIL, true) { }
 
-        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
+        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination, LDAPPermissions permissions)
         {
             // 宣告異動細節分析氣
             AnalyticalModifyDetail analyticalModifyDetail = new AnalyticalModifyDetail();
             // 是否能展示須根據是否能異動決定
-            (InvokeCondition condition, string message) = analyticalModifyDetail.Invokable(dispatcher, invoker, destination);
+            (InvokeCondition condition, string message) = analyticalModifyDetail.Invokable(dispatcher, invoker, destination, permissions);
             // 若不可呼叫
             if (condition == null)
             {
@@ -45,8 +45,8 @@ namespace ADService.Certification
             return (new InvokeCondition(commonFlags, dictionaryProtocolWithDetail), string.Empty);
         }
 
-        internal override bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol) => false;
+        internal override bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions) => false;
 
-        internal override void Invoke(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol) { }
+        internal override void Invoke(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions) { }
     }
 }
