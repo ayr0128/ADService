@@ -1,7 +1,9 @@
 ﻿using ADService.Environments;
 using ADService.Protocol;
 using System;
+using System.Collections.Generic;
 using System.DirectoryServices;
+using System.Linq;
 
 namespace ADService.Media
 {
@@ -51,67 +53,90 @@ namespace ADService.Media
 
         #region 設定取得
         /// <summary>
+        /// 透過透過額外權限取得所有關聯屬性組
+        /// </summary>
+        /// <param name="securityGUID">額外權限的 GUID, 用來匹配藍本的安全屬性 GUID</param>
+        /// <returns>此額外權限需求的藍本群組</returns>
+        internal UnitSchema[] GetPropertySet(in Guid securityGUID) => Configuration.GetPropertySet(this, securityGUID);
+
+        /// <summary>
         /// 取得藍本
         /// </summary>
-        /// <param name="value">目標 GUID</param>
+        /// <param name="guids">目標 GUID 陣列</param>
         /// <returns>藍本結構</returns>
-        internal UnitSchema GetSchema(in Guid value) => Configuration.GetSchema(this, value);
+        internal UnitSchema[] GetSchema(params Guid[] guids) => Configuration.GetSchema(this, guids);
 
         /// <summary>
         /// 使用展示名稱 進行搜尋指定目標藍本物件
         /// </summary>
-        /// <param name="value">展示名稱</param>
+        /// <param name="attributeNames">屬性名稱</param>
         /// <returns>指定藍本物件, 可能不存在</returns>
-        internal UnitSchema GetSchema(in string value) => Configuration.GetSchema(this, value);
+        internal UnitSchema[] GetSchema(params string[] attributeNames) => Configuration.GetSchema(this, attributeNames);
 
         /// <summary>
-        /// 取得額外權限
+        /// 取得相關 GUID 的
         /// </summary>
-        /// <param name="value">目標 GUID</param>
-        /// <returns>額外權限結構</returns>
-        internal UnitExtendedRight GetExtendedRight(in Guid value) => Configuration.GetExtendedRight(this, value);
+        /// <param name="guids">目標 GUID 陣列</param>
+        /// <returns>藍本結構</returns>
+        internal UnitExtendedRight[] GetExtendedRight(params Guid[] guids) => Configuration.GetExtendedRight(this, guids);
 
         /// <summary>
-        /// 使用展示名稱 進行搜尋指定目標額外權限物件
+        /// 使用依賴類別 GUID 找尋相關的額外權限
         /// </summary>
-        /// <param name="value">展示名稱</param>
+        /// <param name="unitSchemas">查詢的藍本</param>
         /// <returns>指定額外權限物件, 可能不存在</returns>
-        internal UnitExtendedRight GetExtendedRight(in string value) => Configuration.GetExtendedRight(this, value);
+        internal UnitExtendedRight[] GetExtendedRight(params UnitSchema[] unitSchemas) => Configuration.GetExtendedRight(this, unitSchemas);
 
         /// <summary>
-        /// 使用 GUID 找到展示名稱
+        /// 提供存取權限中目標物件的 GUID 查詢對應的資料
         /// </summary>
-        /// <param name="value">目標 GUID</param>
-        /// <returns></returns>
-        internal string FindName(in Guid value)
+        /// <param name="accessRuleGUIDs">目標 GUID 陣列</param>
+        /// <returns>返回各 GUID 的詳細資料, 格式如右: Dictiobary 'Guid 字串(小寫), 存取規則描述' </returns>
+        internal Dictionary<string, UnitDetail> GetUnitDetail(in IEnumerable<Guid> accessRuleGUIDs)
         {
-            // 提供的 GUID 為空
-            if (LDAPConfiguration.IsGUIDEmpty(value))
+            // 轉換成袋查詢的資料
+            Dictionary<string, Guid> dictionaryGUIDLowerWithGUID = accessRuleGUIDs.ToDictionary(accessRuleGUID => accessRuleGUID.ToString("D").ToLower());
+            // 長度最多為外部宣告的 GUID 大小
+            Dictionary<string, UnitDetail> dictionaryGuidWithAUnitDetail = new Dictionary<string, UnitDetail>(dictionaryGUIDLowerWithGUID.Count);
+            // 遍歷所有取得的藍本
+            foreach (UnitSchema unitSchema in Configuration.GetSchema(this, dictionaryGUIDLowerWithGUID.Values))
             {
-                // 提供空字串
-                return string.Empty;
+                // 交查詢到的 GUID 轉為小寫
+                string unitSchemaGUIDLower = unitSchema.SchemaGUID.ToLower();
+                // 取得類型
+                UnitType accessRuleObjectType = unitSchema is UnitSchemaAttribute _ ? UnitType.ATTRIBUTE : UnitType.CLASS;
+                // 強型別宣告方便閱讀
+                UnitDetail accessRuleObjectDetail = new UnitDetail(unitSchema.Name, accessRuleObjectType);
+                // 推入查詢物件
+                dictionaryGuidWithAUnitDetail.Add(unitSchemaGUIDLower, accessRuleObjectDetail);
+
+                // 將查詢到的藍本移除
+                dictionaryGUIDLowerWithGUID.Remove(unitSchemaGUIDLower);
+            }
+            
+            // 遍歷所有取得的額外權限
+            foreach (UnitExtendedRight unitExtendedRight in Configuration.GetExtendedRight(this, dictionaryGUIDLowerWithGUID.Values))
+            {
+                // 交查詢到的 GUID 轉為小寫
+                string unitExtendedRightGUIDLower = unitExtendedRight.RightsGUID.ToLower();
+                // 強型別宣告方便閱讀
+                UnitDetail accessRuleObjectDetail = new UnitDetail(unitExtendedRight.Name, UnitType.EXTENDEDRIGHT);
+                // 推入查詢物件
+                dictionaryGuidWithAUnitDetail.Add(unitExtendedRightGUIDLower, accessRuleObjectDetail);
+
+                // 將查詢到的藍本移除
+                dictionaryGUIDLowerWithGUID.Remove(unitExtendedRightGUIDLower);
             }
 
-            // 轉換成根據查詢結構: 若此處出現錯誤則必定是羅錯誤導致加入重複物件
-            UnitExtendedRight unitExtendedRight = Configuration.GetExtendedRight(this, value);
-            // 從額外權限中找到目標資料
-            if (unitExtendedRight != null)
+            // 安全防呆: 所有指定的 GUID 都應該要能被找到
+            if (dictionaryGUIDLowerWithGUID.Count != 0)
             {
-                // 設置對外提供的名稱: 額外權權的展示名稱
-                return unitExtendedRight.Name;
+                // 此時拋出例外: 因為 GUID 應被晚整取得, 此處對外提供邏輯錯誤
+                throw new LDAPExceptions($"預期應找尋的 GUID 中還有剩餘的部分:{string.Join(",", dictionaryGUIDLowerWithGUID.Keys)} 因而拋出例外, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
             }
 
-            // 轉換成根據查詢結構: 若此處出現錯誤則必定是羅錯誤導致加入重複物件
-            UnitSchema unitSchema = Configuration.GetSchema(this, value);
-            // 從藍本中找到目標資料
-            if (unitSchema != null)
-            {
-                // 設置對外提供的名稱: 額外權權的展示名稱
-                return unitSchema.Name;
-            }
-
-            // 應找尋得到額外權限: 若取得此例外則必定是 AD 設置有漏洞
-            throw new LDAPExceptions($"目標 GUID:{value} 無法於額外權限中找得展示名稱因而丟出例外, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
+            // 無錯誤情況下對外提供資料
+            return dictionaryGuidWithAUnitDetail;
         }
         #endregion
 

@@ -19,11 +19,6 @@ namespace ADService.Certification
         #region 存取規則描述對照表
         /// <summary>
         /// 右建功能對應的權限解析方法
-        /// <list type="table|bullet">
-        ///     <item> <see href="https://docs.microsoft.com/en-us/windows/win32/adschema/property-sets">組合式權限</see> </item>
-        ///     <item> <see href="https://docs.microsoft.com/en-us/windows/win32/adschema/attributes">屬性定義</see> </item>
-        ///     <item> <see href="https://docs.microsoft.com/en-us/windows/win32/adschema/extended-rights">額外權限定義</see> </item>
-        /// </list>
         /// </summary>
         internal static readonly Dictionary<string, Analytical> dictionaryMethodWithAnalytical = new List<Analytical>() {
             new AnalyticalReName(),         // 重新命名

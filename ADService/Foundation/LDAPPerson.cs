@@ -1,6 +1,8 @@
 ﻿using ADService.Environments;
+using ADService.Features;
 using ADService.Media;
 using ADService.Protocol;
+using System.Collections.Generic;
 using System.DirectoryServices;
 
 namespace ADService.Foundation
@@ -8,8 +10,34 @@ namespace ADService.Foundation
     /// <summary>
     /// 成員
     /// </summary>
-    public class LDAPPerson : LDAPEntity
+    public class LDAPPerson :
+        LDAPEntity,
+        IRevealerSecuritySIDs
     {
+        #region 介面:IRevealerSID
+        string[] IRevealerSecuritySIDs.Values
+        {
+            get
+            {
+                // 取得 SID 讀取器
+                IRevealerSID revealerSID = this;
+                // 處理的群組 SID
+                List<string> listSID = new List<string>(MemberOf.Count + 1) { revealerSID.Value };
+
+                // 取得 隸屬群組 讀取器
+                IRevealerMemberOf revealerMemberOf = this;
+                // 遍歷所有成員
+                foreach (LDAPRelationship relationship in revealerMemberOf.Elements)
+                {
+                    // 將這些隸屬群組的 SID 家入作為項目之一
+                    listSID.Add(relationship.SID);
+                }
+                // 對外提供所有安全性群組
+                return listSID.ToArray();
+            }
+        }
+        #endregion
+
         /// <summary>
         /// 主要隸屬群組的 SID
         /// </summary>

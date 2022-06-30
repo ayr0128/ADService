@@ -85,60 +85,35 @@ namespace ADService.Certification
         internal abstract void Invoke(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol);
 
         /// <summary>
-        /// </summary>
-        /// <returns>按屬性鍵值區分的存取權限, 格式如右: Dictionary '屬性鍵值, 存取權限' </returns>
-        /// <summary>
         /// 取得換取者對於目標物件的權限
         /// </summary>
+        /// <param name="dispatcher">設定分配氣</param>
         /// <param name="invoker">呼叫者</param>
         /// <param name="destination">目標物件</param>
-        /// <param name="limitedSIDs">限制拿取目標的權限, 沒有限制時會根據喚呼叫者與目標物件做判斷</param>
         /// <returns>按屬性鍵值區分的存取權限, 格式如右: Dictionary '屬性鍵值, 存取權限' </returns>
-        internal static AccessRuleInformation[] GetAccessRuleInformations(in LDAPObject invoker, in LDAPObject destination, params string[] limitedSIDs)
+        internal static LDAPPermissions GetPermissions(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
         {
-            // 處理的群組 SID: 一開始會持有的是經過判斷的 SID
-            List<string> SIDs = new List<string>();
-            // 先判斷外部是否有限制目標
-            if (limitedSIDs == null || limitedSIDs.Length == 0)
-            {
-                // 處理的群組 SID: 一開始會持有的是經過判斷的 SID
-                SIDs.Add(invoker.GUID == destination.GUID ? SID_SELF : SID_EVERYONE);
-                // 加入所有描述持有的 SID: 每次都重新拿取
-                Array.ForEach(invoker is IRevealerMemberOf memberOf ? memberOf.Elements : Array.Empty<LDAPRelationship>(), (relationship) => SIDs.Add(relationship.SID));
+            // 支援的所有安全性群組 SID
+            string[] invokerSecuritySIDs = invoker is IRevealerSecuritySIDs revealerSecuritySIDs ? revealerSecuritySIDs.Values : Array.Empty<string>();
+            // 轉成 HashSet 判斷喚起者是否為自身
+            HashSet<string> invokerSecuritySIDHashSet = new HashSet<string>(invokerSecuritySIDs);
+            /* 根據情況決定添加何種額外 SID
+                 1. 目標不持有 SID 介面: 視為所有人
+                 2. 喚起者與目標非相同物件: 視為所有人
+                 3. 其他情況: 是為自己
+            */
+            string extendedSID = destination is IRevealerSID revealerSID && invokerSecuritySIDHashSet.Contains(revealerSID.Value) ? SID_SELF : SID_EVERYONE;
+            // 推入此參數
+            invokerSecuritySIDHashSet.Add(extendedSID);
 
-                // 取得操作者本身 SID 介面
-                if (invoker is IRevealerSID SID)
-                {
-                    // 加入操作者 SID: 安全性也能指定使用者作為主體
-                    SIDs.Add(SID.Value);
-                }
-            }
-            else
-            {
-                // 加入外部限制項目
-                SIDs.AddRange(limitedSIDs);
-            }
-
-            // 整合所有權縣
-            List<AccessRuleInformation> accessRuleInformations = new List<AccessRuleInformation>();
-            // 遍歷想要限制的 SID
-            foreach (string SID in SIDs)
-            {
-                // 取得 SID 應支援的支援所有屬性名稱
-                AccessRuleInformation[] permissioAccessRuleInformations = destination.StoredProperties.GetAccessRuleInformations(SID);
-                // 如果不存在或長度為 0, 則當作未持有
-                if (permissioAccessRuleInformations == null || permissioAccessRuleInformations.Length == 0)
-                {
-                    // 跳過: 當作未持有
-                    continue;
-                }
-
-                // 整合至陣列
-                accessRuleInformations.AddRange(permissioAccessRuleInformations);
-            }
-
+            // 宣告查詢用陣列: 長度是安全性群組的大小
+            string[] securitySIDs = new string[invokerSecuritySIDHashSet.Count];
+            // 將 安全性群組SID 複製到查詢用的陣列內
+            invokerSecuritySIDHashSet.CopyTo(securitySIDs, 0);
+            // 使用查詢 SID 陣列取得所有存取權限 (包含沒有生效的)
+            AccessRuleConverted[] accessRuleConverteds = destination.StoredProperties.GetAccessRuleConverteds(securitySIDs);
             // 取得 SID 應支援的支援所有屬性名稱
-            return accessRuleInformations.ToArray();
+            return new LDAPPermissions(dispatcher, true, accessRuleConverteds);
         }
     }
 }

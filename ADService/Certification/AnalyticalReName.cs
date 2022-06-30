@@ -30,19 +30,15 @@ namespace ADService.Certification
             }
 
             // 整合各 SID 權向狀態
-            AccessRuleInformation[] accessRuleInformations = GetAccessRuleInformations(invoker, destination);
-            // 權限混和
-            AccessRuleRightFlags mixedProcessedRightsProperty = AccessRuleInformation.CombineAccessRuleRightFlags(Properties.P_NAME, accessRuleInformations);
-
+            LDAPPermissions permissions = GetPermissions(dispatcher, invoker, destination);
             // 不存在 '名稱' 的寫入權限
-            if ((mixedProcessedRightsProperty & AccessRuleRightFlags.PropertyWrite) == AccessRuleRightFlags.None)
+            if (!permissions.IsAllow(Properties.P_NAME, null, AccessRuleRightFlags.PropertyWrite))
             {
                 // 對外提供失敗
                 return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{Properties.P_NAME} 的寫入權限");
             }
 
-            // 需要另外一個名稱權限
-            AccessRuleRightFlags destinationRightsTypeName = AccessRuleRightFlags.None;
+
             // 此權限需要根據目標物件類型取得
             switch (destination.Type)
             {
@@ -51,24 +47,29 @@ namespace ADService.Certification
                 // 成員
                 case CategoryTypes.PERSON:
                     {
-                        // 權限混和
-                        destinationRightsTypeName |= AccessRuleInformation.CombineAccessRuleRightFlags(Properties.P_CN, accessRuleInformations);
+                        // 組織群組需另外需求以下的權限
+                        const string attributeName = Properties.P_CN;
+                        // 不存在 '類型名稱' 的寫入權限
+                        if (!permissions.IsAllow(attributeName, null, AccessRuleRightFlags.PropertyWrite))
+                        {
+                            // 對外提供失敗
+                            return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{attributeName} 的寫入權限");
+                        }
                     }
                     break;
                 // 隸屬群組
                 case CategoryTypes.ORGANIZATION_UNIT:
                     {
-                        // 權限混和
-                        destinationRightsTypeName |= AccessRuleInformation.CombineAccessRuleRightFlags(Properties.P_OU, accessRuleInformations);
+                        // 組織群組需另外需求以下的權限
+                        const string attributeName = Properties.P_OU;
+                        // 不存在 '類型名稱' 的寫入權限
+                        if (!permissions.IsAllow(attributeName, null, AccessRuleRightFlags.PropertyWrite))
+                        {
+                            // 對外提供失敗
+                            return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{attributeName} 的寫入權限");
+                        }
                     }
                     break;
-            }
-
-            // 不存在 '類型名稱' 的寫入權限
-            if ((destinationRightsTypeName & AccessRuleRightFlags.PropertyWrite) == AccessRuleRightFlags.None)
-            {
-                // 對外提供失敗
-                return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有對應類型的存取規則寫入權限");
             }
 
             // 具有修改名稱權限

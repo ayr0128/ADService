@@ -39,17 +39,12 @@ namespace ADService.Certification
             }
 
             // 整合各 SID 權向狀態
-            AccessRuleInformation[] accessRuleInformations = GetAccessRuleInformations(invoker, destination);
+            LDAPPermissions permissions = GetPermissions(dispatcher, invoker, destination);
 
-            // 取得不是透過繼承額來的權限
-            AccessRuleRightFlags accessRuleRightFlagsNotInherited = AccessRuleInformation.CombineAccessRuleRightFlags(categoryValue, false, accessRuleInformations);
             // 目標物件是否具有 '刪除' 的寫入權限
-            bool isValueDelete = (accessRuleRightFlagsNotInherited & AccessRuleRightFlags.Delete) != AccessRuleRightFlags.None;
-            // 取得透過繼承額來的權限
-            AccessRuleRightFlags accessRuleRightFlagsInherited = AccessRuleInformation.CombineAccessRuleRightFlags(categoryValue, true, accessRuleInformations);
+            bool isValueDelete = permissions.IsAllow(categoryValue, false, AccessRuleRightFlags.Delete);
             // 目標物件的父層組織單位是否具有 '刪除子物件' 的寫入權限
-            bool isParentChileDelete = (accessRuleRightFlagsInherited & (AccessRuleRightFlags.ChildrenDelete | AccessRuleRightFlags.Delete)) != AccessRuleRightFlags.None;
-
+            bool isParentChileDelete = permissions.IsAllow(categoryValue, true, AccessRuleRightFlags.ChildrenDelete | AccessRuleRightFlags.Delete);
             // 兩種權限都不具備時
             if (!isValueDelete && !isParentChileDelete)
             {
@@ -168,14 +163,11 @@ namespace ADService.Certification
                     }
 
                     // 整合各 SID 權向狀態
-                    AccessRuleInformation[] accessRuleInformations = GetAccessRuleInformations(invoker, entryObject);
-                    // 權限混和
-                    AccessRuleRightFlags mixedProcessedRightsProperty = AccessRuleInformation.CombineAccessRuleRightFlags(categoryValue, accessRuleInformations);
-
+                    LDAPPermissions permissionsProtocol = GetPermissions(certification.Dispatcher, invoker, entryObject);
                     /* 下述認依條件成立, 驗證失敗
                          - 不具備 '子物件類型' 的創建權限
                     */
-                    return (mixedProcessedRightsProperty & AccessRuleRightFlags.ChildrenCreate) != AccessRuleRightFlags.None;
+                    return permissionsProtocol.IsAllow(categoryValue, null, AccessRuleRightFlags.ChildrenCreate);
                 }
             }
         }

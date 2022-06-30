@@ -29,11 +29,9 @@ namespace ADService.Certification
             }
 
             // 整合各 SID 權向狀態
-            AccessRuleInformation[] accessRuleInformations = GetAccessRuleInformations(invoker, destination);
-            // 取得彙整權限
-            AccessRuleRightFlags mixedProcessedRightsProperty = AccessRuleInformation.CombineAccessRuleRightFlags(Properties.EX_CHANGEPASSWORD, accessRuleInformations);
-            // 不存在 '名稱' 的寫入權限
-            if ((mixedProcessedRightsProperty & AccessRuleRightFlags.RightExtended) == AccessRuleRightFlags.None)
+            LDAPPermissions permissions = GetPermissions(dispatcher, invoker, destination);
+            // 不存在 '重設密碼' 的額外權限
+            if (!permissions.IsAllow(Properties.EX_CHANGEPASSWORD, null, AccessRuleRightFlags.RightExtended))
             {
                 // 對外提供失敗
                 return (false, null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{Properties.EX_CHANGEPASSWORD} 的額外權限");

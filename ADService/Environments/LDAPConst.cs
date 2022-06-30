@@ -3,6 +3,29 @@
 namespace ADService.Environments
 {
     /// <summary>
+    /// 描述目標 GUID 適合種類型
+    /// </summary>
+    internal enum UnitType : byte
+    {
+        /// <summary>
+        /// 預設, 通常不使用
+        /// </summary>
+        NONE,
+        /// <summary>
+        /// 類別
+        /// </summary>
+        CLASS,
+        /// <summary>
+        /// 屬性
+        /// </summary>
+        ATTRIBUTE,
+        /// <summary>
+        /// 額外權限
+        /// </summary>
+        EXTENDEDRIGHT,
+    }
+
+    /// <summary>
     /// 帳號控制協議旗標
     /// </summary>
     [Flags]

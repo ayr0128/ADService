@@ -29,7 +29,7 @@
         /// <summary>
         /// 物件 SID
         /// </summary>
-        public const string C_OBJECTSID = "objectSID";
+        public const string C_OBJECTSID = "objectSid";
         /// <summary>
         /// 霧季類別
         /// </summary>
@@ -103,10 +103,6 @@
         /// </summary>
         public const string P_SUPPORTEDENCRYPTIONTYPES = "msDS-SupportedEncryptionTypes";
 
-        /// <summary>
-        /// 新增或移除成員內的方法: 額外權限
-        /// </summary>
-        public const string EX_A10EMEMBER = "Add/Remove self as member";
         /// <summary>
         /// 重置密碼: 額外權限, 直接作為右鍵方法使用
         /// </summary>

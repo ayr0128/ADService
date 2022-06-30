@@ -247,11 +247,7 @@ namespace ADService.Foundation
         /// <param name="dispatcher">入口物件創建器</param>
         /// <param name="propertiesResult">透過找尋取得字的屬性</param>
         /// <exception cref="LDAPExceptions">解析鍵值不符合規則時對外丟出</exception>
-        internal LDAPObject(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher, in ResultPropertyCollection propertiesResult)
-        {
-            // 初始化可用屬性
-            StoredProperties = new LDAPProperties(dispatcher, entry, propertiesResult);
-        }
+        internal LDAPObject(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher, in ResultPropertyCollection propertiesResult) => StoredProperties = new LDAPProperties(dispatcher, entry, propertiesResult);
 
         /// <summary>
         /// 從提供的基礎物件中將特性鍵值轉換給呼叫者

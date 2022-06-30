@@ -1,5 +1,4 @@
-﻿using ADService.Details;
-using ADService.Environments;
+﻿using ADService.Environments;
 using ADService.Features;
 using ADService.Foundation;
 using ADService.Media;
@@ -77,8 +76,7 @@ namespace ADService.Certification
         internal override (bool, InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
         {
             // 整合各 SID 權向狀態
-            AccessRuleInformation[] accessRuleInformations = GetAccessRuleInformations(invoker, destination);
-
+            LDAPPermissions permissions = GetPermissions(dispatcher, invoker, destination);
             // 要對外回傳的所有項目: 預設容器大小等於所有需要轉換的項目
             Dictionary<string, InvokeCondition> dictionaryAttributesNameWithCondition = new Dictionary<string, InvokeCondition>(PropertiesNames.Count);
             #region 整理可對外提供的項目
@@ -86,16 +84,14 @@ namespace ADService.Certification
             foreach (string propertyName in PropertiesNames)
             {
                 // 檢查參數是否支援
-                if(!destination.StoredProperties.GetProperty(propertyName, out _))
+                if (!destination.StoredProperties.GetProperty(propertyName, out _))
                 {
                     // 不知原則必定不需處理
                     continue;
                 }
 
-                // 取得彙整權限
-                AccessRuleRightFlags mixedProcessedRightsProperty = AccessRuleInformation.CombineAccessRuleRightFlags(propertyName, accessRuleInformations);
                 // 檢驗支援項目: 具有查看旗標
-                if ((mixedProcessedRightsProperty & AccessRuleRightFlags.PropertyRead) == AccessRuleRightFlags.None)
+                if (!permissions.IsAllow(propertyName, null, AccessRuleRightFlags.PropertyRead))
                 {
                     // 不具有查看旗標時: 就可以忽略修改旗標, 因為看不到等於不能修改
                     continue;
@@ -104,7 +100,7 @@ namespace ADService.Certification
                 // 將對外提供的處理項目
                 InvokeCondition invokeCondition;
                 // 是否可異動
-                bool isEditable = (mixedProcessedRightsProperty & AccessRuleRightFlags.PropertyWrite) != AccessRuleRightFlags.None;
+                bool isEditable = permissions.IsAllow(propertyName, null, AccessRuleRightFlags.PropertyWrite);
                 // 對外提供項目有個需要特例處理
                 switch (propertyName)
                 {
@@ -133,7 +129,7 @@ namespace ADService.Certification
                             };
 
                             // 異動能否包含自幾
-                            bool isContainSelf = (mixedProcessedRightsProperty & AccessRuleRightFlags.Self) != AccessRuleRightFlags.None;
+                            bool isContainSelf = permissions.IsAllow(propertyName, null, AccessRuleRightFlags.Self);
                             // 是否可以進行異動: 只有在能異動的情況下進行動作
                             if (isEditable || isContainSelf)
                             {
@@ -341,7 +337,7 @@ namespace ADService.Certification
                             invokeCondition = new InvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside);
                         }
                         break;
-                    #endregion
+                        #endregion
                 }
 
                 // 簡易防呆: 屬性描述不得為空
@@ -375,7 +371,7 @@ namespace ADService.Certification
             return (true, new InvokeCondition(commonFlags, dictionaryProtocolWithDetailOutside), string.Empty);
         }
 
-        internal override bool Authenicate(ref CertificationProperties certification , in LDAPObject invoker, in LDAPObject destination, in JToken protocol)
+        internal override bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol)
         {
             // 紀錄處理目標的區分名稱
             string distinguishedNameDestination = destination.DistinguishedName;
@@ -399,8 +395,7 @@ namespace ADService.Certification
             }
 
             // 整合各 SID 權向狀態
-            AccessRuleInformation[] accessRuleInformations = GetAccessRuleInformations(invoker, destination);
-
+            LDAPPermissions permissions = GetPermissions(certification.Dispatcher, invoker, destination);
             // 紀錄未處理的項目
             Dictionary<string, string> dictionaryFailureAttributeNameWithMessage = new Dictionary<string, string>(dictionaryAttributeNameWithDetail.Count);
             // 遍歷所有需求的項目是否有在支援列表內
@@ -413,10 +408,8 @@ namespace ADService.Certification
                     continue;
                 }
 
-                // 取得彙整權限
-                AccessRuleRightFlags mixedProcessedRightsProperty = AccessRuleInformation.CombineAccessRuleRightFlags(propertyName, accessRuleInformations);
                 // 是否可異動
-                bool isEditable = (mixedProcessedRightsProperty & AccessRuleRightFlags.PropertyWrite) != AccessRuleRightFlags.None;
+                bool isEditable = permissions.IsAllow(propertyName, null, AccessRuleRightFlags.PropertyWrite);
                 // 使用存取鍵值去處理
                 switch (propertyName)
                 {
@@ -496,7 +489,7 @@ namespace ADService.Certification
                                             }
 
                                             // 異動能否包含自身
-                                            bool isContainSelf = (mixedProcessedRightsProperty & AccessRuleRightFlags.Self) != AccessRuleRightFlags.None;
+                                            bool isContainSelf = permissions.IsAllow(propertyName, null, AccessRuleRightFlags.Self);
                                             // 遍歷所有項目轉換成入口物件
                                             foreach (SearchResult one in all)
                                             {
@@ -590,7 +583,7 @@ namespace ADService.Certification
                                         - 限制只找尋特定區分名稱
                                         [TODO] 應使用加密字串避免注入式攻擊
                                     */
-                                    string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY,dictionaryLimitedCategory.Values)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, researchDNHashSet)})";
+                                    string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, researchDNHashSet)})";
                                     // 應從根目錄進行搜尋
                                     using (DirectorySearcher seacher = new DirectorySearcher(entryRoot, encoderFiliter, LDAPObject.PropertiesToLoad))
                                     {
@@ -637,14 +630,11 @@ namespace ADService.Certification
                                 LDAPObject entryObject = LDAPObject.ToObject(set.Entry, certification.Dispatcher, set.Properties);
 
                                 // 整合各 SID 權向狀態
-                                AccessRuleInformation[] accessRuleInformationsMember = GetAccessRuleInformations(invoker, entryObject);
-                                // 權限混和
-                                AccessRuleRightFlags mixedProcessedRightsProcessed = AccessRuleInformation.CombineAccessRuleRightFlags(Properties.EX_A10EMEMBER, accessRuleInformationsMember);
-
+                                LDAPPermissions permissionsProtocol = GetPermissions(certification.Dispatcher, invoker, entryObject);
                                 // 是否可異動
-                                bool isProcessedEditable = (mixedProcessedRightsProcessed & AccessRuleRightFlags.PropertyWrite) != AccessRuleRightFlags.None;
+                                bool isProcessedEditable = permissionsProtocol.IsAllow(Properties.P_MEMBER, null, AccessRuleRightFlags.PropertyWrite);
                                 // 異動能否包含自身
-                                bool isProcessedContainSelf = (mixedProcessedRightsProcessed & AccessRuleRightFlags.Self) != AccessRuleRightFlags.None;
+                                bool isProcessedContainSelf = permissionsProtocol.IsAllow(Properties.P_MEMBER, null, AccessRuleRightFlags.Self); 
                                 /* 根據異動目標判斷異動權限是否不可用
                                      1. 異動資料是自己, 不包含異動自己的權限
                                      2. 異動資料不是自己, 不包含異動的權限
@@ -775,7 +765,7 @@ namespace ADService.Certification
                             }
                         }
                         break;
-                    #endregion
+                        #endregion
                 }
             }
 
@@ -1070,7 +1060,7 @@ namespace ADService.Certification
                             setDestination.CommitRequired();
                         }
                         break;
-                    #endregion
+                        #endregion
                 }
             }
         }
