@@ -1,4 +1,4 @@
-﻿using ADService.Details;
+using ADService.Details;
 using ADService.Environments;
 using ADService.Features;
 using ADService.Foundation;
@@ -38,7 +38,7 @@ namespace ADService.Certification
             }
         }
 
-        /// <summary>
+        /// <summary
         /// 內部使用的儲存結構
         /// </summary>
         private sealed class InheritedAccessRuleRight

@@ -1,4 +1,4 @@
-﻿using ADService.Environments;
+using ADService.Environments;
 using ADService.Features;
 using ADService.Foundation;
 using ADService.Media;
@@ -627,6 +627,7 @@ namespace ADService.Certification
 
                                 // 整合各 SID 權向狀態
                                 LDAPPermissions permissionsProtocol = LDAPPermissions.GetPermissions(certification.Dispatcher, invoker, entryObject);
+
                                 // 是否可異動
                                 bool isProcessedEditable = permissionsProtocol.IsAllow(Properties.P_MEMBER, null, AccessRuleRightFlags.PropertyWrite);
                                 // 異動能否包含自身
