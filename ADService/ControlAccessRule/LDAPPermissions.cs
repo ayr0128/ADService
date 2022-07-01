@@ -46,15 +46,32 @@ namespace ADService.ControlAccessRule
         /// <summary>
         /// 建構子: 取得指定影響類型的存取權限
         /// </summary>
-        /// <param name="dispatcher">設定分配器</param>
-        /// <param name="isEffected">指定是否慘生影響以過濾非此類型之外的存取規則: NULL 時全部都取得</param>
-        /// <param name="accessRuleConverteds">目前的存取規則</param>
-        internal LDAPPermissions(in LDAPConfigurationDispatcher dispatcher, params AccessRuleConverted[] accessRuleConverteds)
+        /// <param name="dispatcher">設定分配氣</param>
+        /// <param name="invoker">呼叫者</param>
+        /// <param name="destination">目標物件</param>
+        internal LDAPPermissions(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
         {
+            // 支援的所有安全性群組 SID
+            string[] invokerSecuritySIDs = invoker is IRevealerSecuritySIDs revealerSecuritySIDs ? revealerSecuritySIDs.Values : Array.Empty<string>();
+            // 轉成 HashSet 判斷喚起者是否為自身
+            HashSet<string> invokerSecuritySIDHashSet = new HashSet<string>(invokerSecuritySIDs);
+            /* 根據情況決定添加何種額外 SID
+                 1. 目標不持有 SID 介面: 視為所有人
+                 2. 喚起者與目標非相同物件: 視為所有人
+                 3. 其他情況: 是為自己
+            */
+            string extendedSID = destination is IRevealerSID revealerSID && invokerSecuritySIDHashSet.Contains(revealerSID.Value) ? SID_SELF : SID_EVERYONE;
+            // 推入此參數
+            invokerSecuritySIDHashSet.Add(extendedSID);
+
+            // 使用查詢 SID 陣列取得所有存取權限 (包含沒有生效的)
+            AccessRuleConverted[] accessRuleConverteds = destination.StoredProperties.GetAccessRuleConverteds(invokerSecuritySIDHashSet);
+
             // 取得能產生影響的 GUID
             HashSet<Guid> accessRuleGUIDs = AccessRuleConverted.GetGUIDs(accessRuleConverteds);
             // 取得匹配的所有資: 注意此處的 GUID 是小寫
             Dictionary<string, ControlAccessDetail> dictionaryGUIDWithAccessRuleObjectDetail = dispatcher.GetControlAccessDetail(accessRuleGUIDs);
+            // 由於被拒絕的權限可以不必理會, 因此先將
             // 轉換匹配用陣列
             foreach (AccessRuleConverted accessRuleConverted in accessRuleConverteds)
             {
@@ -68,11 +85,11 @@ namespace ADService.ControlAccessRule
                 // 將資料轉換成小寫
                 string attributeGUIDLower = accessRuleConverted.AttributeGUID.ToString("D").ToLower();
                 // 除了全域權限之外都應取得對應的權限資料
-                bool isExist = dictionaryGUIDWithAccessRuleObjectDetail.TryGetValue(attributeGUIDLower, out ControlAccessDetail contolAccessDetail);
+                dictionaryGUIDWithAccessRuleObjectDetail.TryGetValue(attributeGUIDLower, out ControlAccessDetail contolAccessDetail);
                 // 設置參數
-                controlAccess.Set(isExist ? contolAccessDetail.Name : string.Empty, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights);
+                controlAccess.Set(contolAccessDetail.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights);
                 // 譨取得時須使用找尋到的目標轉換名稱
-                if (contolAccessDetail.UnitType == ControlAccessType.EXTENDEDRIGHT)
+                if (contolAccessDetail.AccessType == ControlAccessType.EXTENDEDRIGHT)
                 {
                     // 取得指定目標額外權限
                     UnitExtendedRight unitExtendedRight = dispatcher.GetExtendedRight(accessRuleConverted.AttributeGUID);
@@ -101,38 +118,6 @@ namespace ADService.ControlAccessRule
             AccessRuleRightFlags accessRuleRightFlags = controlAccess.Get(name, isInherited);
             // 兩者間作 AND 運算, 任意一個權限存在即可
             return (accessRuleRightFlags & accessRuleRightFlagsLimited) != AccessRuleRightFlags.None;
-        }
-
-        /// <summary>
-        /// 取得換取者對於目標物件的權限
-        /// </summary>
-        /// <param name="dispatcher">設定分配氣</param>
-        /// <param name="invoker">呼叫者</param>
-        /// <param name="destination">目標物件</param>
-        /// <returns>按屬性鍵值區分的存取權限, 格式如右: Dictionary '屬性鍵值, 存取權限' </returns>
-        internal static LDAPPermissions GetPermissions(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
-        {
-            // 支援的所有安全性群組 SID
-            string[] invokerSecuritySIDs = invoker is IRevealerSecuritySIDs revealerSecuritySIDs ? revealerSecuritySIDs.Values : Array.Empty<string>();
-            // 轉成 HashSet 判斷喚起者是否為自身
-            HashSet<string> invokerSecuritySIDHashSet = new HashSet<string>(invokerSecuritySIDs);
-            /* 根據情況決定添加何種額外 SID
-                 1. 目標不持有 SID 介面: 視為所有人
-                 2. 喚起者與目標非相同物件: 視為所有人
-                 3. 其他情況: 是為自己
-            */
-            string extendedSID = destination is IRevealerSID revealerSID && invokerSecuritySIDHashSet.Contains(revealerSID.Value) ? SID_SELF : SID_EVERYONE;
-            // 推入此參數
-            invokerSecuritySIDHashSet.Add(extendedSID);
-
-            // 宣告查詢用陣列: 長度是安全性群組的大小
-            string[] securitySIDs = new string[invokerSecuritySIDHashSet.Count];
-            // 將 安全性群組SID 複製到查詢用的陣列內
-            invokerSecuritySIDHashSet.CopyTo(securitySIDs, 0);
-            // 使用查詢 SID 陣列取得所有存取權限 (包含沒有生效的)
-            AccessRuleConverted[] accessRuleConverteds = destination.StoredProperties.GetAccessRuleConverteds(securitySIDs);
-            // 取得 SID 應支援的支援所有屬性名稱
-            return new LDAPPermissions(dispatcher, accessRuleConverteds);
         }
     }
 }

@@ -212,7 +212,7 @@ namespace ADService.Details
         /// </summary>
         /// <param name="securitySIDs">可套用的安全性群組 SID</param>
         /// <returns>這些群組對應到的權限</returns>
-        internal AccessRuleConverted[] GetAccessRuleConverteds(params string[] securitySIDs)
+        internal AccessRuleConverted[] GetAccessRuleConverteds(in IEnumerable<string> securitySIDs)
         {
             // 總長度尚未確定
             List<AccessRuleConverted> accessRuleConvertedsResult = new List<AccessRuleConverted>();

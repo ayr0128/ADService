@@ -52,13 +52,12 @@ namespace ADService.Details
         /// <summary>
         /// 取得提供的存取歸德中的 GUID HashSet
         /// </summary>
-        /// <param name="isEffected">限制類型是否慘生影響</param>
         /// <param name="accessRuleConverteds">取得存取規則</param>
         /// <returns></returns>
-        internal static HashSet<Guid> GetGUIDs(params AccessRuleConverted[] accessRuleConverteds)
+        internal static HashSet<Guid> GetGUIDs(in IEnumerable<AccessRuleConverted> accessRuleConverteds)
         {
             // 整理權限 GUID
-            HashSet<Guid> accessRuleGUIDs = new HashSet<Guid>(accessRuleConverteds.Length);
+            HashSet<Guid> accessRuleGUIDs = new HashSet<Guid>();
             // 只需處理非空 GUID 的部分 (包含沒有生效的)
             foreach (AccessRuleConverted accessRuleConverted in accessRuleConverteds)
             {

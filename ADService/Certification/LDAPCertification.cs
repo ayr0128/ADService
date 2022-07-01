@@ -74,7 +74,7 @@ namespace ADService.Certification
             try
             {
                 // 整合各 SID 權向狀態
-                LDAPPermissions permissions = LDAPPermissions.GetPermissions(Dispatcher, Invoker, Destination);
+                LDAPPermissions permissions = new LDAPPermissions(Dispatcher, Invoker, Destination);
                 // 最多回傳的長度是所有的項目都支援
                 Dictionary<string, InvokeCondition> dictionaryAttributeNameWithProtocol = new Dictionary<string, InvokeCondition>(dictionaryMethodWithAnalytical.Count);
                 // 遍歷權限並檢查是否可以喚醒
@@ -144,7 +144,7 @@ namespace ADService.Certification
                 }
 
                 // 整合各 SID 權向狀態
-                LDAPPermissions permissions = LDAPPermissions.GetPermissions(Dispatcher, Invoker, Destination);
+                LDAPPermissions permissions = new LDAPPermissions(Dispatcher, Invoker, Destination);
                 // 取得結果
                 (InvokeCondition condition, _) = analytical.Invokable(Dispatcher, Invoker, Destination, permissions);
                 // 無法啟動代表無法呼叫
@@ -198,7 +198,7 @@ namespace ADService.Certification
                 iRelease = certification;
 
                 // 整合各 SID 權向狀態
-                LDAPPermissions permissions = LDAPPermissions.GetPermissions(Dispatcher, Invoker, Destination);
+                LDAPPermissions permissions = new LDAPPermissions(Dispatcher, Invoker, Destination);
 
                 // 遍歷權限驗證協議是否可用
                 return analytical.Authenicate(ref certification, Invoker, Destination, protocol, permissions);
@@ -249,7 +249,7 @@ namespace ADService.Certification
                 iRelease = certification;
 
                 // 整合各 SID 權向狀態
-                LDAPPermissions permissions = LDAPPermissions.GetPermissions(Dispatcher, Invoker, Destination);
+                LDAPPermissions permissions = new LDAPPermissions(Dispatcher, Invoker, Destination);
 
                 // 驗證是否可用
                 bool authenicateSuccess = analytical.Authenicate(ref certification, Invoker, Destination, protocol, permissions);

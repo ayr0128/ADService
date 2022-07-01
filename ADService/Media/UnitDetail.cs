@@ -8,23 +8,27 @@ namespace ADService.Media
     internal struct ControlAccessDetail
     {
         /// <summary>
+        /// 使用屬性避免空值
+        /// </summary>
+        internal string Name => AttbuteName ?? string.Empty;
+        /// <summary>
         /// 存取規則名稱
         /// </summary>
-        internal string Name;
+        private readonly string AttbuteName;
         /// <summary>
         /// 存取規則類型
         /// </summary>
-        internal ControlAccessType UnitType;
+        internal ControlAccessType AccessType { get; private set; }
 
         /// <summary>
         /// 建構子
         /// </summary>
-        /// <param name="name">物件名稱</param>
-        /// <param name="unitType">物件類型</param>
-        internal ControlAccessDetail(in string name, in ControlAccessType unitType)
+        /// <param name="attributeName">物件名稱</param>
+        /// <param name="accessType">物件類型</param>
+        internal ControlAccessDetail(in string attributeName, in ControlAccessType accessType)
         {
-            Name = name;
-            UnitType = unitType;
+            AttbuteName = attributeName;
+            AccessType = accessType;
         }
     }
 }

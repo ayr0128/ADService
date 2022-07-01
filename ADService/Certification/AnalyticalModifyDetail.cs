@@ -620,7 +620,7 @@ namespace ADService.Certification
                                 LDAPObject entryObject = LDAPObject.ToObject(set.Entry, certification.Dispatcher);
 
                                 // 整合各 SID 權向狀態
-                                LDAPPermissions permissionsProtocol = LDAPPermissions.GetPermissions(certification.Dispatcher, invoker, entryObject);
+                                LDAPPermissions permissionsProtocol = new LDAPPermissions(certification.Dispatcher, invoker, entryObject);
 
                                 // 是否可異動
                                 bool isProcessedEditable = permissionsProtocol.IsAllow(Properties.P_MEMBER, null, AccessRuleRightFlags.PropertyWrite);
