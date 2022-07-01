@@ -1,3 +1,4 @@
+using ADService.ControlAccessRule;
 using ADService.Environments;
 using ADService.Features;
 using ADService.Foundation;
@@ -81,13 +82,6 @@ namespace ADService.Certification
             // 遍歷支援項目
             foreach (string attributeName in AttributeNames)
             {
-                // 檢查參數是否支援
-                if (!destination.StoredProperties.GetProperty(attributeName, out _))
-                {
-                    // 不知原則必定不需處理
-                    continue;
-                }
-
                 // 檢驗支援項目: 具有查看旗標
                 if (!permissions.IsAllow(attributeName, null, AccessRuleRightFlags.PropertyRead))
                 {

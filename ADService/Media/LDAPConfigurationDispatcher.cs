@@ -92,19 +92,19 @@ namespace ADService.Media
         /// </summary>
         /// <param name="accessRuleGUIDs">目標 GUID 陣列</param>
         /// <returns>返回各 GUID 的詳細資料, 格式如右: Dictiobary 'Guid 字串(小寫), 存取規則描述' </returns>
-        internal Dictionary<string, UnitDetail> GetUnitDetail(in IEnumerable<Guid> accessRuleGUIDs)
+        internal Dictionary<string, ControlAccessDetail> GetControlAccessDetail(in IEnumerable<Guid> accessRuleGUIDs)
         {
             // 轉換成袋查詢的資料
             Dictionary<string, Guid> dictionaryGUIDLowerWithGUID = accessRuleGUIDs.ToDictionary(accessRuleGUID => accessRuleGUID.ToString("D").ToLower());
             // 長度最多為外部宣告的 GUID 大小
-            Dictionary<string, UnitDetail> dictionaryGuidWithAUnitDetail = new Dictionary<string, UnitDetail>(dictionaryGUIDLowerWithGUID.Count);
+            Dictionary<string, ControlAccessDetail> dictionaryGuidWithAUnitDetail = new Dictionary<string, ControlAccessDetail>(dictionaryGUIDLowerWithGUID.Count);
             // 遍歷所有取得的額外權限
             foreach (UnitExtendedRight unitExtendedRight in Configuration.GetExtendedRight(this, dictionaryGUIDLowerWithGUID.Values))
             {
                 // 交查詢到的 GUID 轉為小寫
                 string unitExtendedRightGUIDLower = unitExtendedRight.GUID.ToLower();
                 // 強型別宣告方便閱讀
-                UnitDetail accessRuleObjectDetail = new UnitDetail(unitExtendedRight.Name, UnitType.EXTENDEDRIGHT);
+                ControlAccessDetail accessRuleObjectDetail = new ControlAccessDetail(unitExtendedRight.Name, ControlAccessType.EXTENDEDRIGHT);
                 // 推入查詢物件
                 dictionaryGuidWithAUnitDetail.Add(unitExtendedRightGUIDLower, accessRuleObjectDetail);
 
@@ -118,9 +118,9 @@ namespace ADService.Media
                 // 交查詢到的 GUID 轉為小寫
                 string unitSchemaGUIDLower = unitSchema.SchemaGUID.ToLower();
                 // 取得類型
-                UnitType accessRuleObjectType = unitSchema is UnitSchemaAttribute _ ? UnitType.ATTRIBUTE : UnitType.CLASS;
+                ControlAccessType accessRuleObjectType = unitSchema is UnitSchemaAttribute _ ? ControlAccessType.ATTRIBUTE : ControlAccessType.CLASS;
                 // 強型別宣告方便閱讀
-                UnitDetail accessRuleObjectDetail = new UnitDetail(unitSchema.Name, accessRuleObjectType);
+                ControlAccessDetail accessRuleObjectDetail = new ControlAccessDetail(unitSchema.Name, accessRuleObjectType);
                 // 推入查詢物件
                 dictionaryGuidWithAUnitDetail.Add(unitSchemaGUIDLower, accessRuleObjectDetail);
 

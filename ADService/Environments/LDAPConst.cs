@@ -29,7 +29,7 @@ namespace ADService.Environments
     /// <summary>
     /// 描述目標 GUID 適合種類型
     /// </summary>
-    internal enum UnitType : byte
+    internal enum ControlAccessType : byte
     {
         /// <summary>
         /// 預設, 通常不使用

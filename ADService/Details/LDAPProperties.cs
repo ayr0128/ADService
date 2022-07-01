@@ -120,19 +120,8 @@ namespace ADService.Details
         /// <exception cref="LDAPExceptions">當內部儲存資料為多筆時將拋出例外</exception>
         internal T GetPropertySingle<T>(in string propertyName)
         {
-            // 嘗試取得內容
-            bool isAllowed = GetProperty(propertyName, out PropertyDetail detail);
-            /* 下述任意情況出現時對外丟出例外
-                 1. 不支援且資料不存在
-                 2. 資料是單一述值十
-            */
-            if ((!isAllowed && detail == null) ||
-                (detail != null && !detail.IsSingleValue))
-            {
-                // 丟出例外: 因為此狀態沒有實作
-                throw new LDAPExceptions($"屬性:{propertyName} 應使用陣列方式進行轉換, 因使用了錯誤方法因而丟出例外, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
-            }
-
+            // 取得資料: 此處僅能取得已存在資料的欄位
+            dictionaryNameWithPropertyDetail.TryGetValue(propertyName, out PropertyDetail detail);
             // 提供查詢結果
             return detail == null ? default(T) : (T)detail.PropertyValue;
         }
@@ -146,19 +135,8 @@ namespace ADService.Details
         /// <exception cref="LDAPExceptions">當內部儲存資料為多筆時將拋出例外</exception>
         internal long GetPropertyInterval(in string propertyName)
         {
-            // 嘗試取得內容
-            bool isAllowed = GetProperty(propertyName, out PropertyDetail detail);
-            /* 下述任意情況出現時對外丟出例外
-                 1. 不支援且資料不存在
-                 2. 資料是單一述值十
-            */
-            if ((!isAllowed && detail == null) ||
-                (detail != null && !detail.IsSingleValue))
-            {
-                // 丟出例外: 因為此狀態沒有實作
-                throw new LDAPExceptions($"屬性:{propertyName} 應使用陣列方式進行轉換, 因使用了錯誤方法因而丟出例外, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
-            }
-
+            // 取得資料: 此處僅能取得已存在資料的欄位
+            dictionaryNameWithPropertyDetail.TryGetValue(propertyName, out PropertyDetail detail);
             // 資料不存在
             if (detail == null)
             {
@@ -184,19 +162,8 @@ namespace ADService.Details
         /// <exception cref="LDAPExceptions">當內部儲存資料為多筆時將拋出例外</exception>
         internal string GetPropertySID(in string propertyName)
         {
-            // 嘗試取得內容
-            bool isAllowed = GetProperty(propertyName, out PropertyDetail detail);
-            /* 下述任意情況出現時對外丟出例外
-                 1. 不支援且資料不存在
-                 2. 資料是單一述值十
-            */
-            if ((!isAllowed && detail == null) ||
-                (detail != null && !detail.IsSingleValue))
-            {
-                // 丟出例外: 因為此狀態沒有實作
-                throw new LDAPExceptions($"屬性:{propertyName} 應使用陣列方式進行轉換, 因使用了錯誤方法因而丟出例外, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
-            }
-
+            // 取得資料: 此處僅能取得已存在資料的欄位
+            dictionaryNameWithPropertyDetail.TryGetValue(propertyName, out PropertyDetail detail);
             // 轉換
             SecurityIdentifier securityIdentifier = detail == null ? new SecurityIdentifier(WellKnownSidType.NullSid, null) : new SecurityIdentifier((byte[])detail.PropertyValue, 0);
             // 提供查詢結果
@@ -211,19 +178,8 @@ namespace ADService.Details
         /// <exception cref="LDAPExceptions">當內部儲存資料為多筆時將拋出例外</exception>
         internal string GetPropertyGUID(in string propertyName)
         {
-            // 嘗試取得內容
-            bool isAllowed = GetProperty(propertyName, out PropertyDetail detail);
-            /* 下述任意情況出現時對外丟出例外
-                 1. 不支援且資料不存在
-                 2. 資料是單一述值十
-            */
-            if ((!isAllowed && detail == null) ||
-                (detail != null && !detail.IsSingleValue))
-            {
-                // 丟出例外: 因為此狀態沒有實作
-                throw new LDAPExceptions($"屬性:{propertyName} 應使用陣列方式進行轉換, 因使用了錯誤方法因而丟出例外, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
-            }
-
+            // 取得資料: 此處僅能取得已存在資料的欄位
+            dictionaryNameWithPropertyDetail.TryGetValue(propertyName, out PropertyDetail detail);
             // 轉換
             Guid guid = detail == null ? Guid.Empty : new Guid((byte[])detail.PropertyValue);
             // 提供查詢結果
@@ -239,19 +195,8 @@ namespace ADService.Details
         /// <exception cref="LDAPExceptions">當內部儲存資料為多筆時將拋出例外</exception>
         internal T[] GetPropertyMultiple<T>(in string propertyName)
         {
-            // 嘗試取得內容
-            bool isAllowed = GetProperty(propertyName, out PropertyDetail detail);
-            /* 下述任意情況出現時對外丟出例外
-                 1. 不支援且資料不存在
-                 2. 資料是單一述值十
-            */
-            if ((!isAllowed && detail == null) ||
-                (detail != null && detail.IsSingleValue))
-            {
-                // 丟出例外: 因為此狀態沒有實作
-                throw new LDAPExceptions($"屬性:{propertyName} 應使用陣列方式進行轉換, 因使用了錯誤方法因而丟出例外, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
-            }
-
+            // 取得資料: 此處僅能取得已存在資料的欄位
+            dictionaryNameWithPropertyDetail.TryGetValue(propertyName, out PropertyDetail detail);
             // 提供查詢結果
             if (detail == null || detail.SizeOf == 0)
             {
@@ -261,14 +206,6 @@ namespace ADService.Details
             // 只有一個時需慘用特例處理
             return detail.SizeOf == 1 ? new T[] { (T)detail.PropertyValue } : Array.ConvertAll((object[])detail.PropertyValue, converted => (T)converted);
         }
-
-        /// <summary>
-        /// 提供指定屬性鍵值取得支援情況與實際儲存資料
-        /// </summary>
-        /// <param name="propertyName">指定屬性鍵值</param>
-        /// <param name="detail">屬性鍵值目前儲存資料</param>
-        /// <returns>是否支援</returns>
-        internal bool GetProperty(in string propertyName, out PropertyDetail detail) => dictionaryNameWithPropertyDetail.TryGetValue(propertyName, out detail);
 
         /// <summary>
         /// 使用指定群組的 SID 取得所有支援的屬性
