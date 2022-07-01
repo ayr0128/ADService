@@ -150,7 +150,7 @@ namespace ADService.Certification
                     // 取得內部入口物件
                     RequiredCommitSet set = certification.GetEntry(distinguishedName);
                     // 取得入口物件: 稍後用來轉換可用權限
-                    LDAPObject entryObject = LDAPObject.ToObject(set.Entry, certification.Dispatcher, set.Properties);
+                    LDAPObject entryObject = LDAPObject.ToObject(set.Entry, certification.Dispatcher);
                     // 入口物件必須是組織單位或根目錄
                     if ((entryObject.Type & (CategoryTypes.ORGANIZATION_UNIT | CategoryTypes.DOMAIN_DNS)) == CategoryTypes.NONE)
                     {

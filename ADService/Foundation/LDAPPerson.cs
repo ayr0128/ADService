@@ -62,8 +62,7 @@ namespace ADService.Foundation
         /// </summary>
         /// <param name="entry">入口物件</param>
         /// <param name="dispatcher">入口物件創建器</param>
-        /// <param name="propertiesResult">透過找尋取得字的屬性</param>
-        internal LDAPPerson(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher, in ResultPropertyCollection propertiesResult) : base(entry, dispatcher, propertiesResult)
+        internal LDAPPerson(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher) : base(entry, dispatcher)
         {
             // 不是允許類型: 成員
             if ((Type & CategoryTypes.PERSON) == CategoryTypes.NONE)

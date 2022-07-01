@@ -9,14 +9,6 @@
         /// 樹系路徑: 隨時可能被異動
         /// </summary>
         public const string C_DISTINGGUISHEDNAME = "distinguishedName";
-        /// <summary>
-        /// 物件持有屬性
-        /// </summary>
-        public const string C_ALLOWEDATTRIBUTES = "allowedAttributes";
-        /// <summary>
-        /// 物件可持有的子類別
-        /// </summary>
-        public const string C_ALLOWEDCHILDCLASSES = "allowedChildClasses";
 
         /// <summary>
         /// 物件類型

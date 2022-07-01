@@ -100,25 +100,15 @@ namespace ADService.Details
         #endregion
 
         /// <summary>
-        /// 允許使用的屬性
-        /// </summary>
-        private readonly HashSet<string> AllowedAttributes;
-
-        /// <summary>
         /// 建構特性儲存與分析類別
         /// </summary>
         /// <param name="dispatcher">藍本物件</param>
         /// <param name="entry">入口物件</param>
         /// <param name="propertiesResult">透過找尋取得字的屬性</param>
-        internal LDAPProperties(in LDAPConfigurationDispatcher dispatcher, in DirectoryEntry entry, in ResultPropertyCollection propertiesResult)
+        internal LDAPProperties(in LDAPConfigurationDispatcher dispatcher, in DirectoryEntry entry)
         {
             dictionaryNameWithPropertyDetail = ParseProperties(dispatcher, entry.Properties);
             dictionarySIDWithAccessRuleConverteds = ParseSecurityAccessRule(entry.ObjectSecurity);
-
-            // 將允許團入屬性改為陣列
-            string[] allowedAttributes = LDAPConfiguration.ParseMutipleValue<string>(Properties.C_ALLOWEDATTRIBUTES, propertiesResult);
-            // 轉換成可比對的屬性參數
-            AllowedAttributes = new HashSet<string>(allowedAttributes);
         }
 
         /// <summary>
@@ -278,13 +268,7 @@ namespace ADService.Details
         /// <param name="propertyName">指定屬性鍵值</param>
         /// <param name="detail">屬性鍵值目前儲存資料</param>
         /// <returns>是否支援</returns>
-        internal bool GetProperty(in string propertyName, out PropertyDetail detail)
-        {
-            // 取得資料
-            bool isAttributeExist = dictionaryNameWithPropertyDetail.TryGetValue(propertyName, out detail);
-            // 是否支援: 支援與否和資料是否存在沒有直接關係
-            return isAttributeExist || AllowedAttributes.Contains(propertyName);
-        }
+        internal bool GetProperty(in string propertyName, out PropertyDetail detail) => dictionaryNameWithPropertyDetail.TryGetValue(propertyName, out detail);
 
         /// <summary>
         /// 使用指定群組的 SID 取得所有支援的屬性
