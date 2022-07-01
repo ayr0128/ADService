@@ -1,5 +1,4 @@
-﻿using ADService.Details;
-using ADService.Environments;
+﻿using ADService.Environments;
 using ADService.Foundation;
 using ADService.Media;
 using ADService.Protocol;
