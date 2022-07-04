@@ -187,7 +187,7 @@ namespace ADService.Certification
                     case Properties.P_USERACCOUNTCONTROL:
                         {
                             // 目前持有的資訊內容
-                            AccountControlFlags storedValue = destination.StoredProperties.GetPropertySingle<AccountControlFlags>(attributeName);
+                            AccountControlFlags storedValue = destination.GetPropertySingle<AccountControlFlags>(attributeName);
 
                             // 將儲存的資料轉換成對外協議
                             AccountControlProtocols accountControlProtocols = AccountControlFromFlagsToProtocols(storedValue);
@@ -223,7 +223,7 @@ namespace ADService.Certification
                     case Properties.P_PWDLASTSET:
                         {
                             // 目前持有的資訊內容
-                            long storedValue = destination.StoredProperties.GetPropertyInterval(attributeName);
+                            long storedValue = destination.GetPropertyInterval(attributeName);
 
                             /* 由於處理邏輯所以數值將以下列方式轉換成旗標
                                  - 數值為 0: 啟用下次登入時需修改密碼
@@ -262,7 +262,7 @@ namespace ADService.Certification
                     case Properties.P_SUPPORTEDENCRYPTIONTYPES:
                         {
                             // 目前持有的資訊內容
-                            EncryptedType storedValue = destination.StoredProperties.GetPropertySingle<EncryptedType>(attributeName);
+                            EncryptedType storedValue = destination.GetPropertySingle<EncryptedType>(attributeName);
 
                             // 初始化
                             AccountControlProtocols accountControlProtocols = AccountControlProtocols.NONE;
@@ -303,7 +303,7 @@ namespace ADService.Certification
                     default:
                         {
                             // 目前持有的資訊內容
-                            string storedValue = destination.StoredProperties.GetPropertySingle<string>(attributeName);
+                            string storedValue = destination.GetPropertySingle<string>(attributeName);
 
                             // 預期項目: 必定是字串
                             Type typeString = typeof(string);
@@ -922,7 +922,7 @@ namespace ADService.Certification
                             // 取得這個參數可調整的參數
                             AccountControlFlags accountControlFlagsMask = AccountControlFromProtocolsToFlags(ACOUNTCONTROL_MASK);
                             // 取得目前持有的屬性
-                            AccountControlFlags storedValue = destination.StoredProperties.GetPropertySingle<AccountControlFlags>(attributeName);
+                            AccountControlFlags storedValue = destination.GetPropertySingle<AccountControlFlags>(attributeName);
                             // 檢查是否有異動
                             if ((storedValue & accountControlFlagsMask) == accountControlFlags)
                             {
@@ -948,7 +948,7 @@ namespace ADService.Certification
                             // 轉換成控制旗標
                             AccountControlProtocols convertedProtocol = receivedValue?.ToObject<AccountControlProtocols>() ?? AccountControlProtocols.NONE;
                             // 取得目前持有的屬性
-                            long storedValue = destination.StoredProperties.GetPropertyInterval(attributeName);
+                            long storedValue = destination.GetPropertyInterval(attributeName);
                             // 取得本次是否包含使用者照號一棟
                             if (dictionaryAttributeNameWithDetail.TryGetValue(Properties.P_USERACCOUNTCONTROL, out JToken userAccountControlJToken))
                             {
@@ -958,7 +958,7 @@ namespace ADService.Certification
                             else
                             {
                                 // 取得目前持有的使用者帳號控制屬性
-                                AccountControlFlags userAccountControlValue = destination.StoredProperties.GetPropertySingle<AccountControlFlags>(Properties.P_USERACCOUNTCONTROL);
+                                AccountControlFlags userAccountControlValue = destination.GetPropertySingle<AccountControlFlags>(Properties.P_USERACCOUNTCONTROL);
                                 // 轉換成外部協議可是別的格式
                                 convertedProtocol |= AccountControlFromFlagsToProtocols(userAccountControlValue);
                             }
@@ -1020,7 +1020,7 @@ namespace ADService.Certification
                             encryptedType |= (convertedProtocol & AccountControlProtocols.ACCOUNT_KERBEROS_AES256) == AccountControlProtocols.ACCOUNT_KERBEROS_AES256 ? EncryptedType.AES256 : EncryptedType.NONE;
 
                             // 取得目前持有的屬性
-                            EncryptedType storedValue = destination.StoredProperties.GetPropertySingle<EncryptedType>(attributeName);
+                            EncryptedType storedValue = destination.GetPropertySingle<EncryptedType>(attributeName);
                             // 檢查修改後設是否與現在鄉相同
                             if ((storedValue & ENCRYPT_MASK) == encryptedType)
                             {

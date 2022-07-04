@@ -65,7 +65,7 @@ namespace ADService.ControlAccessRule
             invokerSecuritySIDHashSet.Add(extendedSID);
 
             // 使用查詢 SID 陣列取得所有存取權限 (包含沒有生效的)
-            AccessRuleConverted[] accessRuleConverteds = destination.StoredProperties.GetAccessRuleConverteds(invokerSecuritySIDHashSet);
+            AccessRuleConverted[] accessRuleConverteds = destination.GetAccessRuleConverteds(invokerSecuritySIDHashSet);
 
             // 取得能產生影響的 GUID
             HashSet<Guid> accessRuleGUIDs = AccessRuleConverted.GetGUIDs(accessRuleConverteds);

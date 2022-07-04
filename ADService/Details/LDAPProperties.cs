@@ -12,13 +12,13 @@ namespace ADService.Details
     /// <summary>
     /// 使用 JSON 做為基底的特性鍵值轉換器
     /// </summary>
-    internal sealed class LDAPProperties
+    public abstract class LDAPProperties
     {
         #region 取得所有設置參數
         /// <summary>
         /// 目前儲存的特性鍵值資料
         /// </summary>
-        private readonly Dictionary<string, PropertyDetail> dictionaryNameWithPropertyDetail = new Dictionary<string, PropertyDetail>();
+        internal Dictionary<string, PropertyDetail> dictionaryNameWithPropertyDetail = new Dictionary<string, PropertyDetail>();
 
         /// <summary>
         /// 整合屬性值轉換功能
@@ -65,7 +65,7 @@ namespace ADService.Details
         /// <summary>
         /// 以 SID 記錄各條存取權限
         /// </summary>
-        private readonly Dictionary<string, List<AccessRuleConverted>> dictionarySIDWithAccessRuleConverteds = new Dictionary<string, List<AccessRuleConverted>>();
+        internal Dictionary<string, List<AccessRuleConverted>> dictionarySIDWithAccessRuleConverteds = new Dictionary<string, List<AccessRuleConverted>>();
 
         /// <summary>
         /// 整合權限轉換功能

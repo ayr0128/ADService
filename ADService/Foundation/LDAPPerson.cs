@@ -46,9 +46,9 @@ namespace ADService.Foundation
             get
             {
                 // 取得 SID: 不存在應丟出例外
-                string primarySID = StoredProperties.GetPropertySID(Properties.C_OBJECTSID);
+                string primarySID = GetPropertySID(Properties.C_OBJECTSID);
                 // 取得 GROUPID: 不存在應丟出例外
-                int primaryGROUPID = StoredProperties.GetPropertySingle<int>(Properties.C_PRIMARYGROUPID);
+                int primaryGROUPID = GetPropertySingle<int>(Properties.C_PRIMARYGROUPID);
 
                 // 已知成員的 SID 去除最後一個 '-' 後的資料則是網域 SID
                 int index = primarySID.LastIndexOf('-');

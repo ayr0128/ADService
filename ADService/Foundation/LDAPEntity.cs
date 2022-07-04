@@ -16,7 +16,7 @@ namespace ADService.Foundation
         IRevealerMemberOf
     {
         #region 介面:IRevealerSID
-        string IRevealerSID.Value => StoredProperties.GetPropertySID(Properties.C_OBJECTSID);
+        string IRevealerSID.Value => GetPropertySID(Properties.C_OBJECTSID);
         #endregion
 
         #region 介面:IRevealerMemberOf
@@ -36,7 +36,7 @@ namespace ADService.Foundation
         internal LDAPEntity(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher) : base(entry, dispatcher)
         {
             // 取得 memberOf: 不存在應丟出例外
-            string[] memberOf = StoredProperties.GetPropertyMultiple<string>(Properties.P_MEMBEROF);
+            string[] memberOf = GetPropertyMultiple<string>(Properties.P_MEMBEROF);
             // 初始化隸屬群組
             MemberOf = ToRelationshipByDNs(dispatcher, memberOf);
         }

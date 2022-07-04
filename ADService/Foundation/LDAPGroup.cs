@@ -33,7 +33,7 @@ namespace ADService.Foundation
             get
             {
                 // 取得 SID: 不存在應丟出例外
-                string primarySID = StoredProperties.GetPropertySID(Properties.C_OBJECTSID);
+                string primarySID = GetPropertySID(Properties.C_OBJECTSID);
 
                 // 已知群組 SID 最後一個 '-' 後的資料就是 PrimaryGroupToken
                 int index = primarySID.LastIndexOf('-');
@@ -60,7 +60,7 @@ namespace ADService.Foundation
             }
 
             // 取得 member 不存在應丟出例外
-            string[] member = StoredProperties.GetPropertyMultiple<string>(Properties.P_MEMBER);
+            string[] member = GetPropertyMultiple<string>(Properties.P_MEMBER);
             // 初始化成員
             Member = ToRelationshipByDNs(dispatcher, member);
 

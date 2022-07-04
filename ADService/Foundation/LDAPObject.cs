@@ -10,7 +10,7 @@ namespace ADService.Foundation
     /// <summary>
     /// 最基底的物件類型: 採用化學中的受質作為名稱代表其特性
     /// </summary>
-    public class LDAPObject
+    public class LDAPObject : LDAPProperties
     {
         /// <summary>
         /// 搜尋物件時使用的特性鍵值
@@ -211,22 +211,17 @@ namespace ADService.Foundation
         }
 
         /// <summary>
-        /// 設定鍵值儲存與解析功能
-        /// </summary>
-        internal LDAPProperties StoredProperties;
-
-        /// <summary>
         /// 此物件的名稱
         /// </summary>
-        public string Name => StoredProperties.GetPropertySingle<string>(Properties.P_NAME);
+        public string Name => GetPropertySingle<string>(Properties.P_NAME);
         /// <summary>
         /// 此物件的區分名稱
         /// </summary>
-        public string DistinguishedName => StoredProperties.GetPropertySingle<string>(Properties.C_DISTINGGUISHEDNAME);
+        public string DistinguishedName => GetPropertySingle<string>(Properties.C_DISTINGGUISHEDNAME);
         /// <summary>
         /// 此物件的全域唯一標識符
         /// </summary>
-        public string GUID => StoredProperties.GetPropertyGUID(Properties.C_OBJECTGUID);
+        public string GUID => GetPropertyGUID(Properties.C_OBJECTGUID);
         /// <summary>
         /// 容器類型
         /// </summary>
@@ -235,7 +230,7 @@ namespace ADService.Foundation
             get
             {
                 // 取得 類別 不存在應丟出例外
-                string storedValue = StoredProperties.GetPropertySingle<string>(Properties.C_OBJECTCATEGORY);
+                string storedValue = GetPropertySingle<string>(Properties.C_OBJECTCATEGORY);
                 // 轉換物件類型
                 return LDAPConfiguration.GetObjectType(storedValue);
             }
@@ -248,7 +243,7 @@ namespace ADService.Foundation
         /// <param name="dispatcher">入口物件創建器</param>
         /// <param name="propertiesResult">透過找尋取得字的屬性</param>
         /// <exception cref="LDAPExceptions">解析鍵值不符合規則時對外丟出</exception>
-        internal LDAPObject(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher) => StoredProperties = new LDAPProperties(dispatcher, entry);
+        internal LDAPObject(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher) : base(dispatcher, entry) { }
 
         /// <summary>
         /// 從提供的基礎物件中將特性鍵值轉換給呼叫者
@@ -266,8 +261,11 @@ namespace ADService.Foundation
                 return newObject;
             }
 
-            // 執行至此能保證 GUID 相同, 替換內部特性鍵值內容
-            StoredProperties = newObject.StoredProperties;
+            // 交換解析完成的目前持有屬性
+            dictionaryNameWithPropertyDetail = newObject.dictionaryNameWithPropertyDetail;
+            // 交換解析完成的目前持有存取規則
+            // 交換解析完成的目前持有存取規則
+            dictionarySIDWithAccessRuleConverteds = newObject.dictionarySIDWithAccessRuleConverteds;
             // 通知外部替換成功
             return this;
         }
