@@ -42,7 +42,7 @@ namespace ADService.Media
         /// <exception cref="LDAPExceptions">解析鍵值不符合規則時對外丟出</exception>
         public LDAPRelationship(in DirectoryEntry entry, in bool isPrimary)
         {
-            DistinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGGUISHEDNAME, entry.Properties);
+            DistinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGUISHEDNAME, entry.Properties);
             Name = LDAPConfiguration.ParseSingleValue<string>(Properties.P_NAME, entry.Properties);
 
             Type = LDAPConfiguration.ParseCategory(entry.Properties);

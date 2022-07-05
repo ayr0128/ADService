@@ -462,7 +462,7 @@ namespace ADService.Certification
                                         - 限制只找尋特定區分名稱
                                         [TODO] 應使用加密字串避免注入式攻擊
                                     */
-                                    string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, researchDNHashSet)})";
+                                    string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGUISHEDNAME, researchDNHashSet)})";
                                     // 應從根目錄進行搜尋
                                     using (DirectorySearcher seacher = new DirectorySearcher(entryRoot, encoderFiliter, LDAPObject.PropertiesToLoad))
                                     {
@@ -484,7 +484,7 @@ namespace ADService.Certification
                                             foreach (SearchResult one in all)
                                             {
                                                 // 取得區分名稱
-                                                string distinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGGUISHEDNAME, one.Properties);
+                                                string distinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGUISHEDNAME, one.Properties);
                                                 /* 根據異動目標判斷異動權限是否不可用
                                                      1. 異動資料是自己, 不包含異動自己的權限
                                                      2. 異動資料不是自己, 不包含異動的權限
@@ -497,7 +497,7 @@ namespace ADService.Certification
                                                 else
                                                 {
                                                     // 設定並轉換成入口物件
-                                                    certification.SetEntry(one, distinguishedName);
+                                                    certification.SetEntry(one.GetDirectoryEntry(), distinguishedName);
                                                 }
                                             }
                                         }
@@ -573,7 +573,7 @@ namespace ADService.Certification
                                         - 限制只找尋特定區分名稱
                                         [TODO] 應使用加密字串避免注入式攻擊
                                     */
-                                    string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, researchDNHashSet)})";
+                                    string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGUISHEDNAME, researchDNHashSet)})";
                                     // 應從根目錄進行搜尋
                                     using (DirectorySearcher seacher = new DirectorySearcher(entryRoot, encoderFiliter, LDAPObject.PropertiesToLoad))
                                     {
@@ -593,9 +593,9 @@ namespace ADService.Certification
                                             foreach (SearchResult one in all)
                                             {
                                                 // 取得區分名稱
-                                                string distinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGGUISHEDNAME, one.Properties);
+                                                string distinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGUISHEDNAME, one.Properties);
                                                 // 設定並轉換成入口物件
-                                                certification.SetEntry(one, distinguishedName);
+                                                certification.SetEntry(one.GetDirectoryEntry(), distinguishedName);
                                             }
                                         }
                                     }

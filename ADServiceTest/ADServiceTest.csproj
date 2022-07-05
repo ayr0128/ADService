@@ -56,6 +56,7 @@
   <ItemGroup>
     <Compile Include="Defines.cs" />
     <Compile Include="LDAPTestServeOnLogonUser.cs" />
+    <Compile Include="LDAPTestServeOnOU.cs" />
     <Compile Include="LDAPTestServeOnUser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

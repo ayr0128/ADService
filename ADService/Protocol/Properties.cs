@@ -8,7 +8,19 @@
         /// <summary>
         /// 樹系路徑: 隨時可能被異動
         /// </summary>
-        public const string C_DISTINGGUISHEDNAME = "distinguishedName";
+        public const string C_DISTINGUISHEDNAME = "distinguishedName";
+        /// <summary>
+        /// 帳號
+        /// </summary>
+        public const string C_SMMACCOUNTNAME = "sAMAccountName";
+        /// <summary>
+        /// 舊版本帳號
+        /// </summary>
+        public const string C_USERPRINCIPALNAME = "userPrincipalName";
+        /// <summary>
+        /// 密碼
+        /// </summary>
+        public const string C_UNICODEPWD = "unicodePwd";
 
         /// <summary>
         /// 物件類型

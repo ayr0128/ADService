@@ -16,7 +16,7 @@ namespace ADService.Foundation
         /// 搜尋物件時使用的特性鍵值
         /// </summary>
         internal static string[] PropertiesToLoad => new string[] {
-            Properties.C_DISTINGGUISHEDNAME, // 物件區分名稱
+            Properties.C_DISTINGUISHEDNAME, // 物件區分名稱
         };
 
         #region 創建物件以及創建描述
@@ -217,7 +217,7 @@ namespace ADService.Foundation
         /// <summary>
         /// 此物件的區分名稱
         /// </summary>
-        public string DistinguishedName => GetPropertySingle<string>(Properties.C_DISTINGGUISHEDNAME);
+        public string DistinguishedName => GetPropertySingle<string>(Properties.C_DISTINGUISHEDNAME);
         /// <summary>
         /// 此物件的全域唯一標識符
         /// </summary>

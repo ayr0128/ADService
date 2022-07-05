@@ -80,7 +80,7 @@ namespace ADService
                     // 找到須限制的物件類型
                     Dictionary<CategoryTypes, string> dictionaryLimitedCategory = LDAPCategory.GetValuesByTypes(CategoryTypes.PERSON);
                     // 加密避免 LDAP 注入式攻擊
-                    string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}(|(sAMAccountName={userName})(userPrincipalName={userName})))";
+                    string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}(|({Properties.C_SMMACCOUNTNAME}={userName})({Properties.C_USERPRINCIPALNAME}={userName})))";
                     /* 備註: 為何要額外搜尋一次?
                          1. 連線時如果未在伺服器後提供區分名稱, 會使用物件類型 domainDNS 來回傳
                          2. 為避免部分資料缺失, 需額外指定
@@ -138,9 +138,9 @@ namespace ADService
                 using (DirectoryEntry entry = dispatcher.ByGUID(GUID))
                 {
                     // 取得區分名稱
-                    string distinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGGUISHEDNAME, entry.Properties);
+                    string distinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGUISHEDNAME, entry.Properties);
                     // [TODO] 應使用加密字串避免注入式攻擊
-                    string encoderFiliter = LDAPConfiguration.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, distinguishedName);
+                    string encoderFiliter = LDAPConfiguration.GetORFiliter(Properties.C_DISTINGUISHEDNAME, distinguishedName);
                     // 轉換成可用物件
                     return LDAPObject.ToObject(entry, dispatcher);
                 }
@@ -189,7 +189,7 @@ namespace ADService
                 using (DirectoryEntry root = dispatcher.DomainRoot())
                 {
                     // [TODO] 應使用加密字串避免注入式攻擊
-                    string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, distinguishedNames)})";
+                    string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGUISHEDNAME, distinguishedNames)})";
                     // 找尋指定目標
                     using (DirectorySearcher searcher = new DirectorySearcher(root, encoderFiliter, LDAPObject.PropertiesToLoad, SearchScope.Subtree))
                     {

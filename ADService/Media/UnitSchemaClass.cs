@@ -263,13 +263,11 @@ namespace ADService.Media
         {
             // 依賴存取權限大小最大微傳入物件的長度
             List<string> unitSchemaClassGUIDs = new List<string>(unitSchemaClasses.Length);
-            // 將屬性 GUID 轉乘小寫
-            string unitSchemaClassNameLower = unitSchemaClass.Name.ToLower();
             // 遍歷所有存取權限
             foreach (UnitSchemaClass childrenUnitSchemaClass in unitSchemaClasses)
             {
                 // 檢查是否依賴於此類別藍本
-                if (!childrenUnitSchemaClass.IsChildrenWith(unitSchemaClassNameLower))
+                if (!childrenUnitSchemaClass.IsChildrenWith(unitSchemaClass.Name))
                 {
                     // 不依賴則跳出
                     continue;

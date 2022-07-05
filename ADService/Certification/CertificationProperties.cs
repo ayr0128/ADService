@@ -130,9 +130,17 @@ namespace ADService.Certification
         /// <summary>
         /// 將取得的入口物件設置至暫存區
         /// </summary>
-        /// <param name="one">找尋獲得的物件</param>
+        /// <param name="entry">入口物件</param>
         /// <param name="distinguishedName">指定區分名稱</param>
-        internal void SetEntry(in SearchResult one, in string distinguishedName) => dictionaryDistinguishedNameWitSet.Add(distinguishedName, new RequiredCommitSet(one.GetDirectoryEntry()));
+        internal RequiredCommitSet SetEntry(in DirectoryEntry entry, in string distinguishedName)
+        {
+            // 創建站存結構
+            RequiredCommitSet requiredCommitSet = new RequiredCommitSet(entry);
+            // 推入字典
+            dictionaryDistinguishedNameWitSet.Add(distinguishedName, requiredCommitSet);
+            // 提供給外部
+            return requiredCommitSet;
+        }
 
         /// <summary>
         /// 推入相關影響後取得入口物件

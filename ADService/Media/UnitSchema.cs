@@ -27,7 +27,7 @@ namespace ADService.Media
         /// 搜尋時找尋的資料
         /// </summary>
         protected static readonly string[] BASE_PROPERTIES = new string[] {
-            Properties.C_DISTINGGUISHEDNAME,
+            Properties.C_DISTINGUISHEDNAME,
         };
 
         /// <summary>

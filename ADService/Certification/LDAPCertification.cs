@@ -28,6 +28,9 @@ namespace ADService.Certification
             new AnalyticalModifyDetail(),   // 異動細節
             new AnalyticalChangePassword(), // 重置密碼
             new AnalyticalResetPassword(),  // 強制重設密碼
+            new AnalyticalShowCreateable(), // 創毽子物件
+            new AnalyticalCreateUser(),     // 創建成員
+            new AnalyticalCreateGroup(),    // 創建群組
         }.ToDictionary(analytical => analytical.Name);
         #endregion
 

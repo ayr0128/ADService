@@ -79,8 +79,8 @@ namespace ADService.Certification
             Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object>
             {
                 { InvokeCondition.CATEGORYLIMITED, CategoryTypes.ORGANIZATION_UNIT },
-                { InvokeCondition.PROPERTIES, new string[]{ Properties.C_DISTINGGUISHEDNAME } },
-                { Properties.C_DISTINGGUISHEDNAME, new InvokeCondition(commonFlagsDistinguishedName, dictionaryProtocolWithDistinguishedName) },
+                { InvokeCondition.PROPERTIES, new string[]{ Properties.C_DISTINGUISHEDNAME } },
+                { Properties.C_DISTINGUISHEDNAME, new InvokeCondition(commonFlagsDistinguishedName, dictionaryProtocolWithDistinguishedName) },
             };
 
             // 對外提供成功必須是組織單位的區分名稱
@@ -111,6 +111,24 @@ namespace ADService.Certification
                 return false;
             }
 
+            // 取得目標物件類型的名稱
+            Dictionary<CategoryTypes, string> dictionaryCategoryTypeWithValue = LDAPCategory.GetAccessRulesByTypes(destination.Type);
+            // 取得物件類型的名稱
+            if (!dictionaryCategoryTypeWithValue.TryGetValue(destination.Type, out string categoryValue))
+            {
+                // 對外提供失敗
+                return false;
+            }
+
+            // 目標物件的父層組織單位是否具有 '刪除子物件' 的寫入權限
+            bool isDeleteable = permissions.IsAllow(categoryValue, AccessRuleRightFlags.ChildrenDelete | AccessRuleRightFlags.Delete);
+            // 兩種權限都不具備時
+            if (!isDeleteable)
+            {
+                // 對外提供失敗
+                return false;
+            }
+
             // 取得根目錄物件: 
             using (DirectoryEntry entryRoot = certification.Dispatcher.DomainRoot())
             {
@@ -121,7 +139,7 @@ namespace ADService.Certification
                     - 區分名稱與限制目標符合
                     [TODO] 應使用加密字串避免注入式攻擊
                 */
-                string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, distinguishedName)})";
+                string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGUISHEDNAME, distinguishedName)})";
                 // 找尋符合條件的物件
                 using (DirectorySearcher searcher = new DirectorySearcher(entryRoot, encoderFiliter, LDAPObject.PropertiesToLoad))
                 {
@@ -134,17 +152,8 @@ namespace ADService.Certification
                         return false;
                     }
 
-                    // 取得目標物件類型的名稱
-                    Dictionary<CategoryTypes, string> dictionaryCategoryTypeWithValue = LDAPCategory.GetAccessRulesByTypes(destination.Type);
-                    // 取得物件類型的名稱
-                    if (!dictionaryCategoryTypeWithValue.TryGetValue(destination.Type, out string categoryValue))
-                    {
-                        // 對外提供失敗
-                        return false;
-                    }
-
                     // 推入快取
-                    certification.SetEntry(one, distinguishedName);
+                    certification.SetEntry(one.GetDirectoryEntry(), distinguishedName);
 
                     // 取得內部入口物件
                     RequiredCommitSet set = certification.GetEntry(distinguishedName);
