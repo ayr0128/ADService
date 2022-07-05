@@ -3,6 +3,52 @@
 namespace ADService.Environments
 {
     /// <summary>
+    /// 物件類別類型
+    /// </summary>
+    internal enum ControlAccessType : int
+    {
+        /// <summary>
+        /// 預設: 部分抽象類型使用了此類別
+        /// </summary>
+        NONE,
+        /// <summary>
+        /// 拓展權限
+        /// </summary>
+        EXTENDED_RIGHT,
+        /// <summary>
+        /// 屬性組
+        /// </summary>
+        PROPERTY_SET,
+        /// <summary>
+        /// 寫入有效
+        /// </summary>
+        VALIDATED_WRITE,
+    }
+
+    /// <summary>
+    /// 物件類別類型
+    /// </summary>
+    internal enum ClassCategory : int
+    {
+        /// <summary>
+        /// 預設: 部分抽象類型使用了此類別
+        /// </summary>
+        NONE,
+        /// <summary>
+        /// 結構化類別
+        /// </summary>
+        STRUCTURAL_CLASS,
+        /// <summary>
+        /// 抽象畫類別
+        /// </summary>
+        ABSTRUCT_CLASS,
+        /// <summary>
+        /// 輔助用類別
+        /// </summary>
+        AUXILIARY_CLASS,
+    }
+
+    /// <summary>
     /// 關聯類型
     /// </summary>
     [Flags]
@@ -24,29 +70,6 @@ namespace ADService.Environments
         /// 是可套用
         /// </summary>
         APPLIES = 0x04,
-    }
-
-    /// <summary>
-    /// 描述目標 GUID 適合種類型
-    /// </summary>
-    internal enum ControlAccessType : byte
-    {
-        /// <summary>
-        /// 預設, 通常不使用
-        /// </summary>
-        NONE,
-        /// <summary>
-        /// 類別
-        /// </summary>
-        CLASS,
-        /// <summary>
-        /// 屬性
-        /// </summary>
-        ATTRIBUTE,
-        /// <summary>
-        /// 額外權限
-        /// </summary>
-        EXTENDEDRIGHT,
     }
 
     /// <summary>

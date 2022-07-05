@@ -78,13 +78,12 @@
     <Compile Include="ControlAccessRule\ControlRights.cs" />
     <Compile Include="ControlAccessRule\InheritedAccessRule.cs" />
     <Compile Include="ControlAccessRule\LDAPPermissions.cs" />
-    <Compile Include="Media\UnitDetail.cs" />
     <Compile Include="Details\PropertyDetail.cs" />
     <Compile Include="Features\IRevealerSID.cs" />
     <Compile Include="Features\IRevealerSecuritySIDs.cs" />
     <Compile Include="Media\LDAPConfigurationDispatcher.cs" />
     <Compile Include="Media\UnitSchemaClass.cs" />
-    <Compile Include="Media\UnitExtendedRight.cs" />
+    <Compile Include="Media\UnitControlAccess.cs" />
     <Compile Include="Media\UnitSchemaAttribute.cs" />
     <Compile Include="Media\UnitSchema.cs" />
     <Compile Include="Protocol\Properties.cs" />

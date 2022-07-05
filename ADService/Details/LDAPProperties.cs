@@ -34,27 +34,18 @@ namespace ADService.Details
             foreach (PropertyValueCollection value in properties)
             {
                 // 取得目標藍本描述: 內部將戰存屬性格式
-                UnitSchema[] unitSchemas = dispatcher.GetSchema(value.PropertyName);
+                UnitSchemaAttribute[] unitSchemaAttributes = dispatcher.GetUnitSchemaAttribute(value.PropertyName);
                 // 若無法取得則跳過處理
-                if (unitSchemas.Length == 0)
-                {
-                    // 跳過
-                    continue;
-                }
-
-                // 必定存在一個物件: 轉換成強情別方便閱讀
-                UnitSchemaAttribute unitAttribute = unitSchemas[0] as UnitSchemaAttribute;
-                // 若轉換失敗
-                if (unitAttribute == null)
+                if (unitSchemaAttributes.Length == 0)
                 {
                     // 拋出例外: 此部分數值是由 AD 設置產生, 因此退外提供伺服器錯誤
                     throw new LDAPExceptions($"物件:{value.PropertyName} 於解析過程中發現不是屬性卻被設置為屬性成員, 請聯絡程式維護人員", ErrorCodes.SERVER_ERROR);
                 }
 
                 // 宣告實體資料
-                PropertyDetail propertyDetail = new PropertyDetail(value, unitAttribute.IsSingleValued);
+                PropertyDetail propertyDetail = new PropertyDetail(value, unitSchemaAttributes[0].IsSingleValued);
                 // 整理屬性
-                dictionaryNameWithPropertyDetail.Add(unitAttribute.Name, propertyDetail);
+                dictionaryNameWithPropertyDetail.Add(unitSchemaAttributes[0].Name, propertyDetail);
             }
             // 轉換後對外提供項目
             return dictionaryNameWithPropertyDetail;

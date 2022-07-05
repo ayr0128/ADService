@@ -70,13 +70,6 @@ namespace ADService.Details
                     continue;
                 }
 
-                // 是否已經推入: 因為不同的安全性群組可能會持有相同的存取權限
-                if (accessRuleGUIDs.Contains(attributeGUID))
-                {
-                    // 跳過
-                    continue;
-                }
-
                 // 推入查詢
                 accessRuleGUIDs.Add(attributeGUID);
             }
