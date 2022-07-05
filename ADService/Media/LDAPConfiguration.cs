@@ -74,7 +74,7 @@ namespace ADService.Media
             if ((collection == null || collection.Count == 0))
             {
                 // 此特性鍵值必須存在因而丟出例外
-                return default(T);
+                return default;
             }
 
             // 對外提供轉換後型別
@@ -97,8 +97,12 @@ namespace ADService.Media
                 return Array.Empty<T>();
             }
 
+            // 宣告長度
+            object[] copyOut = new object[collection.Count];
+            // 將資料拷貝出來
+            collection.CopyTo(copyOut, 0);
             // 對外提供轉換後型別
-            return Array.ConvertAll((object[])collection.Value, convertedObject => (T)convertedObject);
+            return Array.ConvertAll(copyOut, convertedObject => (T)convertedObject);
         }
 
         /// <summary>
@@ -115,7 +119,7 @@ namespace ADService.Media
             if ((collection == null || collection.Count == 0))
             {
                 // 此特性鍵值必須存在因而丟出例外
-                return default(T);
+                return default;
             }
 
             // 對外提供轉換後型別
@@ -272,10 +276,10 @@ namespace ADService.Media
         }
 
         /// <summary>
-        /// 解析 <see cref="C_OBJECTCATEGORY">物件類型</see> 的鍵值容器
+        /// 解析 <see cref="Properties.C_OBJECTCATEGORY">物件類型</see> 的鍵值容器
         /// </summary>
         /// <param name="properties">整包的鍵值儲存容器, 直接傳入不於外部解析是為了避免漏修改</param>
-        /// <returns>從容器中取得的 <see cref="C_OBJECTCATEGORY">物件類型</see> 鍵值內容</returns>
+        /// <returns>從容器中取得的 <see cref="Properties.C_OBJECTCATEGORY">物件類型</see> 鍵值內容</returns>
         internal static CategoryTypes ParseCategory(in PropertyCollection properties)
         {
             // 取得 '物件類型' 特性鍵值內容
@@ -332,7 +336,7 @@ namespace ADService.Media
             /// <summary>
             /// 關聯額外權限
             /// </summary>
-            internal readonly HashSet<string> GUIDHashSet = new HashSet<string>();
+            internal readonly HashSet<string> GUIDHashSet;
 
             /// <summary>
             /// 是否已經超過保留時間
@@ -340,6 +344,12 @@ namespace ADService.Media
             /// <param name="duration"></param>
             /// <returns>是否過期</returns>
             internal bool IsExpired(in TimeSpan duration) => (DateTime.UtcNow - EnableTime) >= duration;
+
+            /// <summary>
+            /// 金退入外部設硬的關聯設定
+            /// </summary>
+            /// <param name="guids">關聯的 GUID</param>
+            internal PropertySet(IEnumerable<string> guids) => GUIDHashSet = new HashSet<string>(guids);
         }
 
         /// <summary>
@@ -408,445 +418,621 @@ namespace ADService.Media
         private readonly ConcurrentDictionary<string, UnitSchema> dictionaryGUIDWithUnitSchema = new ConcurrentDictionary<string, UnitSchema>();
 
         /// <summary>
-        /// 使用 GUID 進行搜尋指定目標藍本物件
+        /// 藍本物件的 GUID 與可作為期子層的類型藍本物件集合
+        /// </summary>
+        private readonly ConcurrentDictionary<string, PropertySet> dictionarySchemaClassGUIDWithChildrenUnitSchemaClassGUIDs = new ConcurrentDictionary<string, PropertySet>();
+
+        /// <summary>
+        /// 使用展示名稱 進行搜尋指定目標藍本物件
         /// </summary>
         /// <param name="dispatcher">入口物件製作器</param>
-        /// <param name="enumerableGUID">目標 GUID 陣列</param>
+        /// <param name="lDAPDisplayNames">屬性名稱</param>
         /// <returns>指定藍本物件, 可能不存在</returns>
-        internal UnitSchema[] GetSchema(in LDAPConfigurationDispatcher dispatcher, in IEnumerable<Guid> enumerableGUID)
+        internal UnitSchemaAttribute[] GetUnitSchemaAttribute(in LDAPConfigurationDispatcher dispatcher, params string[] lDAPDisplayNames)
         {
-            // 使用查詢數量作為容器大小
-            HashSet<string> researchConvertedGUIDs = new HashSet<string>();
-            // 對襪提供的查詢資料
-            List<UnitSchema> unitSchemas = new List<UnitSchema>();
-            // 使用文字串流來推入 GUID
-            StringBuilder sb = new StringBuilder();
-            // 遍歷所有須查詢的 GUID
-            foreach (Guid guid in enumerableGUID)
+            // 最大長度必定為執行續安全字典的長度
+            Dictionary<string, UnitSchemaAttribute> dictionaryLDAPDisplayNameWithUnitSchemaAttribute = new Dictionary<string, UnitSchemaAttribute>(dictionaryGUIDWithUnitSchema.Count);
+            // 將執行續安全的字典轉成陣列
+            foreach (KeyValuePair<string, UnitSchema> pair in dictionaryGUIDWithUnitSchema.ToArray())
             {
-                // 檢查是否微空GUID
-                if (guid == Guid.Empty)
+                // 本次檢查的目標是物件藍本: 將基底藍本轉換成物件藍本
+                // 是否能正確轉換成物件藍本
+                if (!(pair.Value is UnitSchemaAttribute unitSchemaAttribute))
                 {
+                    // 只要無法轉換成物件藍本則都可以跳過
+                    continue;
+                }
+
+                // 轉換記錄格是
+                dictionaryLDAPDisplayNameWithUnitSchemaAttribute.Add(unitSchemaAttribute.Name, unitSchemaAttribute);
+            }
+
+            // 避免重複用
+            HashSet<string> researchedGUIDs = new HashSet<string>(lDAPDisplayNames.Length);
+            // 避免重複用與找尋用
+            HashSet<string> researchedLDAPDisplayNames = new HashSet<string>(lDAPDisplayNames.Length);
+            // 查詢之前是否已持有並停時過濾檢查
+            foreach (string ldapDisplayName in lDAPDisplayNames)
+            {
+                // 能找到指定名稱且尚未過期
+                if (dictionaryLDAPDisplayNameWithUnitSchemaAttribute.TryGetValue(ldapDisplayName, out UnitSchemaAttribute unitSchemaAttribute) && !unitSchemaAttribute.IsExpired(EXPIRES_DURATION))
+                {
+                    // 找尋用的 GUID 必須微小寫
+                    string schemaGUIDLower = unitSchemaAttribute.SchemaGUID.ToLower();
+                    // 則加入最後的 GUID 搜尋
+                    researchedGUIDs.Add(schemaGUIDLower);
                     // 跳過
                     continue;
                 }
 
-                // 轉成小寫
-                string schemaGUIDLower = guid.ToString("D").ToLower();
-                /* 符合下述規則時重新搜尋
-                     1. 資料不存在
-                     2. 存在超過預計時間
+                /* 直行至此則必定下列條件須滿足
+                     - 下述條件滿足其一:
+                       1. 無法找到指定展示名稱的物件藍本
+                       2. 能找到但是物件藍本已過期
+                     - 物件尚未被推入不重複重新搜尋陣列 
                 */
-                if (!dictionaryGUIDWithUnitSchema.TryGetValue(schemaGUIDLower, out UnitSchema result) || result.IsExpired(EXPIRES_DURATION))
-                {
-                    // 遍歷位元組
-                    foreach (byte convertRequired in guid.ToByteArray())
-                    {
-                        // 轉化各位元組至十六進位
-                        sb.Append($"\\{convertRequired:X2}");
-                    }
-                    // 轉換成查詢格式
-                    researchConvertedGUIDs.Add(sb.ToString());
-                }
-                else
-                {
-                    // 未過期時直接提供給外部查詢
-                    unitSchemas.Add(result);
-                }
-
-                // 每個 GUID 後就清空一次串流
-                sb.Clear();
+                researchedLDAPDisplayNames.Add(ldapDisplayName);
             }
 
-            // 找尋目標藍本結構
-            if (researchConvertedGUIDs.Count != 0)
+            // 存在需重新搜尋的不重複物件展示名稱
+            if (researchedLDAPDisplayNames.Count != 0)
             {
                 // 重新建立藍本結構
-                foreach (UnitSchema unitSchema in UnitSchema.GetWithGUID(dispatcher, researchConvertedGUIDs))
+                foreach (UnitSchemaAttribute unitSchemaAttribute in UnitSchemaAttribute.GetWithLDAPDisplayNames(dispatcher, researchedLDAPDisplayNames))
                 {
                     // 更新的 GUID 字串必須是小寫
-                    string schemaGUIDLower = unitSchema.SchemaGUID.ToLower();
+                    string schemaGUIDLower = unitSchemaAttribute.SchemaGUID.ToLower();
                     // 避免託管記憶體洩漏
-                    UnitSchema newUnitSchema = unitSchema;
+                    UnitSchemaAttribute newUnitSchemaAttribute = unitSchemaAttribute;
                     // 先移除舊的資料
                     dictionaryGUIDWithUnitSchema.AddOrUpdate(
                         schemaGUIDLower,
-                        newUnitSchema,
-                        (GUID, oldUnitSchema) => oldUnitSchema.IsExpired(EXPIRES_DURATION) ? newUnitSchema : oldUnitSchema
+                        newUnitSchemaAttribute,
+                        (GUID, oldUnitSchema) => oldUnitSchema.IsExpired(EXPIRES_DURATION) ? newUnitSchemaAttribute : oldUnitSchema
                     );
 
-                    // 設置成對外提供項目
-                    unitSchemas.Add(unitSchema);
+                    // 則加入最後的 GUID 搜尋
+                    researchedGUIDs.Add(schemaGUIDLower);
                 }
             }
-            // 對外提供取得的資料: 注意可能為空
-            return unitSchemas.ToArray();
+
+            // 使用屬性 GUID 的長度作為容器大小
+            List<UnitSchemaAttribute> unitSchemaAttributes = new List<UnitSchemaAttribute>(researchedGUIDs.Count);
+            // 遍歷集成並將資料對外提供
+            foreach (string unitSchemaGUID in researchedGUIDs)
+            {
+                // 先移除舊的資料
+                if (!dictionaryGUIDWithUnitSchema.TryGetValue(unitSchemaGUID, out UnitSchema unitSchema))
+                {
+                    // 必定能取得: 此處為簡易防呆
+                    continue;
+                }
+
+                // 本次檢查的目標是物件藍本: 將基底藍本轉換成物件藍本
+                // 是否能正確轉換成物件藍本
+                if (!(unitSchema is UnitSchemaAttribute unitSchemaAttribute))
+                {
+                    // 只要無法轉換成物件藍本則都可以跳過
+                    continue;
+                }
+
+                // 設置成對外提供項目
+                unitSchemaAttributes.Add(unitSchemaAttribute);
+            }
+
+            // 轉換成陣列對外提供
+            return unitSchemaAttributes.ToArray();
         }
 
         /// <summary>
         /// 使用展示名稱 進行搜尋指定目標藍本物件
         /// </summary>
         /// <param name="dispatcher">入口物件製作器</param>
-        /// <param name="attributeNames">屬性名稱</param>
+        /// <param name="attributeGUID">屬性 GUID</param>
         /// <returns>指定藍本物件, 可能不存在</returns>
-        internal UnitSchema[] GetSchema(in LDAPConfigurationDispatcher dispatcher, params string[] attributeNames)
+        internal UnitSchema GetUnitSchema(in LDAPConfigurationDispatcher dispatcher, in Guid attributeGUID)
         {
-            // 組成名稱對應藍本的字典
-            Dictionary<string, UnitSchema> dictionaryNameWithUnitSchema = new Dictionary<string, UnitSchema>();
-            // 比對展示名稱作為鍵值的字典: 透過本身持有的功能轉換成陣列, 避免多執行續狀況下的錯誤
-            foreach (KeyValuePair<string, UnitSchema> pair in dictionaryGUIDWithUnitSchema.ToArray())
+            string unitSchemaAttributeGUIDLower = attributeGUID.ToString("D").ToLower();
+            // 存在且未過期
+            if (!dictionaryGUIDWithUnitSchema.TryGetValue(unitSchemaAttributeGUIDLower, out UnitSchema unitSchema) || unitSchema.IsExpired(EXPIRES_DURATION))
             {
-                // 轉成強型別方便閱讀
-                UnitSchema schema = pair.Value;
+                // 找到指定物件
+                SearchResult one = UnitSchema.GetWithSchemaEntry(dispatcher, attributeGUID);
+                // 簡易防呆: 不可能出現
+                if (one == null)
+                {
+                    // 無法找到資料交由外部判斷是否錯誤
+                    return null;
+                }
 
-                // 轉換記錄格是
-                dictionaryNameWithUnitSchema.Add(schema.Name, schema);
+                // 取得藍本物件入口
+                using (DirectoryEntry entry = one.GetDirectoryEntry())
+                {
+                    // 對外提供的資料
+                    UnitSchema newUnitSchema = null;
+                    // 取得物件類型
+                    string objectCategory = ParseSingleValue<string>(Properties.C_OBJECTCATEGORY, entry.Properties);
+                    // 取得物件類型並取得展示名稱
+                    using (DirectoryEntry category = dispatcher.ByDistinguisedName(objectCategory))
+                    {
+                        // 取得類型展示名稱
+                        string lDAPDisplayName = ParseSingleValue<string>(UnitSchema.SCHEMA_PROPERTY, category.Properties);
+                        // 根據類型進行轉換
+                        switch (lDAPDisplayName)
+                        {
+                            case UnitSchemaClass.SCHEMA_CLASS:
+                                {
+                                    // 製作成類別對外提供
+                                    newUnitSchema = new UnitSchemaClass(entry.Properties);
+                                }
+                                break;
+                            case UnitSchemaAttribute.SCHEMA_ATTRIBUTE:
+                                {
+                                    newUnitSchema = new UnitSchemaAttribute(entry.Properties);
+                                }
+                                break;
+                            default:
+                                {
+                                    // 拋出例外
+                                    throw new LDAPExceptions($"藍本 GUID:{unitSchemaAttributeGUIDLower} 無法在相關網域:{dispatcher.Configuration} 中被發現, 請聯絡程式維護人員", ErrorCodes.SERVER_ERROR);
+                                }
+                        }
+
+                        // 先移除舊的資料
+                        dictionaryGUIDWithUnitSchema.AddOrUpdate(
+                            unitSchemaAttributeGUIDLower,
+                            newUnitSchema,
+                            (GUID, oldUnitSchema) => oldUnitSchema.IsExpired(EXPIRES_DURATION) ? newUnitSchema : oldUnitSchema
+                        );
+                    }
+                    // 提供給外部使用
+                    unitSchema = newUnitSchema;
+                }
             }
 
-            // 不需重新搜尋的項目
-            List<UnitSchema> unitSchemas = new List<UnitSchema>(attributeNames.Length);
-            // 需重新搜尋的項目
-            List<string> researchNames = new List<string>(attributeNames.Length);
-            // 遍歷希望查詢的物件
-            foreach (string attributeName in attributeNames)
-            {
-                // 存在且未過期
-                if (dictionaryNameWithUnitSchema.TryGetValue(attributeName, out UnitSchema schema) && !schema.IsExpired(EXPIRES_DURATION))
-                {
-                    // 推入對外提供項目
-                    unitSchemas.Add(schema);
-                }
-                else
-                {
-                    // 推入充新找尋提供項目
-                    researchNames.Add(attributeName);
-                }
-            }
-
-            // 存在需重新找尋項目時才執行
-            if (researchNames.Count != 0)
-            {
-                // 重新建立藍本結構
-                UnitSchema[] newUnitSchemas = UnitSchema.GetWithName(dispatcher, researchNames);
-                // 籌溝死得時
-                if (newUnitSchemas.Length != researchNames.Count)
-                {
-                    // 拋出例外
-                    throw new LDAPExceptions($"藍本名稱:{string.Join(",", researchNames)} 無法在相關網域:{dispatcher.Configuration} 中被發現, 請聯絡程式維護人員", ErrorCodes.SERVER_ERROR);
-                }
-
-                foreach (UnitSchema unitSchema in newUnitSchemas)
-                {
-                    // 避免託管記憶體洩漏
-                    string schemaGUIDLower = unitSchema.SchemaGUID.ToLower();
-                    // 避免託管記憶體洩漏
-                    UnitSchema newUnitSchema = unitSchema;
-                    // 先移除舊的資料
-                    dictionaryGUIDWithUnitSchema.AddOrUpdate(
-                        schemaGUIDLower,
-                        newUnitSchema,
-                        (GUID, oldUnitSchema) => oldUnitSchema.IsExpired(EXPIRES_DURATION) ? newUnitSchema : oldUnitSchema
-                    );
-
-                    // 設置成對外提供項目
-                    unitSchemas.Add(unitSchema);
-                }
-            }
-            // 對外提供取得的資料: 注意可能為空
-            return unitSchemas.ToArray();
+            // 對外提供取得的資料
+            return unitSchema;
         }
 
         /// <summary>
-        /// 安全屬性 GUID 與相關屬性職
+        /// 取得指定展示名稱的物件類別藍本
         /// </summary>
-        private readonly ConcurrentDictionary<string, PropertySet> dictionaryExtendedRightGUIDWithPropertySet = new ConcurrentDictionary<string, PropertySet>();
-
-        /// <summary>
-        /// 使用 GUID 進行搜尋指定目標藍本物件
-        /// </summary>
-        /// <param name="dispatcher">入口物件製作器</param>
-        /// <param name="unitExtendedRight">額外權限</param>
-        /// <returns>指定藍本物件, 可能不存在</returns>
-        internal UnitSchema[] GetPropertySet(in LDAPConfigurationDispatcher dispatcher, in UnitExtendedRight unitExtendedRight)
+        /// <param name="dispatcher">提供 連線權限的分配氣</param>
+        /// <param name="ldapDisplayNames">需要查詢的物件展示名稱</param>
+        /// <returns>轉換成基底藍本的物件類型</returns>
+        internal UnitSchemaClass[] GetOriginClasses(in LDAPConfigurationDispatcher dispatcher, params string[] ldapDisplayNames)
         {
-            // 檢查是否微空GUID
-            if (unitExtendedRight == null)
+            // 最大長度必定為執行續安全字典的長度
+            Dictionary<string, UnitSchemaClass> dictionaryLDAPDisplayNameWithUnitSchemaClass = new Dictionary<string, UnitSchemaClass>(dictionaryGUIDWithUnitSchema.Count);
+            // 將執行續安全的字典轉成陣列
+            foreach (KeyValuePair<string, UnitSchema> pair in dictionaryGUIDWithUnitSchema.ToArray())
             {
-                // 對外提供空陣列
-                return Array.Empty<UnitSchema>();
-            }
-
-            // 轉成小寫
-            string securityGUIDLower = unitExtendedRight.GUID.ToLower();
-            /* 符合下述規則時重新搜尋
-                 1. 資料不存在
-                 2. 存在超過預計時間
-            */
-            if (!dictionaryExtendedRightGUIDWithPropertySet.TryGetValue(securityGUIDLower, out PropertySet propertySet) || propertySet.IsExpired(EXPIRES_DURATION))
-            {
-                // 提供給外部處理
-                PropertySet newPropertySet = new PropertySet();
-
-                // 轉換成 GUID
-                Guid securityGUID = new Guid(unitExtendedRight.GUID);
-                // 重新建立藍本結構
-                foreach (UnitSchema unitSchema in UnitSchema.GetWithSecurityGUID(dispatcher, securityGUID))
+                // 本次檢查的目標是物件藍本: 將基底藍本轉換成物件藍本
+                // 是否能正確轉換成物件藍本
+                if (!(pair.Value is UnitSchemaClass unitSchemaClass))
                 {
-                    // 更新的 GUID 字串必須是小寫
-                    string extendedRightGUIDLower = unitSchema.SchemaGUID.ToLower();
-                    // 先移除舊的資料
-                    dictionaryGUIDWithUnitSchema.AddOrUpdate(
-                        extendedRightGUIDLower,
-                        unitSchema,
-                        (GUID, oldUnitSchema) => oldUnitSchema.IsExpired(EXPIRES_DURATION) ? unitSchema : oldUnitSchema
-                    );
-
-                    // 設置成對外提供項目
-                    newPropertySet.GUIDHashSet.Add(extendedRightGUIDLower);
+                    // 只要無法轉換成物件藍本則都可以跳過
+                    continue;
                 }
 
-                // 更新時使用的是目標鍵值
-                dictionaryExtendedRightGUIDWithPropertySet.AddOrUpdate(
-                    securityGUIDLower,
-                    newPropertySet,
-                    (unitSchemaGUIDLower, oldPropertySet) => oldPropertySet.IsExpired(EXPIRES_DURATION) ? newPropertySet : oldPropertySet
-                );
+                // 轉換記錄格是
+                dictionaryLDAPDisplayNameWithUnitSchemaClass.Add(unitSchemaClass.Name, unitSchemaClass);
+            }
 
-                // 提供給外部使用
-                propertySet = newPropertySet;
+            // 避免重複用
+            HashSet<string> researchedGUIDs = new HashSet<string>();
+            // 避免重複用與找尋用
+            HashSet<string> researchedLDAPDisplayNames = new HashSet<string>();
+            // 查詢之前是否已持有並停時過濾檢查
+            foreach (string ldapDisplayName in ldapDisplayNames)
+            {
+                // 能找到指定名稱且尚未過期
+                if (dictionaryLDAPDisplayNameWithUnitSchemaClass.TryGetValue(ldapDisplayName, out UnitSchemaClass unitSchemaClass) && !unitSchemaClass.IsExpired(EXPIRES_DURATION))
+                {
+                    // 找尋用的 GUID 必須微小寫
+                    string schemaGUIDLower = unitSchemaClass.SchemaGUID.ToLower();
+                    // 則加入最後的 GUID 搜尋
+                    researchedGUIDs.Add(schemaGUIDLower);
+                    // 跳過
+                    continue;
+                }
+
+                /* 直行至此則必定下列條件須滿足
+                     - 下述條件滿足其一:
+                       1. 無法找到指定展示名稱的物件藍本
+                       2. 能找到但是物件藍本已過期
+                     - 物件尚未被推入不重複重新搜尋陣列 
+                */
+                researchedLDAPDisplayNames.Add(ldapDisplayName);
+            }
+
+            // 存在需重新搜尋的不重複物件展示名稱
+            if (researchedLDAPDisplayNames.Count != 0)
+            {
+                // 重新建立藍本結構
+                foreach (UnitSchemaClass unitSchemaClass in UnitSchemaClass.GetWithLDAPDisplayNames(dispatcher, researchedLDAPDisplayNames))
+                {
+                    // 更新的 GUID 字串必須是小寫
+                    string schemaGUIDLower = unitSchemaClass.SchemaGUID.ToLower();
+                    // 避免託管記憶體洩漏
+                    UnitSchemaClass newUnitSchemaClass = unitSchemaClass;
+                    // 先移除舊的資料
+                    dictionaryGUIDWithUnitSchema.AddOrUpdate(
+                        schemaGUIDLower,
+                        newUnitSchemaClass,
+                        (GUID, oldUnitSchema) => oldUnitSchema.IsExpired(EXPIRES_DURATION) ? newUnitSchemaClass : oldUnitSchema
+                    );
+
+                    // 則加入最後的 GUID 搜尋
+                    researchedGUIDs.Add(schemaGUIDLower);
+                }
             }
 
             // 使用屬性 GUID 的長度作為容器大小
-            List<UnitSchema> unitSchemas = new List<UnitSchema>(propertySet.GUIDHashSet.Count);
+            List<UnitSchemaClass> unitSchemaClasses = new List<UnitSchemaClass>(researchedGUIDs.Count);
             // 遍歷集成並將資料對外提供
-            foreach (string unitSchemaGUIDLower in propertySet.GUIDHashSet)
+            foreach (string unitSchemaGUID in researchedGUIDs)
             {
                 // 先移除舊的資料
-                if (!dictionaryGUIDWithUnitSchema.TryGetValue(unitSchemaGUIDLower, out UnitSchema unitSchema))
+                if (!dictionaryGUIDWithUnitSchema.TryGetValue(unitSchemaGUID, out UnitSchema unitSchema))
                 {
                     // 必定能取得: 此處為簡易防呆
                     continue;
                 }
 
-                // 設置成對外提供項目
-                unitSchemas.Add(unitSchema);
-            }
-            // 對外提供取得的資料: 注意可能為空
-            return unitSchemas.ToArray();
-        }
-        #endregion
-
-        #region 取得額外權限
-        /// <summary>
-        /// 額外權限陣列
-        /// </summary>
-        private readonly ConcurrentDictionary<string, UnitExtendedRight> dictionaryGUIDWithUnitExtendedRight = new ConcurrentDictionary<string, UnitExtendedRight>();
-
-        /// <summary>
-        /// 使用 GUID 進行搜尋指定目標額外權限物件
-        /// </summary>
-        /// <param name="dispatcher">入口物件製作器</param>
-        /// <param name="enumerableGUID">目標 GUID 陣列</param>
-        /// <returns>指定藍本物件, 可能不存在</returns>
-        internal UnitExtendedRight GetExtendedRight(in LDAPConfigurationDispatcher dispatcher, in Guid guid)
-        {
-            // 轉成小寫
-            string unitExtendedRightGUIDLower = guid.ToString("D").ToLower();
-            /* 符合下述規則時重新搜尋
-                 1. 資料不存在
-                 2. 存在超過預計時間
-            */
-            bool research = !dictionaryGUIDWithUnitExtendedRight.TryGetValue(unitExtendedRightGUIDLower, out UnitExtendedRight result) || result.IsExpired(EXPIRES_DURATION);
-            // 找尋目標額萬權限結構
-            if (research)
-            {
-                // 重新建立藍本結構
-                UnitExtendedRight unitExtendedRight = UnitExtendedRight.GetWithGUID(dispatcher, unitExtendedRightGUIDLower);
-                // 如果不存在此 GUID
-                if (unitExtendedRight == null)
+                // 本次檢查的目標是物件藍本: 將基底藍本轉換成物件藍本
+                // 是否能正確轉換成物件藍本
+                if (!(unitSchema is UnitSchemaClass unitSchemaClass))
                 {
-                    // 拋出例外
-                    throw new LDAPExceptions($"額外權限:{unitExtendedRightGUIDLower} 無法在相關網域:{dispatcher.Configuration} 中被發現, 請聯絡程式維護人員", ErrorCodes.SERVER_ERROR);
+                    // 只要無法轉換成物件藍本則都可以跳過
+                    continue;
                 }
 
-                // 先移除舊的資料
-                dictionaryGUIDWithUnitExtendedRight.AddOrUpdate(
-                    unitExtendedRightGUIDLower,
-                    unitExtendedRight,
-                    (GUID, oldUnitExtendedRight) => oldUnitExtendedRight.IsExpired(EXPIRES_DURATION) ? unitExtendedRight : oldUnitExtendedRight
-                );
-
-                result = unitExtendedRight;
+                // 設置成對外提供項目
+                unitSchemaClasses.Add(unitSchemaClass);
             }
-            // 對外提供取得的資料: 注意可能為空
-            return result;
+
+            // 轉換成陣列對外提供
+            return unitSchemaClasses.ToArray();
         }
 
         /// <summary>
-        /// 使用 GUID 進行搜尋指定目標額外權限物件
+        /// 取得指定物件類別藍本的驅動類型藍本
         /// </summary>
-        /// <param name="dispatcher">入口物件製作器</param>
-        /// <param name="enumerableGUID">目標 GUID 陣列</param>
-        /// <returns>指定藍本物件, 可能不存在</returns>
-        internal UnitExtendedRight[] GetExtendedRight(in LDAPConfigurationDispatcher dispatcher, in IEnumerable<Guid> enumerableGUID)
+        /// <param name="dispatcher">提供 連線權限的分配氣</param>
+        /// <param name="unitSchemaClasses">指定物件類型</param>
+        /// <returns>轉換成基底藍本的物件類型</returns>
+        internal UnitSchemaClass[] GetDrivedClasses(in LDAPConfigurationDispatcher dispatcher, params UnitSchemaClass[] unitSchemaClasses)
         {
-            // 使用查詢數量作為容器大小
-            HashSet<string> researchGUIDs = new HashSet<string>();
-            // 對襪提供的查詢資料
-            List<UnitExtendedRight> unitExtendedRights = new List<UnitExtendedRight>();
-            // 遍歷所有須查詢的 GUID
-            foreach (Guid guid in enumerableGUID)
+            // 最大長度必定為執行續安全字典的長度
+            Dictionary<string, UnitSchemaClass> dictionaryLDAPDisplayNameWithUnitSchemaClass = new Dictionary<string, UnitSchemaClass>(dictionaryGUIDWithUnitSchema.Count);
+            // 將執行續安全的字典轉成陣列
+            foreach (KeyValuePair<string, UnitSchema> pair in dictionaryGUIDWithUnitSchema.ToArray())
             {
-                // 檢查是否微空GUID
-                if (guid == Guid.Empty)
+                // 本次檢查的目標是物件藍本: 將基底藍本轉換成物件藍本
+                // 是否能正確轉換成物件藍本
+                if (!(pair.Value is UnitSchemaClass unitSchemaClass))
                 {
+                    // 只要無法轉換成物件藍本則都可以跳過
+                    continue;
+                }
+
+                // 轉換記錄格是
+                dictionaryLDAPDisplayNameWithUnitSchemaClass.Add(unitSchemaClass.Name, unitSchemaClass);
+            }
+
+            // 找到所有應檢查的驅動類型
+            HashSet<string> drivedClassNames = UnitSchemaClass.DrivedClassNames(unitSchemaClasses);
+            // 避免重複用
+            HashSet<string> researchedGUIDs = new HashSet<string>();
+            // 避免重複用與找尋用
+            HashSet<string> researchedLDAPDisplayNames = new HashSet<string>();
+            // 查詢之前是否已持有並停時過濾檢查
+            foreach (string drivedClassName in drivedClassNames)
+            {
+                // 能找到指定名稱且尚未過期
+                if (dictionaryLDAPDisplayNameWithUnitSchemaClass.TryGetValue(drivedClassName, out UnitSchemaClass unitSchemaClass) && !unitSchemaClass.IsExpired(EXPIRES_DURATION))
+                {
+                    // 找尋用的 GUID 必須微小寫
+                    string schemaGUIDLower = unitSchemaClass.SchemaGUID.ToLower();
+                    // 則加入最後的 GUID 搜尋
+                    researchedGUIDs.Add(schemaGUIDLower);
                     // 跳過
                     continue;
                 }
 
-                // 轉成小寫
-                string schemaGUIDLower = guid.ToString("D").ToLower();
-                /* 符合下述規則時重新搜尋
-                     1. 資料不存在
-                     2. 存在超過預計時間
+                /* 直行至此則必定下列條件須滿足
+                     - 下述條件滿足其一:
+                       1. 無法找到指定展示名稱的物件藍本
+                       2. 能找到但是物件藍本已過期
+                     - 物件尚未被推入不重複重新搜尋陣列 
                 */
-                if (!dictionaryGUIDWithUnitExtendedRight.TryGetValue(schemaGUIDLower, out UnitExtendedRight result) || result.IsExpired(EXPIRES_DURATION))
-                {
-                    // 轉換成查詢格式
-                    researchGUIDs.Add(schemaGUIDLower);
-                }
-                else
-                {
-                    // 未過期時直接提供給外部查詢
-                    unitExtendedRights.Add(result);
-                }
+                researchedLDAPDisplayNames.Add(drivedClassName);
             }
 
-            // 找尋目標額萬權限結構
-            if (researchGUIDs.Count != 0)
+            // 存在需重新搜尋的不重複物件展示名稱
+            if (researchedLDAPDisplayNames.Count != 0)
             {
                 // 重新建立藍本結構
-                foreach (UnitExtendedRight unitExtendedRight in UnitExtendedRight.GetWithGUID(dispatcher, researchGUIDs))
+                foreach (UnitSchemaClass unitSchemaClass in UnitSchemaClass.GetWithLDAPDisplayNames(dispatcher, researchedLDAPDisplayNames))
                 {
+                    // 是否為史提類型
+                    if (!unitSchemaClass.IsClassCategory(ClassCategory.STRUCTURAL_CLASS))
+                    {
+                        // 不是則跳過
+                        continue;
+                    }
+
+                    // 是否為系統使用
+                    if (unitSchemaClass.SystemOnly)
+                    {
+                        // 是系統使用跳過
+                        continue;
+                    }
+
                     // 更新的 GUID 字串必須是小寫
-                    string extendedRightGUIDLower = unitExtendedRight.GUID.ToLower();
+                    string schemaGUIDLower = unitSchemaClass.SchemaGUID.ToLower();
                     // 避免託管記憶體洩漏
-                    UnitExtendedRight newUnitExtendedRight = unitExtendedRight;
+                    UnitSchemaClass newUnitSchemaClass = unitSchemaClass;
                     // 先移除舊的資料
-                    dictionaryGUIDWithUnitExtendedRight.AddOrUpdate(
-                        extendedRightGUIDLower,
-                        newUnitExtendedRight,
-                        (GUID, oldUnitExtendedRight) => oldUnitExtendedRight.IsExpired(EXPIRES_DURATION) ? newUnitExtendedRight : oldUnitExtendedRight
+                    dictionaryGUIDWithUnitSchema.AddOrUpdate(
+                        schemaGUIDLower,
+                        newUnitSchemaClass,
+                        (GUID, oldUnitSchema) => oldUnitSchema.IsExpired(EXPIRES_DURATION) ? newUnitSchemaClass : oldUnitSchema
                     );
 
-                    // 設置成對外提供項目
-                    unitExtendedRights.Add(unitExtendedRight);
+                    // 尚未加入至最後的 GUID 搜尋
+                    if (!researchedGUIDs.Contains(schemaGUIDLower))
+                    {
+                        // 則加入最後的 GUID 搜尋
+                        researchedGUIDs.Add(schemaGUIDLower);
+                    }
                 }
             }
-            // 對外提供取得的資料: 注意可能為空
-            return unitExtendedRights.ToArray();
-        }
 
-        /// <summary>
-        /// 藍本 GUID 與 額外權限
-        /// </summary>
-        private readonly ConcurrentDictionary<string, PropertySet> dictionarySchemaGUIDWithPropertySet = new ConcurrentDictionary<string, PropertySet>();
+            // 使用屬性 GUID 的長度作為容器大小
+            List<UnitSchemaClass> drivedUnitSchemaClasses = new List<UnitSchemaClass>(researchedGUIDs.Count);
+            // 遍歷集成並將資料對外提供
+            foreach (string unitSchemaGUID in researchedGUIDs)
+            {
+                // 先移除舊的資料
+                if (!dictionaryGUIDWithUnitSchema.TryGetValue(unitSchemaGUID, out UnitSchema unitSchema))
+                {
+                    // 必定能取得: 此處為簡易防呆
+                    continue;
+                }
+
+                // 是否能正確轉換成物件藍本
+                if (!(unitSchema is UnitSchemaClass unitSchemaClass))
+                {
+                    // 只要無法轉換成物件藍本則都可以跳過
+                    continue;
+                }
+
+                // 設置成對外提供項目
+                drivedUnitSchemaClasses.Add(unitSchemaClass);
+            }
+
+            // 轉換成陣列對外提供
+            return drivedUnitSchemaClasses.ToArray();
+        }
 
         /// <summary>
         /// 透過展示名稱取額指定額外全縣
         /// </summary>
         /// <param name="dispatcher">入口物件製作器</param>
-        /// <param name="unitSchemas">查詢的藍本</param>
-        /// <returns>指定額外權限物件, 可能不存在</returns>
-        internal UnitExtendedRight[] GetExtendedRight(in LDAPConfigurationDispatcher dispatcher, params UnitSchema[] unitSchemas)
+        /// <param name="unitSchemaClasses">可作為父層藍本物件的類型</param>
+        /// <returns>指定的物件藍本支援可包含的藍本物件</returns>
+        internal UnitSchemaClass[] GetChildrenClasses(in LDAPConfigurationDispatcher dispatcher, params UnitSchemaClass[] unitSchemaClasses)
         {
-            // 即將用來搜尋的字典
-            Dictionary<string, HashSet<string>> dictionaryAttributeNameWithValues = new Dictionary<string, HashSet<string>>();
+            // 將資料換成小寫的 GUID 作為鍵值的字典
+            Dictionary<string, UnitSchemaClass> dictionaryNameWithUnitSchemaClass = unitSchemaClasses.ToDictionary(unitSchemaClass => unitSchemaClass.Name.ToLower());
+            // 即將用來搜尋的 GUID
+            HashSet<string> researchedNames = new HashSet<string>(dictionaryNameWithUnitSchemaClass.Count);
             // 轉換成物件類型 GUID 與是否過期的字典
-            foreach (UnitSchema unitSchema in unitSchemas)
+            foreach (KeyValuePair<string, UnitSchemaClass> pair in dictionaryNameWithUnitSchemaClass)
             {
-                // 查詢時須使用小寫的 GUID
-                string searcherSchenaGUID = unitSchema.SchemaGUID.ToLower();
+                // 取得父層的 GUID 小寫
+                string schemaClassGUIDLower = pair.Value.SchemaGUID.ToLower();
                 // 取得藍本額外權限關聯
-                if (dictionarySchemaGUIDWithPropertySet.TryGetValue(searcherSchenaGUID, out PropertySet propertySet) && !propertySet.IsExpired(EXPIRES_DURATION))
+                if (dictionarySchemaClassGUIDWithChildrenUnitSchemaClassGUIDs.TryGetValue(schemaClassGUIDLower, out PropertySet propertySet) && !propertySet.IsExpired(EXPIRES_DURATION))
                 {
                     // 已存在且未過期
                     continue;
                 }
 
                 // 組成應搜尋出更新物件的字典黨
-                unitSchema.CombineFiliter(ref dictionaryAttributeNameWithValues);
+                researchedNames.Add(pair.Key);
             }
 
             // 找尋目標藍本結構
-            if (dictionaryAttributeNameWithValues.Count != 0)
+            if (researchedNames.Count != 0)
             {
-                // 即將用來搜尋的字典
-                Dictionary<string, PropertySet> dictionarySchemaGUIDWithPropertySetCache = new Dictionary<string, PropertySet>();
-                // 這些資料都常是進行刷新
-                foreach (UnitExtendedRight newUnitExtendedRight in UnitExtendedRight.GetWithPropertySet(dispatcher, dictionaryAttributeNameWithValues))
+                // 取得可隸屬於指定藍本類型物件的下層類型藍本
+                UnitSchemaClass[] unitSchemaClassChirden = UnitSchemaClass.GetWithSuperiorLDAPDisplayNames(dispatcher, researchedNames);
+                // 遍歷存取權限並更新
+                foreach (UnitSchemaClass unitSchemaClass in unitSchemaClassChirden)
                 {
                     // 查詢時須使用小寫的 GUID
-                    string unitExtendedRightGUIDLower = newUnitExtendedRight.GUID.ToLower();
+                    string unitSchemaGUIDLower = unitSchemaClass.SchemaGUID.ToLower();
+                    // 避免託管記憶體洩漏
+                    UnitSchemaClass newUnitSchemaClass = unitSchemaClass;
                     // 更新相關資訊
-                    dictionaryGUIDWithUnitExtendedRight.AddOrUpdate(
-                        unitExtendedRightGUIDLower,
-                        newUnitExtendedRight,
-                        // 此時無論是否過期都強制設置
-                        (GUID, oldUnitExtendedRight) => newUnitExtendedRight
+                    dictionaryGUIDWithUnitSchema.AddOrUpdate(
+                        unitSchemaGUIDLower,
+                        newUnitSchemaClass,
+                        (GUID, oldUnitSchemaClass) => newUnitSchemaClass
                     );
-
-                    // 遍歷藍本物件進行檢查
-                    foreach (UnitSchema unitSchema in unitSchemas)
-                    {
-                        // 預設狀況時不必處理
-                        if (unitSchema.GetPorpertyType(newUnitExtendedRight) == PropertytFlags.NONE)
-                        {
-                            // 不是則跳過
-                            continue;
-                        }
-
-                        // 轉成查詢與推入用的小寫字串
-                        string unitSchemaGUIDLower = unitSchema.SchemaGUID.ToLower();
-                        // 取得目前集成
-                        if (!dictionarySchemaGUIDWithPropertySetCache.TryGetValue(unitSchemaGUIDLower, out PropertySet propertySet))
-                        {
-                            // 不存在時沖新宣告
-                            propertySet = new PropertySet();
-                            // 並推入
-                            dictionarySchemaGUIDWithPropertySetCache.Add(unitSchemaGUIDLower, propertySet);
-                        }
-
-                        // 推入作為查詢用物件
-                        propertySet.GUIDHashSet.Add(newUnitExtendedRight.GUID);
-                    }
                 }
 
                 // 更新資料
-                foreach (KeyValuePair<string, PropertySet> pair in dictionarySchemaGUIDWithPropertySetCache)
+                foreach (string unitSchemaClassName in researchedNames)
                 {
                     // 避免託管記憶體洩漏
-                    PropertySet newPropertySet = pair.Value;
+                    bool isExist = dictionaryNameWithUnitSchemaClass.TryGetValue(unitSchemaClassName, out UnitSchemaClass unitSchemaClass);
+                    // 簡易防呆: 肯定是存在的
+                    if (!isExist)
+                    {
+                        // 但是不存在跳過處理
+                        continue;
+                    }
+
+                    // 檢查得到的存取權限何者隸屬於查詢的目標
+                    string[] unitSchemaClassGUIDs = UnitSchemaClass.WhichChildrenWith(unitSchemaClass, unitSchemaClassChirden);
+
+                    // 建立新的關聯設定
+                    PropertySet newPropertySet = new PropertySet(unitSchemaClassGUIDs);
                     // 避免託管記憶體洩漏
-                    string schemaGUIDLower = pair.Key;
+                    string unitSchemaClassGUIDLower = unitSchemaClass.SchemaGUID.ToLower();
                     // 更新時使用的是目標鍵值
-                    dictionarySchemaGUIDWithPropertySet.AddOrUpdate(
-                        schemaGUIDLower,
+                    dictionarySchemaClassGUIDWithChildrenUnitSchemaClassGUIDs.AddOrUpdate(
+                        unitSchemaClassGUIDLower,
                         newPropertySet,
                         (unitSchemaGUIDLower, oldPropertySet) => oldPropertySet.IsExpired(EXPIRES_DURATION) ? newPropertySet : oldPropertySet
                     );
                 }
             }
 
-            // 最多為目前額外權限的大小
-            Dictionary<string, UnitExtendedRight> dictionaryGUIDWithUnitExtendedRightResult = new Dictionary<string, UnitExtendedRight>();
+            // 最多為目前額外權限的大小: 此用字典是會了避免重複加入
+            Dictionary<string, UnitSchemaClass> dictionaryUnitSchemaClassGUIDWithUnitSchemaClass = new Dictionary<string, UnitSchemaClass>();
             // 轉換成物件類型 GUID 與是否過期的字典
-            foreach (UnitSchema unitSchema in unitSchemas)
+            foreach (UnitSchemaClass unitSchemaClass in unitSchemaClasses)
             {
                 // 將藍本物件 GUID 轉乘小寫
-                string unitSchemaGUIDLower = unitSchema.SchemaGUID.ToLower();
+                string unitSchemaClassGUIDLower = unitSchemaClass.SchemaGUID.ToLower();
                 // 找到關聯物件列表 (不必檢查是否過期)
-                if (!dictionarySchemaGUIDWithPropertySet.TryGetValue(unitSchemaGUIDLower, out PropertySet propertySet))
+                if (!dictionarySchemaClassGUIDWithChildrenUnitSchemaClassGUIDs.TryGetValue(unitSchemaClassGUIDLower, out PropertySet propertySet))
+                {
+                    // 不存在就跳過: 極少觸發, 不持有權限的欄位不必開放查看
+                    continue;
+                }
+
+                // 遍歷此
+                foreach (string unitSchemaClassGUID in propertySet.GUIDHashSet)
+                {
+                    // 檢查是否以推入過
+                    if (dictionaryUnitSchemaClassGUIDWithUnitSchemaClass.ContainsKey(unitSchemaClassGUID))
+                    {
+                        // 已包含則跳過
+                        continue;
+                    }
+
+                    // 找到目標屬性組 GUID 相關額外權限
+                    if (!dictionaryGUIDWithUnitSchema.TryGetValue(unitSchemaClassGUID, out UnitSchema unitSchema))
+                    {
+                        // 無罰找到也跳過
+                        continue;
+                    }
+
+                    // 簡易防呆
+                    if (!(unitSchema is UnitSchemaClass childrenUnitSchemaClass))
+                    {
+                        // 跳過
+                        continue;
+                    }
+
+                    // 找到時推入作為外部可用權限
+                    dictionaryUnitSchemaClassGUIDWithUnitSchemaClass.Add(unitSchemaClassGUID, childrenUnitSchemaClass);
+                }
+            }
+            // 對外提供取得的資料: 注意可能為空
+            return dictionaryUnitSchemaClassGUIDWithUnitSchemaClass.Values.ToArray();
+        }
+        #endregion
+
+        #region 取得額外權限
+        /// <summary>
+        /// 存取控制的 GUID 與存取控制
+        /// </summary>
+        private readonly ConcurrentDictionary<string, UnitControlAccess> dictionaryGUIDWithUnitControlAccess = new ConcurrentDictionary<string, UnitControlAccess>();
+        /// <summary>
+        /// 藍本物件的 GUID 與 關聯存取渠線的集合
+        /// </summary>
+        private readonly ConcurrentDictionary<string, PropertySet> dictionarySchemaClassGUIDWithUnitControlAccesGUIDs = new ConcurrentDictionary<string, PropertySet>();
+
+        /// <summary>
+        /// 透過展示名稱取額指定額外全縣
+        /// </summary>
+        /// <param name="dispatcher">入口物件製作器</param>
+        /// <param name="unitSchemaClasses">查詢的物件藍本</param>
+        /// <returns>指定的物件藍本支援的所有控制渠縣</returns>
+        internal UnitControlAccess[] GeControlAccess(in LDAPConfigurationDispatcher dispatcher, params UnitSchemaClass[] unitSchemaClasses)
+        {
+            // 將資料換成小寫的 GUID 作為鍵值的字典
+            Dictionary<string, UnitSchemaClass> dictionarySchemaClassGUIDWithUnitSchemaClass = unitSchemaClasses.ToDictionary(unitSchemaClass => unitSchemaClass.SchemaGUID.ToLower());
+            // 即將用來搜尋的 GUID
+            HashSet<string> researchedSchemaClassGUIDs = new HashSet<string>(dictionarySchemaClassGUIDWithUnitSchemaClass.Count);
+            // 轉換成物件類型 GUID 與是否過期的字典
+            foreach (string schemaClassGUIDLower in dictionarySchemaClassGUIDWithUnitSchemaClass.Keys)
+            {
+                // 取得藍本額外權限關聯
+                if (dictionarySchemaClassGUIDWithUnitControlAccesGUIDs.TryGetValue(schemaClassGUIDLower, out PropertySet propertySet) && !propertySet.IsExpired(EXPIRES_DURATION))
+                {
+                    // 已存在且未過期
+                    continue;
+                }
+
+                // 組成應搜尋出更新物件的字典黨
+                researchedSchemaClassGUIDs.Add(schemaClassGUIDLower);
+            }
+
+            // 找尋目標藍本結構
+            if (researchedSchemaClassGUIDs.Count != 0)
+            {
+                // 取得所有關聯於目標類型的存取權限
+                UnitControlAccess[] unitControlAccesses = UnitControlAccess.GetAppliedTo(dispatcher, researchedSchemaClassGUIDs);
+                // 遍歷存取權限並更新
+                foreach (UnitControlAccess unitControlAccess in unitControlAccesses)
+                {
+                    // 查詢時須使用小寫的 GUID
+                    string unitControlAccessGUIDLower = unitControlAccess.GUID.ToLower();
+                    // 避免託管記憶體洩漏
+                    UnitControlAccess newUnitControlAccess = unitControlAccess;
+                    // 更新相關資訊
+                    dictionaryGUIDWithUnitControlAccess.AddOrUpdate(
+                        unitControlAccessGUIDLower,
+                        newUnitControlAccess,
+                        (GUID, oldUnitControlAccess) => newUnitControlAccess
+                    );
+                }
+
+                // 更新資料
+                foreach (string unitSchemaClassGUID in researchedSchemaClassGUIDs)
+                {
+                    // 避免託管記憶體洩漏
+                    bool isExist = dictionarySchemaClassGUIDWithUnitSchemaClass.TryGetValue(unitSchemaClassGUID, out UnitSchemaClass unitSchemaClass);
+                    // 簡易防呆: 肯定是存在的
+                    if (!isExist)
+                    {
+                        // 但是不存在跳過處理
+                        continue;
+                    }
+
+                    // 檢查得到的存取權限何者隸屬於查詢的目標
+                    string[] unitControlAccessGUIDs = UnitSchemaClass.WhichAppliedWith(unitSchemaClass, unitControlAccesses);
+
+                    // 建立新的關聯設定
+                    PropertySet newPropertySet = new PropertySet(unitControlAccessGUIDs);
+                    // 避免託管記憶體洩漏
+                    string unitSchemaClassGUIDLower = unitSchemaClassGUID;
+                    // 更新時使用的是目標鍵值
+                    dictionarySchemaClassGUIDWithUnitControlAccesGUIDs.AddOrUpdate(
+                        unitSchemaClassGUIDLower,
+                        newPropertySet,
+                        (unitSchemaGUIDLower, oldPropertySet) => oldPropertySet.IsExpired(EXPIRES_DURATION) ? newPropertySet : oldPropertySet
+                    );
+                }
+            }
+
+            // 最多為目前額外權限的大小: 此用字典是會了避免重複加入
+            Dictionary<string, UnitControlAccess> dictionaryUnitControlAccessGUIDWithUnitControlAccess = new Dictionary<string, UnitControlAccess>();
+            // 轉換成物件類型 GUID 與是否過期的字典
+            foreach (UnitSchemaClass unitSchemaClass in unitSchemaClasses)
+            {
+                // 將藍本物件 GUID 轉乘小寫
+                string unitSchemaClassGUIDLower = unitSchemaClass.SchemaGUID.ToLower();
+                // 找到關聯物件列表 (不必檢查是否過期)
+                if (!dictionarySchemaClassGUIDWithUnitControlAccesGUIDs.TryGetValue(unitSchemaClassGUIDLower, out PropertySet propertySet))
                 {
                     // 不存在就跳過: 極少觸發, 不持有權限的欄位不必開放查看
                     continue;
@@ -855,28 +1041,130 @@ namespace ADService.Media
                 // 遍歷此
                 foreach (string unitExtendedRightGUID in propertySet.GUIDHashSet)
                 {
-                    // 將屬性組 GUID 轉乘小寫
-                    string unitExtendedRightGUIDLower = unitExtendedRightGUID.ToLower();
                     // 檢查是否以推入過
-                    if (dictionaryGUIDWithUnitExtendedRightResult.ContainsKey(unitExtendedRightGUIDLower))
+                    if (dictionaryUnitControlAccessGUIDWithUnitControlAccess.ContainsKey(unitExtendedRightGUID))
                     {
                         // 已包含則跳過
                         continue;
                     }
 
                     // 找到目標屬性組 GUID 相關額外權限
-                    if (!dictionaryGUIDWithUnitExtendedRight.TryGetValue(unitExtendedRightGUIDLower, out UnitExtendedRight unitExtendedRight))
+                    if (!dictionaryGUIDWithUnitControlAccess.TryGetValue(unitExtendedRightGUID, out UnitControlAccess unitExtendedRight))
                     {
                         // 無罰找到也跳過
                         continue;
                     }
 
                     // 找到時推入作為外部可用權限
-                    dictionaryGUIDWithUnitExtendedRightResult.Add(unitExtendedRightGUIDLower, unitExtendedRight);
+                    dictionaryUnitControlAccessGUIDWithUnitControlAccess.Add(unitExtendedRightGUID, unitExtendedRight);
                 }
             }
             // 對外提供取得的資料: 注意可能為空
-            return dictionaryGUIDWithUnitExtendedRightResult.Values.ToArray();
+            return dictionaryUnitControlAccessGUIDWithUnitControlAccess.Values.ToArray();
+        }
+
+        /// <summary>
+        /// 存取權限物件的 GUID 與關聯的相關參數
+        /// </summary>
+        private readonly ConcurrentDictionary<string, PropertySet> dictionaryUnitControlAccesGUIDWithUnitSchemaAttributeGUIDs = new ConcurrentDictionary<string, PropertySet>();
+
+        /// <summary>
+        /// 使用指定存取權限找到相關聯的屬性值, 並回傳存取類型
+        /// </summary>
+        /// <param name="dispatcher">入口物件製作器</param>
+        /// <param name="unitControlAccess">目標存取璇縣</param>
+        /// <param name="unitSchemas">此存取權限關聯的屬性</param>
+        /// <returns>此存取權限為何種類型</returns>
+        internal ControlAccessType GeControlAccessAttributes(in LDAPConfigurationDispatcher dispatcher, in UnitControlAccess unitControlAccess, out UnitSchema[] unitSchemas)
+        {
+            // 轉成小寫
+            string unitControlAccessGUIDLower = unitControlAccess.GUID.ToLower();
+            // 轉成查詢用的 GUID
+            Guid unitControlAccessGUID = new Guid(unitControlAccessGUIDLower);
+            // 尚不存在或者過期時
+            if (!dictionaryUnitControlAccesGUIDWithUnitSchemaAttributeGUIDs.TryGetValue(unitControlAccessGUIDLower, out PropertySet propertySet) || propertySet.IsExpired(EXPIRES_DURATION))
+            {
+                // 此存取權限的關聯屬性
+                UnitSchemaAttribute[] unitSchemaAttributeCaches = UnitSchemaAttribute.GetWithControlAccessGUID(dispatcher, unitControlAccessGUID);
+                // 紀錄所有可用的屬性
+                HashSet<string> unitSchemaAttributeGUIDs = new HashSet<string>(unitSchemaAttributeCaches.Length);
+                // 遍歷存取權限並更新
+                foreach (UnitSchemaAttribute unitSchemaAttribute in unitSchemaAttributeCaches)
+                {
+                    // 查詢時須使用小寫的 GUID
+                    string unitSchemaAttributeGUIDLower = unitSchemaAttribute.SchemaGUID.ToLower();
+                    // 避免託管記憶體洩漏
+                    UnitSchemaAttribute newUnitSchemaAttribute = unitSchemaAttribute;
+                    // 更新相關資訊
+                    dictionaryGUIDWithUnitSchema.AddOrUpdate(
+                        unitSchemaAttributeGUIDLower,
+                        newUnitSchemaAttribute,
+                        (GUID, oldUnitSchemaAttribute) => newUnitSchemaAttribute
+                    );
+
+                    // 推入關聯
+                    unitSchemaAttributeGUIDs.Add(unitSchemaAttributeGUIDLower);
+                }
+
+                // 建立新的關聯設定
+                PropertySet newPropertySet = new PropertySet(unitSchemaAttributeGUIDs);
+                // 更新相關資訊
+                dictionaryUnitControlAccesGUIDWithUnitSchemaAttributeGUIDs.AddOrUpdate(
+                    unitControlAccessGUIDLower,
+                    newPropertySet,
+                    (GUID, oldUnitSchemaPropertySet) => newPropertySet
+                );
+
+                // 取得新的群組
+                propertySet = newPropertySet;
+            }
+
+            // 宣告總總長度
+            List<UnitSchema> unitSchemasCache = new List<UnitSchema>(propertySet.GUIDHashSet.Count);
+            // 遍歷權限
+            foreach (string unitSchemaAttributeGUIDLower in propertySet.GUIDHashSet)
+            {
+                // 嘗試找到指定屬性
+                if (!dictionaryGUIDWithUnitSchema.TryGetValue(unitSchemaAttributeGUIDLower, out UnitSchema unitSchema))
+                {
+                    // 不存在時跳過: 可以丟例外
+                    continue;
+                }
+
+                // 轉換失敗時
+                if (!(unitSchema is UnitSchemaAttribute unitSchemaAttribute))
+                {
+                    // 不存在時跳過: 可以丟例外
+                    continue;
+                }
+
+                // 加入對外提供細目
+                unitSchemasCache.Add(unitSchemaAttribute);
+            }
+
+            // 轉換成為陣列
+            unitSchemas = unitSchemasCache.ToArray();
+            // 根據長度進行判斷
+            switch (unitSchemas.Length)
+            {
+                case 0:
+                    {
+                        // 不存在任何項目時必定是拓展權限
+                        return ControlAccessType.EXTENDED_RIGHT;
+                    }
+                case 1:
+                    {
+                        // 取得第 0 筆
+                        UnitSchemaAttribute unitSchemaAttribute = unitSchemasCache[0] as UnitSchemaAttribute;
+                        // 查看是否為群組項目
+                        return unitSchemaAttribute.IsPropertySet(unitControlAccessGUIDLower) ? ControlAccessType.PROPERTY_SET : ControlAccessType.VALIDATED_WRITE;
+                    }
+                default:
+                    {
+                        // 多筆時必定微群組設定
+                        return ControlAccessType.PROPERTY_SET;
+                    }
+            }
         }
         #endregion
 

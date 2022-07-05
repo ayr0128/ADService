@@ -40,7 +40,7 @@ namespace ADServiceFrameworkTest
         public bool TryGetValue<T>(in string name, out T value)
         {
             // 先設置成預設
-            value = default(T);
+            value = default;
             // 如果未持有任何可用資料
             if (Details == null)
             {
@@ -613,7 +613,8 @@ namespace ADServiceFrameworkTest
         /// </summary>
         /// <param name="user">執行此操作的登入者</param>
         /// <param name="distinguishedNameMove">指定目標區分名稱</param>
-        /// <param name="oldPWD">指定移動到區分名稱下</param>
+        /// <param name="oldPWD">舊密碼</param>
+        /// <param name="newPWD">新密碼</param>
         internal static void Test_LDAP_Feature_ChangePassword(in LDAPLogonPerson user, in string distinguishedNameMove, in string oldPWD, in string newPWD)
         {
             #region 模擬客戶端指定自身作為操作物件並取得右鍵方法
@@ -673,6 +674,161 @@ namespace ADServiceFrameworkTest
             // 須包含目標物件
             Assert.IsTrue(dictionaryDNWithRecover.ContainsKey(distinguishedNameMove), $"還原的影響結果應包含:{distinguishedNameMove} ");
             #endregion
+        }
+
+        /// <summary>
+        /// 驗證點擊自身時的可用方法
+        /// </summary>
+        /// <param name="user">執行此操作的登入者</param>
+        /// <param name="distinguishedName">指定目標區分名稱</param>
+        internal static void Test_LDAP_Feature_Create(in LDAPLogonPerson user, in string distinguishedName)
+        {
+            #region 模擬客戶端指定自身作為操作物件並取得右鍵方法
+            // 取得目標物件
+            Dictionary<string, LDAPObject> dictionaryDNWithObject = Serve.GetObjects(user, CategoryTypes.NONE, distinguishedName);
+            // 防呆測試: 指定的使用者 (自己) 應該能被發現
+            dictionaryDNWithObject.TryGetValue(distinguishedName, out LDAPObject objectTarget);
+            // 此時應存在物件
+            Assert.IsNotNull(objectTarget, $"指定找尋使用者物件:{distinguishedName} 但無法找到指定物件");
+            // 使用登入者與目標物件取得功能證書
+            LDAPCertification certificate = Serve.GetCertificate(user, objectTarget);
+            // 功能證書在喚起者與目標物件存在的情況下絕對不會為空
+            Assert.IsNotNull(certificate, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時應能取得證書");
+            // 取得支援的方法
+            Dictionary<string, InvokeCondition> dictionaryArrtibuteNameWithCondition = certificate.ListAllMethods();
+            // 將資料轉換成 JSON
+            JObject protocol = JObject.FromObject(dictionaryArrtibuteNameWithCondition);
+            #endregion
+            #region 模擬客戶端或網頁端呼叫的是展示物件內容方法
+            // 假設支援展示物件細節方法: 支援方法中存在可用方法
+            const string methodSupported = Methods.M_SHOWCRATEABLE;
+            // 存在方法時: 若特定旗標存在, 則細節中必定存在的功能描述
+            const string conditionName = InvokeCondition.METHODCONDITION;
+
+            // 模擬收到封包後嘗試呼叫透定方法: 可呼叫的方法會陳列在封包的 KEY 內
+            JToken conditionJSON = protocol.GetValue(methodSupported);
+            // 此時應存在物件
+            Assert.IsNotNull(conditionJSON, $"協議應支援:{methodSupported} 方法");
+
+            // 展示物件細節的內容解析
+            ClientCondition condition = conditionJSON.ToObject<ClientCondition>();
+            // 指定方法應支援
+            Assert.IsNotNull(condition, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時功能:{methodSupported} 應存在細節條件");
+            // 展示物件細節需要依靠呼叫另外的方法取得參數內容: 可以透過協議條件判斷是何種運行方式
+            bool isInvokeMethod = condition.IsContains(ProtocolAttributeFlags.INVOKEMETHOD);
+            // 簡易防呆
+            Assert.IsTrue(isInvokeMethod, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時的支援功能:{methodSupported} 應為呼叫方法:{ProtocolAttributeFlags.INVOKEMETHOD}");
+            // 簡易防呆: 細節用來描述此功能如何使用或有哪些使用參數
+            Assert.IsNotNull(condition.Details, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時功能:{methodSupported} 應存在詳細描述");
+            // 內部儲存的資料是陣列需使用陣列解析
+            bool isArray = condition.IsContains(ProtocolAttributeFlags.ISARRAY);
+            // 簡易防呆
+            Assert.IsTrue(isArray, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時的支援功能:{methodSupported} 應為陣列");
+            // 還有此旗標時: 細節中必定含有呼叫目標方法
+            bool isMethodExost = condition.TryGetValue(conditionName, out string[] methods);
+            // 簡易防呆
+            Assert.IsTrue(isMethodExost, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時 的支援功能:{methodSupported} 應能取得呼叫方法參數:{conditionName}");
+            // 簡易防呆
+            Assert.IsNotNull(methods, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時, 支援功能:{methodSupported} 呼叫方法參數:{conditionName} 內應具有目標方法");
+            #endregion
+            // 創建完成後應刪除的目標
+            HashSet<string> deleteDN = new HashSet<string>();
+            // 能執行的指令
+            foreach (string method in methods)
+            {
+                #region 至伺服器端取得可用功能及其描述
+                // 取得支援方法的展示細節
+                InvokeCondition invokeCondition = certificate.GetMethodCondition(method);
+                // 簡易防呆1: 應具有可異動與展示細節
+                Assert.IsNotNull(invokeCondition, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時的支援功能:{methodSupported} 呼叫方法參數:{conditionName} 的方法:{method} 時應提供可用的集合");
+                // 將資料轉換成 JSON: 用來傳遞至客戶端的資料
+                JObject protocolJSON = JObject.FromObject(invokeCondition);
+                // 此時應存在物件
+                Assert.IsNotNull(protocolJSON, $"呼叫目標:{method} 應能取得呼叫細節");
+                #endregion
+                #region 客戶端根據方法提供的資料開始準備需求資料
+                // 模擬客戶端解析呼叫後的資料資訊
+                ClientCondition clientConditionMethod = protocolJSON.ToObject<ClientCondition>();
+                // 展示物件細節需要依靠呼叫另外的方法取得參數內容: 可以透過協議條件判斷是何種運行方式
+                bool isEditable = clientConditionMethod.IsContains(ProtocolAttributeFlags.EDITABLE);
+                // 簡易防呆
+                Assert.IsTrue(isEditable, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時的支援功能:{methodSupported} 的方法:{method} 應為可被異動:{ProtocolAttributeFlags.EDITABLE}");
+                // 應只有兩中方法可以呼叫
+                switch (method)
+                {
+                    case Methods.M_CREATEGROUP:
+                        {
+                            // 模擬發送應使用的封包
+                            CreateGroup createGroup = new CreateGroup();
+                            // 假設創建的名稱是
+                            createGroup.Name = "32767";
+
+                            // 模擬客戶端發送的異動封包格式
+                            JToken modifiedProtocol = JToken.FromObject(createGroup);
+                            // 驗證目標協議是否可透過方法進行異動
+                            bool isAuthenicatableModified = certificate.AuthenicateMethod(method, modifiedProtocol);
+                            // 驗證
+                            Assert.IsTrue(isAuthenicatableModified, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時執行異動的驗證方法時:{method} 應通過 ");
+                            // 不論是否經過驗證都可以呼叫執行方法, 但是如果驗證不通過將不產生任何影響
+                            Dictionary<string, LDAPObject> dictionaryDNWithModified = certificate.InvokeMethod(method, modifiedProtocol);
+                            // 推入作為刪除的目標
+                            foreach (string dn in dictionaryDNWithModified.Keys)
+                            {
+                                // 推入作為刪除項目
+                                deleteDN.Add(dn);
+                            }
+                        }
+                        break;
+                    case Methods.M_CREATEUSER:
+                        {
+                            // 模擬發送應使用的封包
+                            CreateUser createUser = new CreateUser();
+                            // 創建使用者有限制需要提供參數
+                            bool isPorperties = clientConditionMethod.IsContains(ProtocolAttributeFlags.PROPERTIES);
+                            // 簡易防呆
+                            Assert.IsTrue(isPorperties, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時的支援功能:{methodSupported} 的方法:{method} 應具有需求屬性:{ProtocolAttributeFlags.PROPERTIES}");
+                            // 取得可填入參數
+                            clientConditionMethod.TryGetValue(InvokeCondition.PROPERTIES, out string[] properties);
+                            // 簡易防呆
+                            Assert.IsNotNull(properties, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時, 支援功能:{methodSupported} 的方法:{method} 應具有屬性:{InvokeCondition.PROPERTIES}");
+                            // 故意填入任意文字測試用
+                            foreach (string property in properties)
+                            {
+                                // 設置內容
+                                createUser.DictionaryAttributeNameWithValue.Add(property, "_");
+                            }
+                            // 提供物件名稱
+                            createUser.Name = "NewPerson";
+                            // 提供使用者帳號
+                            createUser.Account = "WahIna";
+                            // 提供使用者密碼
+                            createUser.Password = "@7847SrX";
+
+                            // 模擬客戶端發送的異動封包格式
+                            JToken modifiedProtocol = JToken.FromObject(createUser);
+                            // 驗證目標協議是否可透過方法進行異動
+                            bool isAuthenicatableModified = certificate.AuthenicateMethod(method, modifiedProtocol);
+                            // 驗證
+                            Assert.IsTrue(isAuthenicatableModified, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時執行異動的驗證方法時:{method} 應通過 ");
+                            // 不論是否經過驗證都可以呼叫執行方法, 但是如果驗證不通過將不產生任何影響
+                            Dictionary<string, LDAPObject> dictionaryDNWithModified = certificate.InvokeMethod(method, modifiedProtocol);
+                            // 推入作為刪除的目標
+                            foreach (string dn in dictionaryDNWithModified.Keys)
+                            {
+                                // 推入作為刪除項目
+                                deleteDN.Add(dn);
+                            }
+                        }
+                        break;
+                    default:
+                        {
+                            // 簡易防呆1: 應具有可異動與展示細節
+                            Assert.IsNotNull(invokeCondition, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時的支援功能:{methodSupported} 呼叫方法參數:{conditionName} 的方法:{method} 不應被觸發");
+                        }
+                        break;
+                }
+                #endregion
+            }
         }
     }
 }

@@ -2,6 +2,9 @@
 
 namespace ADServiceFrameworkTest
 {
+    /// <summary>
+    /// 測試非登入者的成員
+    /// </summary>
     [TestClass]
     public class LDAPTestServeOnUser
     {

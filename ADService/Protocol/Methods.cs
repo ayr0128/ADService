@@ -22,6 +22,18 @@
         /// </summary>
         public const string M_SHOWDETAIL = "ShowDetail";
         /// <summary>
+        /// 顯示可創建的子物件: 右鍵方法
+        /// </summary>
+        public const string M_SHOWCRATEABLE = "ShowCreateable";
+        /// <summary>
+        /// 創建成員: 額外呼叫
+        /// </summary>
+        public const string M_CREATEUSER = "CreateUser";
+        /// <summary>
+        /// 創建成員: 額外呼叫
+        /// </summary>
+        public const string M_CREATEGROUP = "CreateGroup";
+        /// <summary>
         /// 重置密碼: 額外權限, 直接作為右鍵方法使用
         /// </summary>
         public const string M_CHANGEPWD = "ChangePWD";

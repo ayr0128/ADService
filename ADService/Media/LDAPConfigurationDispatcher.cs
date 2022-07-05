@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace ADService.Media
 {
@@ -53,91 +54,61 @@ namespace ADService.Media
 
         #region 設定取得
         /// <summary>
-        /// 透過透過額外權限取得所有關聯屬性組
+        /// 取得指定展示名稱的物件類別藍本
         /// </summary>
-        /// <param name="unitExtendedRight">額外權限</param>
-        /// <returns>此額外權限需求的藍本群組</returns>
-        internal UnitSchema[] GetPropertySet(in UnitExtendedRight unitExtendedRight) => Configuration.GetPropertySet(this, unitExtendedRight);
+        /// <param name="ldapDisplayNames">類別物件的展示名稱</param>
+        /// <returns>類別物件藍本</returns>
+        internal UnitSchemaClass[] GetClasses(params string[] ldapDisplayNames)
+        {
+            // 透過物件持有類別取得所有可用屬性以及所有可用子類別
+            UnitSchemaClass[] originUnitSchemaClasses = Configuration.GetOriginClasses(this, ldapDisplayNames);
+            // 取得所有指定類別的可用輔助類別
+            UnitSchemaClass[] drivedUnitSchemaClasses = Configuration.GetDrivedClasses(this, originUnitSchemaClasses);
+            // 整合上述兩者
+            List<UnitSchemaClass> unitSchemaClasses = new List<UnitSchemaClass>(originUnitSchemaClasses.Length + drivedUnitSchemaClasses.Length);
+            // 推入原始類別藍本
+            unitSchemaClasses.AddRange(originUnitSchemaClasses);
+            // 推入驅動類別藍本
+            unitSchemaClasses.AddRange(drivedUnitSchemaClasses);
+            // 對外提供資料
+            return unitSchemaClasses.ToArray();
+        }
 
         /// <summary>
-        /// 取得藍本
+        /// 取得以類別藍本物件為父層的類別
         /// </summary>
-        /// <param name="guids">目標 GUID 陣列</param>
-        /// <returns>藍本結構</returns>
-        internal UnitSchema[] GetSchema(params Guid[] guids) => Configuration.GetSchema(this, guids);
+        /// <param name="unitSchemaClasses">查詢的物件藍本</param>
+        /// <returns>類別物件藍本</returns>
+        internal UnitSchemaClass[] GetChildrenClasess(params UnitSchemaClass[] unitSchemaClasses) => Configuration.GetChildrenClasses(this, unitSchemaClasses);
 
         /// <summary>
         /// 使用展示名稱 進行搜尋指定目標藍本物件
         /// </summary>
-        /// <param name="attributeNames">屬性名稱</param>
+        /// <param name="lDAPDisplayNames">屬性名稱 </param>
         /// <returns>指定藍本物件, 可能不存在</returns>
-        internal UnitSchema[] GetSchema(params string[] attributeNames) => Configuration.GetSchema(this, attributeNames);
+        internal UnitSchemaAttribute[] GetUnitSchemaAttribute(params string[] lDAPDisplayNames) => Configuration.GetUnitSchemaAttribute(this, lDAPDisplayNames);
 
         /// <summary>
-        /// 取得相關 GUID 的
+        /// 使用物件藍本取得所有存取控制權限
         /// </summary>
-        /// <param name="guids">目標 GUID 陣列</param>
-        /// <returns>藍本結構</returns>
-        internal UnitExtendedRight GetExtendedRight(in Guid guid) => Configuration.GetExtendedRight(this, guid);
-
-        /// <summary>
-        /// 使用依賴類別 GUID 找尋相關的額外權限
-        /// </summary>
-        /// <param name="unitSchemas">查詢的藍本</param>
+        /// <param name="unitSchemaClasses">查詢的物件藍本</param>
         /// <returns>指定額外權限物件, 可能不存在</returns>
-        internal UnitExtendedRight[] GetExtendedRight(params UnitSchema[] unitSchemas) => Configuration.GetExtendedRight(this, unitSchemas);
+        internal UnitControlAccess[] GeControlAccess(params UnitSchemaClass[] unitSchemaClasses) => Configuration.GeControlAccess(this, unitSchemaClasses);
 
         /// <summary>
-        /// 提供存取權限中目標物件的 GUID 查詢對應的資料
+        /// 使用指定存取權限找到相關聯的屬性值, 並回傳存取類型
         /// </summary>
-        /// <param name="accessRuleGUIDs">目標 GUID 陣列</param>
-        /// <returns>返回各 GUID 的詳細資料, 格式如右: Dictiobary 'Guid 字串(小寫), 存取規則描述' </returns>
-        internal Dictionary<string, UnitDetail> GetUnitDetail(in IEnumerable<Guid> accessRuleGUIDs)
-        {
-            // 轉換成袋查詢的資料
-            Dictionary<string, Guid> dictionaryGUIDLowerWithGUID = accessRuleGUIDs.ToDictionary(accessRuleGUID => accessRuleGUID.ToString("D").ToLower());
-            // 長度最多為外部宣告的 GUID 大小
-            Dictionary<string, UnitDetail> dictionaryGuidWithAUnitDetail = new Dictionary<string, UnitDetail>(dictionaryGUIDLowerWithGUID.Count);
-            // 遍歷所有取得的額外權限
-            foreach (UnitExtendedRight unitExtendedRight in Configuration.GetExtendedRight(this, dictionaryGUIDLowerWithGUID.Values))
-            {
-                // 交查詢到的 GUID 轉為小寫
-                string unitExtendedRightGUIDLower = unitExtendedRight.GUID.ToLower();
-                // 強型別宣告方便閱讀
-                UnitDetail accessRuleObjectDetail = new UnitDetail(unitExtendedRight.Name, UnitType.EXTENDEDRIGHT);
-                // 推入查詢物件
-                dictionaryGuidWithAUnitDetail.Add(unitExtendedRightGUIDLower, accessRuleObjectDetail);
+        /// <param name="unitControlAccess">目標存取璇縣</param>
+        /// <param name="unitSchemaAttributes">此存取權限關聯的屬性</param>
+        /// <returns>此存取權限為何種類型</returns>
+        internal ControlAccessType GetControlAccessAttributes(in UnitControlAccess unitControlAccess, out UnitSchema[] unitSchemaAttributes) => Configuration.GeControlAccessAttributes(this, unitControlAccess, out unitSchemaAttributes);
 
-                // 將查詢到的藍本移除
-                dictionaryGUIDLowerWithGUID.Remove(unitExtendedRightGUIDLower);
-            }
-
-            // 遍歷所有取得的藍本
-            foreach (UnitSchema unitSchema in Configuration.GetSchema(this, dictionaryGUIDLowerWithGUID.Values))
-            {
-                // 交查詢到的 GUID 轉為小寫
-                string unitSchemaGUIDLower = unitSchema.SchemaGUID.ToLower();
-                // 取得類型
-                UnitType accessRuleObjectType = unitSchema is UnitSchemaAttribute _ ? UnitType.ATTRIBUTE : UnitType.CLASS;
-                // 強型別宣告方便閱讀
-                UnitDetail accessRuleObjectDetail = new UnitDetail(unitSchema.Name, accessRuleObjectType);
-                // 推入查詢物件
-                dictionaryGuidWithAUnitDetail.Add(unitSchemaGUIDLower, accessRuleObjectDetail);
-
-                // 將查詢到的藍本移除
-                dictionaryGUIDLowerWithGUID.Remove(unitSchemaGUIDLower);
-            }
-
-            // 安全防呆: 所有指定的 GUID 都應該要能被找到
-            if (dictionaryGUIDLowerWithGUID.Count != 0)
-            {
-                // 此時拋出例外: 因為 GUID 應被晚整取得, 此處對外提供邏輯錯誤
-                throw new LDAPExceptions($"預期應找尋的 GUID 中還有剩餘的部分:{string.Join(",", dictionaryGUIDLowerWithGUID.Keys)} 因而拋出例外, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
-            }
-
-            // 無錯誤情況下對外提供資料
-            return dictionaryGuidWithAUnitDetail;
-        }
+        /// <summary>
+        /// 使用展示名稱 進行搜尋指定目標藍本物件
+        /// </summary>
+        /// <param name="attributeGUID">屬性 GUID </param>
+        /// <returns>指定藍本物件, 可能不存在</returns>
+        internal UnitSchema GetUnitSchema(in Guid attributeGUID) => Configuration.GetUnitSchema(this, attributeGUID);
         #endregion
 
         #region 入口物件取得

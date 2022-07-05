@@ -23,6 +23,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Debug\ADService.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -31,6 +32,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Release\ADService.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
@@ -68,23 +70,29 @@
   <ItemGroup>
     <Compile Include="Certification\Analytical.cs" />
     <Compile Include="Certification\AnalyticalChangePassword.cs" />
+    <Compile Include="Certification\AnalyticalCreateGroup.cs" />
     <Compile Include="Certification\AnalyticalModifyDetail.cs" />
     <Compile Include="Certification\AnalyticalMoveTo.cs" />
     <Compile Include="Certification\AnalyticalReName.cs" />
     <Compile Include="Certification\AnalyticalResetPassword.cs" />
+    <Compile Include="Certification\AnalyticalCreateUser.cs" />
+    <Compile Include="Certification\AnalyticalShowCreateable.cs" />
     <Compile Include="Certification\AnalyticalShowDetail.cs" />
     <Compile Include="Certification\LDAPCertification.cs" />
     <Compile Include="Certification\CertificationProperties.cs" />
-    <Compile Include="Certification\LDAPPermissions.cs" />
-    <Compile Include="Media\UnitDetail.cs" />
+    <Compile Include="ControlAccessRule\ControlRights.cs" />
+    <Compile Include="ControlAccessRule\InheritedAccessRule.cs" />
+    <Compile Include="ControlAccessRule\LDAPPermissions.cs" />
     <Compile Include="Details\PropertyDetail.cs" />
     <Compile Include="Features\IRevealerSID.cs" />
     <Compile Include="Features\IRevealerSecuritySIDs.cs" />
     <Compile Include="Media\LDAPConfigurationDispatcher.cs" />
     <Compile Include="Media\UnitSchemaClass.cs" />
-    <Compile Include="Media\UnitExtendedRight.cs" />
+    <Compile Include="Media\UnitControlAccess.cs" />
     <Compile Include="Media\UnitSchemaAttribute.cs" />
     <Compile Include="Media\UnitSchema.cs" />
+    <Compile Include="Protocol\CreateGroup.cs" />
+    <Compile Include="Protocol\CreateUser.cs" />
     <Compile Include="Protocol\Properties.cs" />
     <Compile Include="Environments\LDAPCategory.cs" />
     <Compile Include="Environments\LDAPConst.cs" />

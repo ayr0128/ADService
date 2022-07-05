@@ -1,4 +1,5 @@
-﻿using ADService.Environments;
+﻿using ADService.ControlAccessRule;
+using ADService.Environments;
 using ADService.Foundation;
 using ADService.Media;
 using ADService.Protocol;
@@ -27,6 +28,9 @@ namespace ADService.Certification
             new AnalyticalModifyDetail(),   // 異動細節
             new AnalyticalChangePassword(), // 重置密碼
             new AnalyticalResetPassword(),  // 強制重設密碼
+            new AnalyticalShowCreateable(), // 創毽子物件
+            new AnalyticalCreateUser(),     // 創建成員
+            new AnalyticalCreateGroup(),    // 創建群組
         }.ToDictionary(analytical => analytical.Name);
         #endregion
 
@@ -73,7 +77,7 @@ namespace ADService.Certification
             try
             {
                 // 整合各 SID 權向狀態
-                LDAPPermissions permissions = LDAPPermissions.GetPermissions(Dispatcher, Invoker, Destination);
+                LDAPPermissions permissions = new LDAPPermissions(Dispatcher, Invoker, Destination);
                 // 最多回傳的長度是所有的項目都支援
                 Dictionary<string, InvokeCondition> dictionaryAttributeNameWithProtocol = new Dictionary<string, InvokeCondition>(dictionaryMethodWithAnalytical.Count);
                 // 遍歷權限並檢查是否可以喚醒
@@ -143,7 +147,7 @@ namespace ADService.Certification
                 }
 
                 // 整合各 SID 權向狀態
-                LDAPPermissions permissions = LDAPPermissions.GetPermissions(Dispatcher, Invoker, Destination);
+                LDAPPermissions permissions = new LDAPPermissions(Dispatcher, Invoker, Destination);
                 // 取得結果
                 (InvokeCondition condition, _) = analytical.Invokable(Dispatcher, Invoker, Destination, permissions);
                 // 無法啟動代表無法呼叫
@@ -197,8 +201,7 @@ namespace ADService.Certification
                 iRelease = certification;
 
                 // 整合各 SID 權向狀態
-                LDAPPermissions permissions = LDAPPermissions.GetPermissions(Dispatcher, Invoker, Destination);
-
+                LDAPPermissions permissions = new LDAPPermissions(Dispatcher, Invoker, Destination);
                 // 遍歷權限驗證協議是否可用
                 return analytical.Authenicate(ref certification, Invoker, Destination, protocol, permissions);
             }
@@ -248,8 +251,7 @@ namespace ADService.Certification
                 iRelease = certification;
 
                 // 整合各 SID 權向狀態
-                LDAPPermissions permissions = LDAPPermissions.GetPermissions(Dispatcher, Invoker, Destination);
-
+                LDAPPermissions permissions = new LDAPPermissions(Dispatcher, Invoker, Destination);
                 // 驗證是否可用
                 bool authenicateSuccess = analytical.Authenicate(ref certification, Invoker, Destination, protocol, permissions);
                 // 檢查驗證是否成功
@@ -262,17 +264,13 @@ namespace ADService.Certification
                 // 執行異動或呼叫
                 analytical.Invoke(ref certification, Invoker, Destination, protocol, permissions);
 
-                // 推入修改
-                Dictionary<string, RequiredCommitSet> dictionaryDistinguishedNameWitSet = certification.Commited();
                 // 對外提供所有影響的物件
-                Dictionary<string, LDAPObject> dictionaryDistinguishedNameWithLDAPObject = new Dictionary<string, LDAPObject>(dictionaryDistinguishedNameWitSet.Count);
+                Dictionary<string, LDAPObject> dictionaryDistinguishedNameWithLDAPObject = new Dictionary<string, LDAPObject>();
                 // 遍歷修改內容
-                foreach (KeyValuePair<string, RequiredCommitSet> pair in dictionaryDistinguishedNameWitSet)
+                foreach (KeyValuePair<string, DirectoryEntry> pair in certification.Commited())
                 {
-                    // 異動資料
-                    RequiredCommitSet set = pair.Value;
                     // 重新製作目標物件
-                    LDAPObject reflashObject = LDAPObject.ToObject(set.Entry, Dispatcher, set.Properties);
+                    LDAPObject reflashObject = LDAPObject.ToObject(pair.Value, Dispatcher);
                     // 轉換物件為空
                     if (reflashObject == null)
                     {

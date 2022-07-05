@@ -8,15 +8,19 @@
         /// <summary>
         /// 樹系路徑: 隨時可能被異動
         /// </summary>
-        public const string C_DISTINGGUISHEDNAME = "distinguishedName";
+        public const string C_DISTINGUISHEDNAME = "distinguishedName";
         /// <summary>
-        /// 物件持有屬性
+        /// 帳號
         /// </summary>
-        public const string C_ALLOWEDATTRIBUTES = "allowedAttributes";
+        public const string C_SMMACCOUNTNAME = "sAMAccountName";
         /// <summary>
-        /// 物件可持有的子類別
+        /// 舊版本帳號
         /// </summary>
-        public const string C_ALLOWEDCHILDCLASSES = "allowedChildClasses";
+        public const string C_USERPRINCIPALNAME = "userPrincipalName";
+        /// <summary>
+        /// 密碼
+        /// </summary>
+        public const string C_UNICODEPWD = "unicodePwd";
 
         /// <summary>
         /// 物件類型

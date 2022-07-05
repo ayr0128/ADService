@@ -1,3 +1,4 @@
+using ADService.ControlAccessRule;
 using ADService.Environments;
 using ADService.Features;
 using ADService.Foundation;
@@ -81,15 +82,8 @@ namespace ADService.Certification
             // 遍歷支援項目
             foreach (string attributeName in AttributeNames)
             {
-                // 檢查參數是否支援
-                if (!destination.StoredProperties.GetProperty(attributeName, out _))
-                {
-                    // 不知原則必定不需處理
-                    continue;
-                }
-
                 // 檢驗支援項目: 具有查看旗標
-                if (!permissions.IsAllow(attributeName, null, AccessRuleRightFlags.PropertyRead))
+                if (!permissions.IsAllow(attributeName, AccessRuleRightFlags.PropertyRead))
                 {
                     // 不具有查看旗標時: 就可以忽略修改旗標, 因為看不到等於不能修改
                     continue;
@@ -98,7 +92,7 @@ namespace ADService.Certification
                 // 將對外提供的處理項目
                 InvokeCondition invokeCondition;
                 // 是否可異動
-                bool isEditable = permissions.IsAllow(attributeName, null, AccessRuleRightFlags.PropertyWrite);
+                bool isEditable = permissions.IsAllow(attributeName, AccessRuleRightFlags.PropertyWrite);
                 // 對外提供項目有個需要特例處理
                 switch (attributeName)
                 {
@@ -127,7 +121,7 @@ namespace ADService.Certification
                             };
 
                             // 異動能否包含自幾
-                            bool isContainSelf = permissions.IsAllow(attributeName, null, AccessRuleRightFlags.Self);
+                            bool isContainSelf = permissions.IsAllow(attributeName, AccessRuleRightFlags.Self);
                             // 是否可以進行異動: 只有在能異動的情況下進行動作
                             if (isEditable || isContainSelf)
                             {
@@ -193,7 +187,7 @@ namespace ADService.Certification
                     case Properties.P_USERACCOUNTCONTROL:
                         {
                             // 目前持有的資訊內容
-                            AccountControlFlags storedValue = destination.StoredProperties.GetPropertySingle<AccountControlFlags>(attributeName);
+                            AccountControlFlags storedValue = destination.GetPropertySingle<AccountControlFlags>(attributeName);
 
                             // 將儲存的資料轉換成對外協議
                             AccountControlProtocols accountControlProtocols = AccountControlFromFlagsToProtocols(storedValue);
@@ -229,7 +223,7 @@ namespace ADService.Certification
                     case Properties.P_PWDLASTSET:
                         {
                             // 目前持有的資訊內容
-                            long storedValue = destination.StoredProperties.GetPropertyInterval(attributeName);
+                            long storedValue = destination.GetPropertyInterval(attributeName);
 
                             /* 由於處理邏輯所以數值將以下列方式轉換成旗標
                                  - 數值為 0: 啟用下次登入時需修改密碼
@@ -268,7 +262,7 @@ namespace ADService.Certification
                     case Properties.P_SUPPORTEDENCRYPTIONTYPES:
                         {
                             // 目前持有的資訊內容
-                            EncryptedType storedValue = destination.StoredProperties.GetPropertySingle<EncryptedType>(attributeName);
+                            EncryptedType storedValue = destination.GetPropertySingle<EncryptedType>(attributeName);
 
                             // 初始化
                             AccountControlProtocols accountControlProtocols = AccountControlProtocols.NONE;
@@ -309,7 +303,7 @@ namespace ADService.Certification
                     default:
                         {
                             // 目前持有的資訊內容
-                            string storedValue = destination.StoredProperties.GetPropertySingle<string>(attributeName);
+                            string storedValue = destination.GetPropertySingle<string>(attributeName);
 
                             // 預期項目: 必定是字串
                             Type typeString = typeof(string);
@@ -405,7 +399,7 @@ namespace ADService.Certification
                 }
 
                 // 是否可異動
-                bool isEditable = permissions.IsAllow(attributeName, null, AccessRuleRightFlags.PropertyWrite);
+                bool isEditable = permissions.IsAllow(attributeName, AccessRuleRightFlags.PropertyWrite);
                 // 使用存取鍵值去處理
                 switch (attributeName)
                 {
@@ -468,7 +462,7 @@ namespace ADService.Certification
                                         - 限制只找尋特定區分名稱
                                         [TODO] 應使用加密字串避免注入式攻擊
                                     */
-                                    string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, researchDNHashSet)})";
+                                    string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGUISHEDNAME, researchDNHashSet)})";
                                     // 應從根目錄進行搜尋
                                     using (DirectorySearcher seacher = new DirectorySearcher(entryRoot, encoderFiliter, LDAPObject.PropertiesToLoad))
                                     {
@@ -485,12 +479,12 @@ namespace ADService.Certification
                                             }
 
                                             // 異動能否包含自身
-                                            bool isContainSelf = permissions.IsAllow(attributeName, null, AccessRuleRightFlags.Self);
+                                            bool isContainSelf = permissions.IsAllow(attributeName, AccessRuleRightFlags.Self);
                                             // 遍歷所有項目轉換成入口物件
                                             foreach (SearchResult one in all)
                                             {
                                                 // 取得區分名稱
-                                                string distinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGGUISHEDNAME, one.Properties);
+                                                string distinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGUISHEDNAME, one.Properties);
                                                 /* 根據異動目標判斷異動權限是否不可用
                                                      1. 異動資料是自己, 不包含異動自己的權限
                                                      2. 異動資料不是自己, 不包含異動的權限
@@ -503,7 +497,7 @@ namespace ADService.Certification
                                                 else
                                                 {
                                                     // 設定並轉換成入口物件
-                                                    certification.SetEntry(one, distinguishedName);
+                                                    certification.SetEntry(one.GetDirectoryEntry(), distinguishedName);
                                                 }
                                             }
                                         }
@@ -579,7 +573,7 @@ namespace ADService.Certification
                                         - 限制只找尋特定區分名稱
                                         [TODO] 應使用加密字串避免注入式攻擊
                                     */
-                                    string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, researchDNHashSet)})";
+                                    string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGUISHEDNAME, researchDNHashSet)})";
                                     // 應從根目錄進行搜尋
                                     using (DirectorySearcher seacher = new DirectorySearcher(entryRoot, encoderFiliter, LDAPObject.PropertiesToLoad))
                                     {
@@ -599,9 +593,9 @@ namespace ADService.Certification
                                             foreach (SearchResult one in all)
                                             {
                                                 // 取得區分名稱
-                                                string distinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGGUISHEDNAME, one.Properties);
+                                                string distinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGUISHEDNAME, one.Properties);
                                                 // 設定並轉換成入口物件
-                                                certification.SetEntry(one, distinguishedName);
+                                                certification.SetEntry(one.GetDirectoryEntry(), distinguishedName);
                                             }
                                         }
                                     }
@@ -623,15 +617,15 @@ namespace ADService.Certification
                                 }
 
                                 // 轉換成基礎物件
-                                LDAPObject entryObject = LDAPObject.ToObject(set.Entry, certification.Dispatcher, set.Properties);
+                                LDAPObject entryObject = LDAPObject.ToObject(set.Entry, certification.Dispatcher);
 
                                 // 整合各 SID 權向狀態
-                                LDAPPermissions permissionsProtocol = LDAPPermissions.GetPermissions(certification.Dispatcher, invoker, entryObject);
+                                LDAPPermissions permissionsProtocol = new LDAPPermissions(certification.Dispatcher, invoker, entryObject);
 
                                 // 是否可異動
-                                bool isProcessedEditable = permissionsProtocol.IsAllow(Properties.P_MEMBER, null, AccessRuleRightFlags.PropertyWrite);
+                                bool isProcessedEditable = permissionsProtocol.IsAllow(Properties.P_MEMBER, AccessRuleRightFlags.PropertyWrite);
                                 // 異動能否包含自身
-                                bool isProcessedContainSelf = permissionsProtocol.IsAllow(Properties.P_MEMBER, null, AccessRuleRightFlags.Self); 
+                                bool isProcessedContainSelf = permissionsProtocol.IsAllow(Properties.P_MEMBER, AccessRuleRightFlags.Self); 
                                 /* 根據異動目標判斷異動權限是否不可用
                                      1. 異動資料是自己, 不包含異動自己的權限
                                      2. 異動資料不是自己, 不包含異動的權限
@@ -928,7 +922,7 @@ namespace ADService.Certification
                             // 取得這個參數可調整的參數
                             AccountControlFlags accountControlFlagsMask = AccountControlFromProtocolsToFlags(ACOUNTCONTROL_MASK);
                             // 取得目前持有的屬性
-                            AccountControlFlags storedValue = destination.StoredProperties.GetPropertySingle<AccountControlFlags>(attributeName);
+                            AccountControlFlags storedValue = destination.GetPropertySingle<AccountControlFlags>(attributeName);
                             // 檢查是否有異動
                             if ((storedValue & accountControlFlagsMask) == accountControlFlags)
                             {
@@ -954,7 +948,7 @@ namespace ADService.Certification
                             // 轉換成控制旗標
                             AccountControlProtocols convertedProtocol = receivedValue?.ToObject<AccountControlProtocols>() ?? AccountControlProtocols.NONE;
                             // 取得目前持有的屬性
-                            long storedValue = destination.StoredProperties.GetPropertyInterval(attributeName);
+                            long storedValue = destination.GetPropertyInterval(attributeName);
                             // 取得本次是否包含使用者照號一棟
                             if (dictionaryAttributeNameWithDetail.TryGetValue(Properties.P_USERACCOUNTCONTROL, out JToken userAccountControlJToken))
                             {
@@ -964,7 +958,7 @@ namespace ADService.Certification
                             else
                             {
                                 // 取得目前持有的使用者帳號控制屬性
-                                AccountControlFlags userAccountControlValue = destination.StoredProperties.GetPropertySingle<AccountControlFlags>(Properties.P_USERACCOUNTCONTROL);
+                                AccountControlFlags userAccountControlValue = destination.GetPropertySingle<AccountControlFlags>(Properties.P_USERACCOUNTCONTROL);
                                 // 轉換成外部協議可是別的格式
                                 convertedProtocol |= AccountControlFromFlagsToProtocols(userAccountControlValue);
                             }
@@ -1026,7 +1020,7 @@ namespace ADService.Certification
                             encryptedType |= (convertedProtocol & AccountControlProtocols.ACCOUNT_KERBEROS_AES256) == AccountControlProtocols.ACCOUNT_KERBEROS_AES256 ? EncryptedType.AES256 : EncryptedType.NONE;
 
                             // 取得目前持有的屬性
-                            EncryptedType storedValue = destination.StoredProperties.GetPropertySingle<EncryptedType>(attributeName);
+                            EncryptedType storedValue = destination.GetPropertySingle<EncryptedType>(attributeName);
                             // 檢查修改後設是否與現在鄉相同
                             if ((storedValue & ENCRYPT_MASK) == encryptedType)
                             {

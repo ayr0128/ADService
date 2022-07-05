@@ -46,7 +46,7 @@ namespace ADService.Foundation
                         using (DirectoryEntry entryOne = one.GetDirectoryEntry())
                         {
                             // 轉換為基礎物件: 不可能轉換失敗
-                            LDAPObject objectSearched = ToObject(entryOne, dispatcher, one.Properties);
+                            LDAPObject objectSearched = ToObject(entryOne, dispatcher);
                             // 推入轉換完成的物件
                             objectMixedLists.Add(objectSearched);
                         }
@@ -77,9 +77,8 @@ namespace ADService.Foundation
         /// <param name="entry">入口物件</param>
         /// <param name="limitedType">限制類型</param>
         /// <param name="dispatcher">入口物件創建器</param>
-        /// <param name="propertiesResult">透過找尋取得字的屬性</param>
         /// <exception cref="LDAPExceptions">移除外部整理過屬於此組織單位的成員或組織單位後還有其他剩餘資料時丟出</exception>
-        internal LDAPAssembly(in DirectoryEntry entry, in CategoryTypes limitedType, in LDAPConfigurationDispatcher dispatcher, in ResultPropertyCollection propertiesResult) : base(entry, dispatcher, propertiesResult)
+        internal LDAPAssembly(in DirectoryEntry entry, in CategoryTypes limitedType, in LDAPConfigurationDispatcher dispatcher) : base(entry, dispatcher)
         {
             // 不是允許類型的其中一種
             if ((limitedType & Type & CategoryTypes.ALL_CONTAINERS) == CategoryTypes.NONE)
