@@ -46,8 +46,7 @@ namespace ADService.ControlAccessRule
         /// 內部使用, 設置相關存取權限
         /// </summary>
         /// <param name="name">目標名稱</param>
-        /// <param name="isInherited">是否透過繼承取得</param>
-        internal AccessRuleRightFlags Get(in string name, in bool? isInherited)
+        internal AccessRuleRightFlags Get(in string name)
         {
             // 需取得全域設置與指定的名稱屬性
             string[] attributesNames = new string[] { string.Empty, name };
@@ -65,7 +64,7 @@ namespace ADService.ControlAccessRule
                 }
 
                 // 疊加存取規則
-                accessRuleRightFlagsAllow |= inheritedAccessRule.Get(isInherited);
+                accessRuleRightFlagsAllow |= inheritedAccessRule.Get();
             }
 
             // 疊加的拒絕權限
@@ -81,7 +80,7 @@ namespace ADService.ControlAccessRule
                 }
 
                 // 疊加存取規則
-                accessRuleRightFlagsDisallow |= inheritedAccessRule.Get(isInherited);
+                accessRuleRightFlagsDisallow |= inheritedAccessRule.Get();
             }
 
             // 允許權限必須被拒絕權限遮蔽

@@ -28,7 +28,6 @@ namespace ADService.Certification
         /// 推入入口物件並預設為不須簽入
         /// </summary>
         /// <param name="entry">入口物件</param>
-        /// <param name="one">額外查詢的屬性</param>
         internal RequiredCommitSet(in DirectoryEntry entry)
         {
             RequiredCommit = false;  // 預設: 沒有被異動不須簽入

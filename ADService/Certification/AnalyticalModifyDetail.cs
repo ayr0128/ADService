@@ -83,7 +83,7 @@ namespace ADService.Certification
             foreach (string attributeName in AttributeNames)
             {
                 // 檢驗支援項目: 具有查看旗標
-                if (!permissions.IsAllow(attributeName, null, AccessRuleRightFlags.PropertyRead))
+                if (!permissions.IsAllow(attributeName, AccessRuleRightFlags.PropertyRead))
                 {
                     // 不具有查看旗標時: 就可以忽略修改旗標, 因為看不到等於不能修改
                     continue;
@@ -92,7 +92,7 @@ namespace ADService.Certification
                 // 將對外提供的處理項目
                 InvokeCondition invokeCondition;
                 // 是否可異動
-                bool isEditable = permissions.IsAllow(attributeName, null, AccessRuleRightFlags.PropertyWrite);
+                bool isEditable = permissions.IsAllow(attributeName, AccessRuleRightFlags.PropertyWrite);
                 // 對外提供項目有個需要特例處理
                 switch (attributeName)
                 {
@@ -121,7 +121,7 @@ namespace ADService.Certification
                             };
 
                             // 異動能否包含自幾
-                            bool isContainSelf = permissions.IsAllow(attributeName, null, AccessRuleRightFlags.Self);
+                            bool isContainSelf = permissions.IsAllow(attributeName, AccessRuleRightFlags.Self);
                             // 是否可以進行異動: 只有在能異動的情況下進行動作
                             if (isEditable || isContainSelf)
                             {
@@ -399,7 +399,7 @@ namespace ADService.Certification
                 }
 
                 // 是否可異動
-                bool isEditable = permissions.IsAllow(attributeName, null, AccessRuleRightFlags.PropertyWrite);
+                bool isEditable = permissions.IsAllow(attributeName, AccessRuleRightFlags.PropertyWrite);
                 // 使用存取鍵值去處理
                 switch (attributeName)
                 {
@@ -479,7 +479,7 @@ namespace ADService.Certification
                                             }
 
                                             // 異動能否包含自身
-                                            bool isContainSelf = permissions.IsAllow(attributeName, null, AccessRuleRightFlags.Self);
+                                            bool isContainSelf = permissions.IsAllow(attributeName, AccessRuleRightFlags.Self);
                                             // 遍歷所有項目轉換成入口物件
                                             foreach (SearchResult one in all)
                                             {
@@ -623,9 +623,9 @@ namespace ADService.Certification
                                 LDAPPermissions permissionsProtocol = new LDAPPermissions(certification.Dispatcher, invoker, entryObject);
 
                                 // 是否可異動
-                                bool isProcessedEditable = permissionsProtocol.IsAllow(Properties.P_MEMBER, null, AccessRuleRightFlags.PropertyWrite);
+                                bool isProcessedEditable = permissionsProtocol.IsAllow(Properties.P_MEMBER, AccessRuleRightFlags.PropertyWrite);
                                 // 異動能否包含自身
-                                bool isProcessedContainSelf = permissionsProtocol.IsAllow(Properties.P_MEMBER, null, AccessRuleRightFlags.Self); 
+                                bool isProcessedContainSelf = permissionsProtocol.IsAllow(Properties.P_MEMBER, AccessRuleRightFlags.Self); 
                                 /* 根據異動目標判斷異動權限是否不可用
                                      1. 異動資料是自己, 不包含異動自己的權限
                                      2. 異動資料不是自己, 不包含異動的權限

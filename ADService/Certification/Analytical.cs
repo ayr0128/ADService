@@ -37,6 +37,7 @@ namespace ADService.Certification
         /// <param name="dispatcher">入口物件製作器</param>
         /// <param name="invoker">喚起物件</param>
         /// <param name="destination">目標物件</param>
+        /// <param name="permissions">喚起者與目標能使用的權限</param>
         /// <returns>是否可使用</returns>
         internal abstract (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination, LDAPPermissions permissions);
         /// <summary>
@@ -46,6 +47,7 @@ namespace ADService.Certification
         /// <param name="invoker">喚起物件</param>
         /// <param name="destination">目標物件</param>
         /// <param name="protocol">外部傳遞的協定內容</param>
+        /// <param name="permissions">喚起者與目標能使用的權限</param>
         /// <returns>此協定是否可用</returns>
         internal abstract bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions);
         /// <summary>
@@ -55,6 +57,7 @@ namespace ADService.Certification
         /// <param name="invoker">喚起物件</param>
         /// <param name="destination">目標物件</param>
         /// <param name="protocol">外部傳遞的協定內容</param>
+        /// <param name="permissions">喚起者與目標能使用的權限</param>
         internal abstract void Invoke(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions);
     }
 }

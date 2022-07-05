@@ -276,10 +276,10 @@ namespace ADService.Media
         }
 
         /// <summary>
-        /// 解析 <see cref="C_OBJECTCATEGORY">物件類型</see> 的鍵值容器
+        /// 解析 <see cref="Properties.C_OBJECTCATEGORY">物件類型</see> 的鍵值容器
         /// </summary>
         /// <param name="properties">整包的鍵值儲存容器, 直接傳入不於外部解析是為了避免漏修改</param>
-        /// <returns>從容器中取得的 <see cref="C_OBJECTCATEGORY">物件類型</see> 鍵值內容</returns>
+        /// <returns>從容器中取得的 <see cref="Properties.C_OBJECTCATEGORY">物件類型</see> 鍵值內容</returns>
         internal static CategoryTypes ParseCategory(in PropertyCollection properties)
         {
             // 取得 '物件類型' 特性鍵值內容
@@ -426,9 +426,9 @@ namespace ADService.Media
         /// 使用展示名稱 進行搜尋指定目標藍本物件
         /// </summary>
         /// <param name="dispatcher">入口物件製作器</param>
-        /// <param name="ldapDisplayNames">屬性名稱</param>
+        /// <param name="lDAPDisplayNames">屬性名稱</param>
         /// <returns>指定藍本物件, 可能不存在</returns>
-        internal UnitSchemaAttribute[] GetUnitSchemaAttribute(in LDAPConfigurationDispatcher dispatcher, in IEnumerable<string> ldapDisplayNames)
+        internal UnitSchemaAttribute[] GetUnitSchemaAttribute(in LDAPConfigurationDispatcher dispatcher, params string[] lDAPDisplayNames)
         {
             // 最大長度必定為執行續安全字典的長度
             Dictionary<string, UnitSchemaAttribute> dictionaryLDAPDisplayNameWithUnitSchemaAttribute = new Dictionary<string, UnitSchemaAttribute>(dictionaryGUIDWithUnitSchema.Count);
@@ -448,11 +448,11 @@ namespace ADService.Media
             }
 
             // 避免重複用
-            HashSet<string> researchedGUIDs = new HashSet<string>();
+            HashSet<string> researchedGUIDs = new HashSet<string>(lDAPDisplayNames.Length);
             // 避免重複用與找尋用
-            HashSet<string> researchedLDAPDisplayNames = new HashSet<string>();
+            HashSet<string> researchedLDAPDisplayNames = new HashSet<string>(lDAPDisplayNames.Length);
             // 查詢之前是否已持有並停時過濾檢查
-            foreach (string ldapDisplayName in ldapDisplayNames)
+            foreach (string ldapDisplayName in lDAPDisplayNames)
             {
                 // 能找到指定名稱且尚未過期
                 if (dictionaryLDAPDisplayNameWithUnitSchemaAttribute.TryGetValue(ldapDisplayName, out UnitSchemaAttribute unitSchemaAttribute) && !unitSchemaAttribute.IsExpired(EXPIRES_DURATION))
@@ -756,6 +756,20 @@ namespace ADService.Media
                 // 重新建立藍本結構
                 foreach (UnitSchemaClass unitSchemaClass in UnitSchemaClass.GetWithLDAPDisplayNames(dispatcher, researchedLDAPDisplayNames))
                 {
+                    // 是否為史提類型
+                    if (!unitSchemaClass.IsClassCategory(ClassCategory.STRUCTURAL_CLASS))
+                    {
+                        // 不是則跳過
+                        continue;
+                    }
+
+                    // 是否為系統使用
+                    if (unitSchemaClass.SystemOnly)
+                    {
+                        // 是系統使用跳過
+                        continue;
+                    }
+
                     // 更新的 GUID 字串必須是小寫
                     string schemaGUIDLower = unitSchemaClass.SchemaGUID.ToLower();
                     // 避免託管記憶體洩漏

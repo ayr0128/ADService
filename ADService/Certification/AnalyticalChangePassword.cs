@@ -29,7 +29,7 @@ namespace ADService.Certification
             }
 
             // 不存在 '重設密碼' 的額外權限
-            if (!permissions.IsAllow(Properties.EX_CHANGEPASSWORD, null, AccessRuleRightFlags.RightExtended))
+            if (!permissions.IsAllow(Properties.EX_CHANGEPASSWORD, AccessRuleRightFlags.RightExtended))
             {
                 // 對外提供失敗
                 return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{Properties.EX_CHANGEPASSWORD} 的額外權限");

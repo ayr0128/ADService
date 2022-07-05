@@ -146,7 +146,7 @@ namespace ADService.ControlAccessRule
                 }
 
                 // 取得參數名稱
-                UnitSchema unitSchema = dispatcher.GetUnitSchemae(accessRuleConverted.AttributeGUID);
+                UnitSchema unitSchema = dispatcher.GetUnitSchema(accessRuleConverted.AttributeGUID);
                 // 無法取得對應屬性資料
                 if (unitSchema == null)
                 {
@@ -162,15 +162,8 @@ namespace ADService.ControlAccessRule
         /// 取得指定屬性職是否存在指定權限
         /// </summary>
         /// <param name="name">目標群取權限</param>
-        /// <param name="isInherited">是否重繼承取得, NULL 時會忽略劑成狀態</param>
         /// <param name="accessRuleRightFlagsLimited">任意一個權限存在就是允許</param>
         /// <returns>是否可用</returns>
-        internal bool IsAllow(in string name, in bool? isInherited, in AccessRuleRightFlags accessRuleRightFlagsLimited) 
-        {
-            // 從限制的目標取得的存取權限
-            AccessRuleRightFlags accessRuleRightFlags = controlAccess.Get(name, isInherited);
-            // 兩者間作 AND 運算, 任意一個權限存在即可
-            return (accessRuleRightFlags & accessRuleRightFlagsLimited) != AccessRuleRightFlags.None;
-        }
+        internal bool IsAllow(in string name, in AccessRuleRightFlags accessRuleRightFlagsLimited) => (controlAccess.Get(name) & accessRuleRightFlagsLimited) != AccessRuleRightFlags.None;
     }
 }

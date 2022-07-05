@@ -36,25 +36,15 @@ namespace ADService.ControlAccessRule
         /// <summary>
         /// 使用指定繼承狀態取得存取旗標
         /// </summary>
-        /// <param name="isInherited">繼承狀態</param>
         /// <returns>指定繼承狀態的</returns>
-        internal AccessRuleRightFlags Get(in bool? isInherited)
+        internal AccessRuleRightFlags Get()
         {
             // 預計對外回傳項目
             AccessRuleRightFlags accessRuleRightFlags = AccessRuleRightFlags.None;
-            // 根據外部指定的繼承進行動作
-            if (isInherited == null)
-            {
-                // 取得從繼承而來的起標語對外回傳項目進行疊加
-                accessRuleRightFlags |= directionaryInheritedWithFlags.TryGetValue(true, out AccessRuleRightFlags accessRuleRightFlagsIsInherited) ? accessRuleRightFlagsIsInherited : AccessRuleRightFlags.None;
-                // 取得不是繼承而來的起標語對外回傳項目進行疊加
-                accessRuleRightFlags |= directionaryInheritedWithFlags.TryGetValue(false, out AccessRuleRightFlags accessRuleRightFlagsIsNotInherited) ? accessRuleRightFlagsIsNotInherited : AccessRuleRightFlags.None;
-            }
-            else
-            {
-                // 取得外部指定的繼承類型旗標進行疊加
-                accessRuleRightFlags |= directionaryInheritedWithFlags.TryGetValue(isInherited.Value, out AccessRuleRightFlags accessRuleRightFlagsIsCustom) ? accessRuleRightFlagsIsCustom : AccessRuleRightFlags.None;
-            }
+            // 取得從繼承而來的起標語對外回傳項目進行疊加
+            accessRuleRightFlags |= directionaryInheritedWithFlags.TryGetValue(true, out AccessRuleRightFlags accessRuleRightFlagsIsInherited) ? accessRuleRightFlagsIsInherited : AccessRuleRightFlags.None;
+            // 取得不是繼承而來的起標語對外回傳項目進行疊加
+            accessRuleRightFlags |= directionaryInheritedWithFlags.TryGetValue(false, out AccessRuleRightFlags accessRuleRightFlagsIsNotInherited) ? accessRuleRightFlagsIsNotInherited : AccessRuleRightFlags.None;
             // 對外提供疊加完成的項目
             return accessRuleRightFlags;
         }

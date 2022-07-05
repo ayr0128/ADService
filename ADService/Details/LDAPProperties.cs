@@ -95,7 +95,6 @@ namespace ADService.Details
         /// </summary>
         /// <param name="dispatcher">藍本物件</param>
         /// <param name="entry">入口物件</param>
-        /// <param name="propertiesResult">透過找尋取得字的屬性</param>
         internal LDAPProperties(in LDAPConfigurationDispatcher dispatcher, in DirectoryEntry entry)
         {
             dictionaryNameWithPropertyDetail = ParseProperties(dispatcher, entry.Properties);
@@ -121,7 +120,6 @@ namespace ADService.Details
         /// 根據鍵值取得儲存內容
         /// </summary>
         /// <param name="propertyName">特性參數</param>
-        /// <param name="convertedValue">實際資料</param>
         /// <returns> 資料是否存在 </returns>
         /// <exception cref="LDAPExceptions">當內部儲存資料為多筆時將拋出例外</exception>
         internal long GetPropertyInterval(in string propertyName)

@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace ADService.Media
 {
@@ -81,6 +82,13 @@ namespace ADService.Media
         internal UnitSchemaClass[] GetChildrenClasess(params UnitSchemaClass[] unitSchemaClasses) => Configuration.GetChildrenClasses(this, unitSchemaClasses);
 
         /// <summary>
+        /// 使用展示名稱 進行搜尋指定目標藍本物件
+        /// </summary>
+        /// <param name="lDAPDisplayNames">屬性名稱 </param>
+        /// <returns>指定藍本物件, 可能不存在</returns>
+        internal UnitSchemaAttribute[] GetUnitSchemaAttribute(params string[] lDAPDisplayNames) => Configuration.GetUnitSchemaAttribute(this, lDAPDisplayNames);
+
+        /// <summary>
         /// 使用物件藍本取得所有存取控制權限
         /// </summary>
         /// <param name="unitSchemaClasses">查詢的物件藍本</param>
@@ -100,14 +108,7 @@ namespace ADService.Media
         /// </summary>
         /// <param name="attributeGUID">屬性 GUID </param>
         /// <returns>指定藍本物件, 可能不存在</returns>
-        internal UnitSchema GetUnitSchemae(in Guid attributeGUID) => Configuration.GetUnitSchema(this, attributeGUID);
-
-        /// <summary>
-        /// 使用展示名稱 進行搜尋指定目標藍本物件
-        /// </summary>
-        /// <param name="lDAPDisplayNames">屬性名稱 </param>
-        /// <returns>指定藍本物件, 可能不存在</returns>
-        internal UnitSchemaAttribute[] GetUnitSchemaAttribute(params string[] lDAPDisplayNames) => Configuration.GetUnitSchemaAttribute(this, lDAPDisplayNames);
+        internal UnitSchema GetUnitSchema(in Guid attributeGUID) => Configuration.GetUnitSchema(this, attributeGUID);
         #endregion
 
         #region 入口物件取得

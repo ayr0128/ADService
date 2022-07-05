@@ -16,6 +16,14 @@ namespace ADService.Media
         /// 藍本的搜尋目標
         /// </summary>
         internal const string SCHEMA_CLASS = "classSchema";
+        /// <summary>
+        /// 藍本的搜尋目標
+        /// </summary>
+        private const string SCHEMA_CLASS_PROPERTY = "objectClassCategory";
+        /// <summary>
+        /// 藍本的搜尋目標
+        /// </summary>
+        private const string SCHEMA_CLASS_SYSTEMONLY = "systemOnly";
 
         /// <summary>
         /// 何者的子物件
@@ -280,6 +288,17 @@ namespace ADService.Media
         /// 藍本物件的遊河種類別衍伸
         /// </summary>
         private readonly string SubClassOf;
+
+        /// <summary>
+        /// 藍本物件的類型
+        /// </summary>
+        private readonly ClassCategory ClassType;
+
+        /// <summary>
+        /// 是否為系統使用
+        /// </summary>
+        internal bool SystemOnly { get; private set; }
+
         /// <summary>
         /// 輔助物件列表
         /// </summary>
@@ -321,6 +340,9 @@ namespace ADService.Media
         /// <param name="properties">入口物件持有的屬性</param>
         internal UnitSchemaClass(in PropertyCollection properties) : base(properties)
         {
+            ClassType = LDAPConfiguration.ParseSingleValue<ClassCategory>(SCHEMA_CLASS_PROPERTY, properties);
+            SystemOnly = LDAPConfiguration.ParseSingleValue<bool>(SCHEMA_CLASS_SYSTEMONLY, properties);
+
             SubClassOf = LDAPConfiguration.ParseSingleValue<string>(SCHEMA_CLASS_SUBCLASSOF, properties);
             AuxiliaryClasses = LDAPConfiguration.ParseMutipleValue<string>(SCHEMA_CLASS_AUXILIARYCLASS, properties);
             SystemAuxiliaryClasses = LDAPConfiguration.ParseMutipleValue<string>(SCHEMA_CLASS_SYSTEMAUXILIARYCLASS, properties);
@@ -340,5 +362,11 @@ namespace ADService.Media
         /// <param name="unitSchemaClasNameLower">指定物件蕾型藍本的名稱</param>
         /// <returns>是否可作為指定藍本物件的內容物</returns>
         internal bool IsChildrenWith(in string unitSchemaClasNameLower) => PossSuperiors.Contains(unitSchemaClasNameLower) || SystemPossSuperiors.Contains(unitSchemaClasNameLower);
+        /// <summary>
+        /// 是否為指定的類別物件類型
+        /// </summary>
+        /// <param name="classCategory">指定類型物件</param>
+        /// <returns>是否為指定類型物件</returns>
+        internal bool IsClassCategory(in ClassCategory classCategory) => ClassType == classCategory;
     }
 }

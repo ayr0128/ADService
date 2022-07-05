@@ -47,7 +47,6 @@ namespace ADService.Foundation
         /// </summary>
         /// <param name="entry">入口物件</param>
         /// <param name="dispatcher">入口物件創建器</param>
-        /// <param name="propertiesResult">透過找尋取得字的屬性</param>
         internal LDAPGroup(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher) : base(entry, dispatcher)
         {
             // 限制應為: 成員, 內部安全性群組

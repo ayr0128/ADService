@@ -62,12 +62,12 @@ namespace ADService.Media
         #endregion
 
         /// <summary>
-        /// 使用欄位 <see cref="ATTRIBUTE_SCHEMA_PROPERTY"> 展示名稱 </see> 取得的相關字串
+        /// 使用欄位 <see cref="CONTEXT_SCHEMA"> 展示名稱 </see> 取得的相關字串
         /// </summary>
         internal readonly string Name;
 
         /// <summary>
-        /// 使用欄位 <see cref="ATTRIBUTE_SCHEMA_GUID"> GUID </see> 取得的相關字串
+        /// 使用欄位 <see cref="SCHEMA_GUID"> GUID </see> 取得的相關字串
         /// </summary>
         internal readonly string SchemaGUID;
 

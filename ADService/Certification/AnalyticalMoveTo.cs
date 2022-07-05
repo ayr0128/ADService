@@ -38,12 +38,10 @@ namespace ADService.Certification
                 return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 不具有類型資料");
             }
 
-            // 目標物件是否具有 '刪除' 的寫入權限
-            bool isValueDelete = permissions.IsAllow(categoryValue, false, AccessRuleRightFlags.Delete);
             // 目標物件的父層組織單位是否具有 '刪除子物件' 的寫入權限
-            bool isParentChileDelete = permissions.IsAllow(categoryValue, true, AccessRuleRightFlags.ChildrenDelete | AccessRuleRightFlags.Delete);
+            bool isDeleteable = permissions.IsAllow(categoryValue, AccessRuleRightFlags.ChildrenDelete | AccessRuleRightFlags.Delete);
             // 兩種權限都不具備時
-            if (!isValueDelete && !isParentChileDelete)
+            if (!isDeleteable)
             {
                 // 對外提供失敗
                 return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有目標:{categoryValue} 的刪除權限且父層:{organizationUnitDN} 需具有子物件刪除權限");
@@ -164,7 +162,7 @@ namespace ADService.Certification
                     /* 下述認依條件成立, 驗證失敗
                          - 不具備 '子物件類型' 的創建權限
                     */
-                    return permissionsProtocol.IsAllow(categoryValue, null, AccessRuleRightFlags.ChildrenCreate);
+                    return permissionsProtocol.IsAllow(categoryValue, AccessRuleRightFlags.ChildrenCreate);
                 }
             }
         }

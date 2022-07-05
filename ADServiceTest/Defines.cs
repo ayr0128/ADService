@@ -40,7 +40,7 @@ namespace ADServiceFrameworkTest
         public bool TryGetValue<T>(in string name, out T value)
         {
             // 先設置成預設
-            value = default(T);
+            value = default;
             // 如果未持有任何可用資料
             if (Details == null)
             {
@@ -613,7 +613,8 @@ namespace ADServiceFrameworkTest
         /// </summary>
         /// <param name="user">執行此操作的登入者</param>
         /// <param name="distinguishedNameMove">指定目標區分名稱</param>
-        /// <param name="oldPWD">指定移動到區分名稱下</param>
+        /// <param name="oldPWD">舊密碼</param>
+        /// <param name="newPWD">新密碼</param>
         internal static void Test_LDAP_Feature_ChangePassword(in LDAPLogonPerson user, in string distinguishedNameMove, in string oldPWD, in string newPWD)
         {
             #region 模擬客戶端指定自身作為操作物件並取得右鍵方法
