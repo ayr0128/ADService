@@ -49,34 +49,6 @@ namespace ADService.Details
             return _Rights;
         }
 
-        /// <summary>
-        /// 取得提供的存取歸德中的 GUID HashSet
-        /// </summary>
-        /// <param name="accessRuleConverteds">取得存取規則</param>
-        /// <returns></returns>
-        internal static HashSet<Guid> GetGUIDs(in IEnumerable<AccessRuleConverted> accessRuleConverteds)
-        {
-            // 整理權限 GUID
-            HashSet<Guid> accessRuleGUIDs = new HashSet<Guid>();
-            // 只需處理非空 GUID 的部分 (包含沒有生效的)
-            foreach (AccessRuleConverted accessRuleConverted in accessRuleConverteds)
-            {
-                // 使用強型別暫存方便閱讀
-                Guid attributeGUID = accessRuleConverted.AttributeGUID;
-                // 空的 GUID
-                if (attributeGUID.Equals(Guid.Empty))
-                {
-                    // 不必處理
-                    continue;
-                }
-
-                // 推入查詢
-                accessRuleGUIDs.Add(attributeGUID);
-            }
-            // 對外提供此 HashSet
-            return accessRuleGUIDs;
-        }
-
         private readonly ActiveDirectoryAccessRule rawActiveDirectoryAccessRule;
 
         /// <summary>

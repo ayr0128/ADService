@@ -15,7 +15,7 @@ namespace ADService.Media
         /// <summary>
         /// 藍本的搜尋目標
         /// </summary>
-        private const string SCHEMA_ATTRIBUTE = "attributeSchema";
+        internal const string SCHEMA_ATTRIBUTE = "attributeSchema";
         
         /// <summary>
         /// 與額外權限連結的 GUID 欄位名稱
@@ -25,15 +25,6 @@ namespace ADService.Media
         /// 此藍本結構是否僅儲存一筆
         /// </summary>
         private const string SCHEMA_ATTRIBUTE_ISSINGLEVALUED = "isSingleValued";
-        /// <summary>
-        /// 搜尋時找尋的資料
-        /// </summary>
-        private static readonly string[] BASE_PROPERTIES = new string[] {
-            SCHEMA_PROPERTY,
-            SCHEMA_GUID,
-            SCHEMA_ATTRIBUTE_SECURITYGUID,
-            SCHEMA_ATTRIBUTE_ISSINGLEVALUED,
-        };
 
         /// <summary>
         /// 取得使用目標安全性 GUID 的藍本
@@ -76,55 +67,18 @@ namespace ADService.Media
                                 continue;
                             }
 
-                            // 對外提供的基底結構
-                            UnitSchemaAttribute unitSchemaAttribute = new UnitSchemaAttribute(one.Properties);
-                            // 對外提供描述名稱
-                            unitSchemaAttributes.Add(unitSchemaAttribute);
+                            // 轉換成入口物件
+                            using (DirectoryEntry entry = one.GetDirectoryEntry())
+                            {
+                                // 對外提供的基底結構
+                                UnitSchemaAttribute unitSchemaAttribute = new UnitSchemaAttribute(entry.Properties);
+                                // 對外提供描述名稱
+                                unitSchemaAttributes.Add(unitSchemaAttribute);
+                            }
                         }
                         // 返回查詢到的資料
                         return unitSchemaAttributes.ToArray();
                     }
-                }
-            }
-        }
-
-        /// <summary>
-        /// 取得使用目標安全性 GUID 的藍本
-        /// </summary>
-        /// <param name="dispatcher">入口物件製作器</param>
-        /// <param name="unitSchemaAttributeGUID">目標屬性的 GUID</param>
-        /// <returns>藍本結構</returns>
-        internal static UnitSchemaAttribute GetWithSchemaAttributeGUID(in LDAPConfigurationDispatcher dispatcher, in Guid unitSchemaAttributeGUID)
-        {
-            // 藍本入口物件不存在
-            using (DirectoryEntry entrySchema = dispatcher.ByDistinguisedName($"{CONTEXT_SCHEMA},{dispatcher.ConfigurationDistinguishedName}"))
-            {
-                // 限制找尋的物件類型應為物件類型
-                string subSearchCategory = LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, SCHEMA_ATTRIBUTE);
-                // 使用文字串流來推入 GUID
-                StringBuilder sb = new StringBuilder();
-                // 遍歷位元組
-                foreach (byte convertRequired in unitSchemaAttributeGUID.ToByteArray())
-                {
-                    // 轉化各位元組至十六進位
-                    sb.Append($"\\{convertRequired:X2}");
-                }
-                // 需使用加密避免 LDAP 注入式攻擊
-                string filiter = $"(&({SCHEMA_GUID}={sb})({subSearchCategory}))";
-                // 從入口物件中找尋到指定物件
-                using (DirectorySearcher searcher = new DirectorySearcher(entrySchema, filiter, BASE_PROPERTIES))
-                {
-                    // 找到所有查詢
-                    SearchResult one = searcher.FindOne();
-                    // 簡易防呆: 不可能出現
-                    if (one == null)
-                    {
-                        // 無法找到資料交由外部判斷是否錯誤
-                        return null;
-                    }
-
-                    // 返回查詢到的資料
-                    return new UnitSchemaAttribute(one.Properties);
                 }
             }
         }
@@ -160,10 +114,15 @@ namespace ADService.Media
                                 continue;
                             }
 
-                            // 對外提供的基底結構
-                            UnitSchemaAttribute unitSchemaAttribute = new UnitSchemaAttribute(one.Properties);
-                            // 對外提供描述名稱
-                            unitSchemaAttributes.Add(unitSchemaAttribute);
+
+                            // 轉換成入口物件
+                            using (DirectoryEntry entry = one.GetDirectoryEntry())
+                            {
+                                // 對外提供的基底結構
+                                UnitSchemaAttribute unitSchemaAttribute = new UnitSchemaAttribute(entry.Properties);
+                                // 對外提供描述名稱
+                                unitSchemaAttributes.Add(unitSchemaAttribute);
+                            }
                         }
                         // 轉換成陣列對外圖供
                         return unitSchemaAttributes.ToArray();
@@ -192,7 +151,7 @@ namespace ADService.Media
         /// 實作藍本結構
         /// </summary>
         /// <param name="properties">入口物件持有的屬性</param>
-        internal UnitSchemaAttribute(in ResultPropertyCollection properties) : base(properties)
+        internal UnitSchemaAttribute(in PropertyCollection properties) : base(properties)
         {
             IsSingleValued = LDAPConfiguration.ParseSingleValue<bool>(SCHEMA_ATTRIBUTE_ISSINGLEVALUED, properties);
             SecurityGUID = LDAPConfiguration.ParseGUID(SCHEMA_ATTRIBUTE_SECURITYGUID, properties);

@@ -15,11 +15,11 @@ namespace ADService.Media
         /// <summary>
         /// 藍本的搜尋目標
         /// </summary>
-        private const string SCHEMA_CLASS_PROPERTY = "objectClassCategory";
+        internal const string SCHEMA_CLASS = "classSchema";
         /// <summary>
         /// 藍本的搜尋目標
         /// </summary>
-        private const string SCHEMA_CLASS = "classSchema";
+        private const string SCHEMA_CLASS_PROPERTY = "objectClassCategory";
 
         /// <summary>
         /// 何者的子物件
@@ -61,24 +61,6 @@ namespace ADService.Media
         private const string SCHEMA_CLASS_SYSTEMPOSSSUPERIORS = "systemPossSuperiors";
 
         /// <summary>
-        /// 搜尋時找尋的資料
-        /// </summary>
-        private static readonly string[] BASE_PROPERTIES = new string[] {
-            SCHEMA_PROPERTY,
-            SCHEMA_GUID,
-            SCHEMA_CLASS_PROPERTY,
-            SCHEMA_CLASS_SUBCLASSOF,
-            SCHEMA_CLASS_AUXILIARYCLASS,
-            SCHEMA_CLASS_SYSTEMAUXILIARYCLASS,
-            SCHEMA_CLASS_MUSTCONTAIN,
-            SCHEMA_CLASS_SYSTEMMUSTCONTAIN,
-            SCHEMA_CLASS_MAYCONTAIN,
-            SCHEMA_CLASS_SYSTEMMAYCONTAIN,
-            SCHEMA_CLASS_POSSSUPERIORS,
-            SCHEMA_CLASS_SYSTEMPOSSSUPERIORS,
-        };
-
-        /// <summary>
         /// 取得物件藍本
         /// </summary>
         /// <param name="dispatcher">入口物件製作器</param>
@@ -113,10 +95,14 @@ namespace ADService.Media
                                 continue;
                             }
 
-                            // 對外提供的基底結構
-                            UnitSchemaClass unitSchemaClass = new UnitSchemaClass(one.Properties);
-                            // 對外提供描述名稱
-                            unitSchemas.Add(unitSchemaClass);
+                            // 轉換成入口物件
+                            using (DirectoryEntry entry = one.GetDirectoryEntry())
+                            {
+                                // 對外提供的基底結構
+                                UnitSchemaClass unitSchemaClass = new UnitSchemaClass(entry.Properties);
+                                // 對外提供描述名稱
+                                unitSchemas.Add(unitSchemaClass);
+                            }
                         }
                         // 轉換成陣列對外圖供
                         return unitSchemas.ToArray();
@@ -162,10 +148,11 @@ namespace ADService.Media
                                 continue;
                             }
 
+                            // 轉換成入口物件
                             using (DirectoryEntry entry = one.GetDirectoryEntry())
                             {
                                 // 對外提供的基底結構
-                                UnitSchemaClass unitSchemaClass = new UnitSchemaClass(one.Properties);
+                                UnitSchemaClass unitSchemaClass = new UnitSchemaClass(entry.Properties);
                                 // 對外提供描述名稱
                                 unitSchemas.Add(unitSchemaClass);
                             }
@@ -341,7 +328,7 @@ namespace ADService.Media
         /// 實作藍本結構
         /// </summary>
         /// <param name="properties">入口物件持有的屬性</param>
-        internal UnitSchemaClass(in ResultPropertyCollection properties) : base(properties)
+        internal UnitSchemaClass(in PropertyCollection properties) : base(properties)
         {
             ClassType = LDAPConfiguration.ParseSingleValue<ClassCategory>(SCHEMA_CLASS_PROPERTY, properties);
 

@@ -54,7 +54,7 @@ namespace ADService.ControlAccessRule
         /// <summary>
         /// 目標物件類型可包含的下層物件
         /// </summary>
-        private readonly UnitSchemaClass[] destinatioChildrenUnitSchemaClass;
+        private readonly UnitSchemaClass[] destinatioChildrenUnitSchemaClasses;
         /// <summary>
         /// 目標物件類型所支援的存取權限
         /// </summary>
@@ -72,15 +72,17 @@ namespace ADService.ControlAccessRule
             string[] classNames = destination.GetPropertyMultiple<string>(Properties.C_OBJECTCLASS);
             // 透過物件持有類別取得所有可用屬性以及所有可用子類別
             UnitSchemaClass[] unitSchemaClasses = dispatcher.GetClasses(classNames);
+            // 取得自身物件類型
+            Dictionary<string, UnitSchemaClass> dictionaryNameWithUnitSchemaClass = unitSchemaClasses.ToDictionary(unitSchemaClass => unitSchemaClass.Name);
+            // 透過物件實際類型取得類型藍本
+            dictionaryNameWithUnitSchemaClass.TryGetValue(classNames[classNames.Length - 1], out UnitSchemaClass destinationUnitSchemaClass);
 
             // 取得可飽含的子類別
-            destinatioChildrenUnitSchemaClass = dispatcher.GetChildrenClasess(unitSchemaClasses);
+            destinatioChildrenUnitSchemaClasses = dispatcher.GetChildrenClasess(unitSchemaClasses);
             // 取得此類別支援的存取權限
             destinatioUnitControlAccesses = dispatcher.GeControlAccess(unitSchemaClasses);
             // 組合持有物件類型以及驅動物件類型
             destinationAllowedAttributes = UnitSchemaClass.UniqueAttributeNames(unitSchemaClasses);
-            // 目標類別持有的存取控制
-            dictionaryControlAccessGUIDWithType = new Dictionary<string, ControlAccessType>(destinatioUnitControlAccesses.Length);
 
             // 支援的所有安全性群組 SID
             string[] invokerSecuritySIDs = invoker is IRevealerSecuritySIDs revealerSecuritySIDs ? revealerSecuritySIDs.Values : Array.Empty<string>();
@@ -95,14 +97,12 @@ namespace ADService.ControlAccessRule
             // 推入此參數
             invokerSecuritySIDHashSet.Add(extendedSID);
 
-            // 使用查詢 SID 陣列取得所有存取權限 (包含沒有生效的)
-            AccessRuleConverted[] accessRuleConverteds = destination.GetAccessRuleConverteds(invokerSecuritySIDHashSet);
-            // 取得能產生影響的 GUID
-            HashSet<Guid> accessRuleGUIDs = AccessRuleConverted.GetGUIDs(accessRuleConverteds);
             // 將此類別可用的存取權限轉換成 GUID 對應的字典
             Dictionary<string, UnitControlAccess> dictionaryGUIDithUnitControlAccesses = destinatioUnitControlAccesses.ToDictionary(unitControlAccess => unitControlAccess.GUID.ToLower());
-            // 轉換匹配用陣列
-            foreach (AccessRuleConverted accessRuleConverted in accessRuleConverteds)
+            // 目標類別持有的存取控制
+            dictionaryControlAccessGUIDWithType = new Dictionary<string, ControlAccessType>(destinatioUnitControlAccesses.Length);
+            // 使用查詢 SID 陣列取得所有存取權限 (包含沒有生效的)
+            foreach (AccessRuleConverted accessRuleConverted in destination.GetAccessRuleConverteds(invokerSecuritySIDHashSet))
             {
                 // 不產生影響的物件不須進行動作
                 if (!accessRuleConverted.IsEffected)
@@ -114,37 +114,47 @@ namespace ADService.ControlAccessRule
                 // 是空GUID時需進行特殊動作
                 if (accessRuleConverted.AttributeGUID.Equals(Guid.Empty))
                 {
+                    // 所有屬性都需要設置一次全域的設定
                     Array.ForEach(destinationAllowedAttributes, destinationAllowedAttribute =>
                     {
                         controlAccess.Set(destinationAllowedAttribute, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights);
                     });
+
+                    // 支援的類別物件也需要
+                    Array.ForEach(destinatioChildrenUnitSchemaClasses, destinatioChildrenUnitSchemaClass => controlAccess.Set(destinatioChildrenUnitSchemaClass.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights) );
+
+                    // 最後設置自身
+                    controlAccess.Set(destinationUnitSchemaClass.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights);
                     continue;
                 }
 
                 // 將資料轉換成小寫
                 string attributeGUIDLower = accessRuleConverted.AttributeGUID.ToString("D").ToLower();
-                UnitSchemaAttribute[] unitSchemaAttributes;
                 // 先重存取控制的權限開始取得對應資料
                 if (dictionaryGUIDithUnitControlAccesses.TryGetValue(attributeGUIDLower, out UnitControlAccess unitControlAccess))
                 {
                     // 能從存取權限中取得時必定能從關聯取得對應狀態
-                    ControlAccessType controlAccessType = dispatcher.GetControlAccessAttributes(unitControlAccess, out unitSchemaAttributes);
+                    ControlAccessType controlAccessType = dispatcher.GetControlAccessAttributes(unitControlAccess, out UnitSchema[] unitSchemas);
                     // 設置存取控制權縣關聯
                     dictionaryControlAccessGUIDWithType.Add(unitControlAccess.Name, controlAccessType);
-                }
-                else
-                {
-                    // 取得參數名稱
-                    UnitSchemaAttribute unitSchemaAttribute = dispatcher.GetUnitSchemaAttribute(accessRuleConverted.AttributeGUID);
-                    // 推入需設置項目
-                    unitSchemaAttributes = new UnitSchemaAttribute[1] { unitSchemaAttribute };
+
+                    // 設置所有取得的屬性
+                    Array.ForEach(unitSchemas, unitSchemaAttribute => controlAccess.Set(unitSchemaAttribute.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights) );
+
+                    // 執行完畢
+                    continue;
                 }
 
-                // 設置所有取得的屬性
-                Array.ForEach(unitSchemaAttributes, unitSchemaAttribute =>
+                // 取得參數名稱
+                UnitSchema unitSchema = dispatcher.GetUnitSchemae(accessRuleConverted.AttributeGUID);
+                // 無法取得對應屬性資料
+                if (unitSchema == null)
                 {
-                    controlAccess.Set(unitSchemaAttribute.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights);
-                });
+                    // 代表有不支援的存取璇縣
+                    continue;
+                }
+
+                controlAccess.Set(unitSchema.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights);
             }
         }
 

@@ -97,8 +97,12 @@ namespace ADService.Media
                 return Array.Empty<T>();
             }
 
+            // 宣告長度
+            object[] copyOut = new object[collection.Count];
+            // 將資料拷貝出來
+            collection.CopyTo(copyOut, 0);
             // 對外提供轉換後型別
-            return Array.ConvertAll((object[])collection.Value, convertedObject => (T)convertedObject);
+            return Array.ConvertAll(copyOut, convertedObject => (T)convertedObject);
         }
 
         /// <summary>
@@ -528,34 +532,68 @@ namespace ADService.Media
         /// <param name="dispatcher">入口物件製作器</param>
         /// <param name="attributeGUID">屬性 GUID</param>
         /// <returns>指定藍本物件, 可能不存在</returns>
-        internal UnitSchemaAttribute GetUnitSchemaAttribute(in LDAPConfigurationDispatcher dispatcher, in Guid attributeGUID)
+        internal UnitSchema GetUnitSchema(in LDAPConfigurationDispatcher dispatcher, in Guid attributeGUID)
         {
             string unitSchemaAttributeGUIDLower = attributeGUID.ToString("D").ToLower();
             // 存在且未過期
             if (!dictionaryGUIDWithUnitSchema.TryGetValue(unitSchemaAttributeGUIDLower, out UnitSchema unitSchema) || unitSchema.IsExpired(EXPIRES_DURATION))
             {
-                // 重新建立藍本結構
-                UnitSchemaAttribute newUnitSchemaAttribute = UnitSchemaAttribute.GetWithSchemaAttributeGUID(dispatcher, attributeGUID);
-                // 找不到時拋出例外
-                if (newUnitSchemaAttribute == null)
+                // 找到指定物件
+                SearchResult one = UnitSchema.GetWithSchemaEntry(dispatcher, attributeGUID);
+                // 簡易防呆: 不可能出現
+                if (one == null)
                 {
-                    // 拋出例外
-                    throw new LDAPExceptions($"藍本 GUID:{unitSchemaAttributeGUIDLower} 無法在相關網域:{dispatcher.Configuration} 中被發現, 請聯絡程式維護人員", ErrorCodes.SERVER_ERROR);
+                    // 無法找到資料交由外部判斷是否錯誤
+                    return null;
                 }
 
-                // 先移除舊的資料
-                dictionaryGUIDWithUnitSchema.AddOrUpdate(
-                    unitSchemaAttributeGUIDLower,
-                    newUnitSchemaAttribute,
-                    (GUID, oldUnitSchema) => oldUnitSchema.IsExpired(EXPIRES_DURATION) ? newUnitSchemaAttribute : oldUnitSchema
-                );
+                // 取得藍本物件入口
+                using (DirectoryEntry entry = one.GetDirectoryEntry())
+                {
+                    // 對外提供的資料
+                    UnitSchema newUnitSchema = null;
+                    // 取得物件類型
+                    string objectCategory = ParseSingleValue<string>(Properties.C_OBJECTCATEGORY, entry.Properties);
+                    // 取得物件類型並取得展示名稱
+                    using (DirectoryEntry category = dispatcher.ByDistinguisedName(objectCategory))
+                    {
+                        // 取得類型展示名稱
+                        string lDAPDisplayName = ParseSingleValue<string>(UnitSchema.SCHEMA_PROPERTY, category.Properties);
+                        // 根據類型進行轉換
+                        switch (lDAPDisplayName)
+                        {
+                            case UnitSchemaClass.SCHEMA_CLASS:
+                                {
+                                    // 製作成類別對外提供
+                                    newUnitSchema = new UnitSchemaClass(entry.Properties);
+                                }
+                                break;
+                            case UnitSchemaAttribute.SCHEMA_ATTRIBUTE:
+                                {
+                                    newUnitSchema = new UnitSchemaAttribute(entry.Properties);
+                                }
+                                break;
+                            default:
+                                {
+                                    // 拋出例外
+                                    throw new LDAPExceptions($"藍本 GUID:{unitSchemaAttributeGUIDLower} 無法在相關網域:{dispatcher.Configuration} 中被發現, 請聯絡程式維護人員", ErrorCodes.SERVER_ERROR);
+                                }
+                        }
 
-                // 提供給外部使用
-                unitSchema = newUnitSchemaAttribute;
+                        // 先移除舊的資料
+                        dictionaryGUIDWithUnitSchema.AddOrUpdate(
+                            unitSchemaAttributeGUIDLower,
+                            newUnitSchema,
+                            (GUID, oldUnitSchema) => oldUnitSchema.IsExpired(EXPIRES_DURATION) ? newUnitSchema : oldUnitSchema
+                        );
+                    }
+                    // 提供給外部使用
+                    unitSchema = newUnitSchema;
+                }
             }
 
             // 對外提供取得的資料
-            return unitSchema as UnitSchemaAttribute;
+            return unitSchema;
         }
 
         /// <summary>
@@ -1030,9 +1068,9 @@ namespace ADService.Media
         /// </summary>
         /// <param name="dispatcher">入口物件製作器</param>
         /// <param name="unitControlAccess">目標存取璇縣</param>
-        /// <param name="unitSchemaAttributes">此存取權限關聯的屬性</param>
+        /// <param name="unitSchemas">此存取權限關聯的屬性</param>
         /// <returns>此存取權限為何種類型</returns>
-        internal ControlAccessType GeControlAccessAttributes(in LDAPConfigurationDispatcher dispatcher, in UnitControlAccess unitControlAccess, out UnitSchemaAttribute[] unitSchemaAttributes)
+        internal ControlAccessType GeControlAccessAttributes(in LDAPConfigurationDispatcher dispatcher, in UnitControlAccess unitControlAccess, out UnitSchema[] unitSchemas)
         {
             // 轉成小寫
             string unitControlAccessGUIDLower = unitControlAccess.GUID.ToLower();
@@ -1077,7 +1115,7 @@ namespace ADService.Media
             }
 
             // 宣告總總長度
-            List<UnitSchemaAttribute> unitSchemaAttributesCache = new List<UnitSchemaAttribute>(propertySet.GUIDHashSet.Count);
+            List<UnitSchema> unitSchemasCache = new List<UnitSchema>(propertySet.GUIDHashSet.Count);
             // 遍歷權限
             foreach (string unitSchemaAttributeGUIDLower in propertySet.GUIDHashSet)
             {
@@ -1098,13 +1136,13 @@ namespace ADService.Media
                 }
 
                 // 加入對外提供細目
-                unitSchemaAttributesCache.Add(unitSchemaAttribute);
+                unitSchemasCache.Add(unitSchemaAttribute);
             }
 
             // 轉換成為陣列
-            unitSchemaAttributes = unitSchemaAttributesCache.ToArray();
+            unitSchemas = unitSchemasCache.ToArray();
             // 根據長度進行判斷
-            switch (unitSchemaAttributes.Length)
+            switch (unitSchemas.Length)
             {
                 case 0:
                     {
@@ -1114,7 +1152,7 @@ namespace ADService.Media
                 case 1:
                     {
                         // 取得第 0 筆
-                        UnitSchemaAttribute unitSchemaAttribute = unitSchemaAttributesCache[0];
+                        UnitSchemaAttribute unitSchemaAttribute = unitSchemasCache[0] as UnitSchemaAttribute;
                         // 查看是否為群組項目
                         return unitSchemaAttribute.IsPropertySet(unitControlAccessGUIDLower) ? ControlAccessType.PROPERTY_SET : ControlAccessType.VALIDATED_WRITE;
                     }

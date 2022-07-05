@@ -93,14 +93,14 @@ namespace ADService.Media
         /// <param name="unitControlAccess">目標存取璇縣</param>
         /// <param name="unitSchemaAttributes">此存取權限關聯的屬性</param>
         /// <returns>此存取權限為何種類型</returns>
-        internal ControlAccessType GetControlAccessAttributes(in UnitControlAccess unitControlAccess, out UnitSchemaAttribute[] unitSchemaAttributes) => Configuration.GeControlAccessAttributes(this, unitControlAccess, out unitSchemaAttributes);
+        internal ControlAccessType GetControlAccessAttributes(in UnitControlAccess unitControlAccess, out UnitSchema[] unitSchemaAttributes) => Configuration.GeControlAccessAttributes(this, unitControlAccess, out unitSchemaAttributes);
 
         /// <summary>
         /// 使用展示名稱 進行搜尋指定目標藍本物件
         /// </summary>
         /// <param name="attributeGUID">屬性 GUID </param>
         /// <returns>指定藍本物件, 可能不存在</returns>
-        internal UnitSchemaAttribute GetUnitSchemaAttribute(in Guid attributeGUID) => Configuration.GetUnitSchemaAttribute(this, attributeGUID);
+        internal UnitSchema GetUnitSchemae(in Guid attributeGUID) => Configuration.GetUnitSchema(this, attributeGUID);
 
         /// <summary>
         /// 使用展示名稱 進行搜尋指定目標藍本物件

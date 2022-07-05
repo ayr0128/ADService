@@ -1,9 +1,6 @@
-﻿using ADService.Environments;
-using ADService.Protocol;
+﻿using ADService.Protocol;
 using System;
-using System.Collections.Generic;
 using System.DirectoryServices;
-using System.Security.Principal;
 using System.Text;
 
 namespace ADService.Media
@@ -15,17 +12,53 @@ namespace ADService.Media
     {
         #region 查詢相關資料
         /// <summary>
+        /// 藍本的搜尋目標
+        /// </summary>
+        internal const string SCHEMA_PROPERTY = "ldapDisplayName";
+        /// <summary>
         /// 藍本的 DN 組合字尾
         /// </summary>
         protected const string CONTEXT_SCHEMA = "CN=Schema";
         /// <summary>
-        /// 藍本的搜尋目標
-        /// </summary>
-        protected const string SCHEMA_PROPERTY = "ldapDisplayName";
-        /// <summary>
         /// 藍本的 GUID 欄位名稱
         /// </summary>
         protected const string SCHEMA_GUID = "schemaIDGUID";
+        /// <summary>
+        /// 搜尋時找尋的資料
+        /// </summary>
+        protected static readonly string[] BASE_PROPERTIES = new string[] {
+            Properties.C_DISTINGGUISHEDNAME,
+        };
+
+        /// <summary>
+        /// 取得使用目標安全性 GUID 的藍本
+        /// </summary>
+        /// <param name="dispatcher">入口物件製作器</param>
+        /// <param name="unitSchemaAGUID">目標屬性的 GUID</param>
+        /// <returns>藍本結構</returns>
+        internal static SearchResult GetWithSchemaEntry(in LDAPConfigurationDispatcher dispatcher, in Guid unitSchemaAGUID)
+        {
+            // 藍本入口物件不存在
+            using (DirectoryEntry entrySchema = dispatcher.ByDistinguisedName($"{CONTEXT_SCHEMA},{dispatcher.ConfigurationDistinguishedName}"))
+            {
+                // 使用文字串流來推入 GUID
+                StringBuilder sb = new StringBuilder();
+                // 遍歷位元組
+                foreach (byte convertRequired in unitSchemaAGUID.ToByteArray())
+                {
+                    // 轉化各位元組至十六進位
+                    sb.Append($"\\{convertRequired:X2}");
+                }
+                // 需使用加密避免 LDAP 注入式攻擊
+                string filiter = $"({SCHEMA_GUID}={sb})";
+                // 從入口物件中找尋到指定物件
+                using (DirectorySearcher searcher = new DirectorySearcher(entrySchema, filiter, BASE_PROPERTIES))
+                {
+                    // 找到所有查詢
+                    return searcher.FindOne();
+                }
+            }
+        }
         #endregion
 
         /// <summary>
@@ -54,7 +87,7 @@ namespace ADService.Media
         /// 實作藍本結構
         /// </summary>
         /// <param name="properties">入口物件持有的屬性</param>
-        internal UnitSchema(in ResultPropertyCollection properties)
+        internal UnitSchema(in PropertyCollection properties)
         {
             // 將名稱轉換成小寫
             Name = LDAPConfiguration.ParseSingleValue<string>(SCHEMA_PROPERTY, properties);
