@@ -1,45 +1,41 @@
-﻿using ADService.Foundation;
-using ADService.Media;
-using ADService.Protocol;
+﻿using ADService.Media;
 using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
 
 namespace ADService.Certification
 {
+    #region 記錄用類別
     /// <summary>
     /// 儲存的入口物件是否需要被簽入異動
     /// </summary>
     internal sealed class RequiredCommitSet
     {
         /// <summary>
-        /// 儲存的入口物件
+        /// 儲存的入口物件是否需要被簽入異動
         /// </summary>
-        internal DirectoryEntry Entry { get; private set; }
+        private bool RequiredCommit;
+        /// <summary>
+        /// 儲存的入口物件是否需要被簽入異動
+        /// </summary>
+        private bool RequiredReflash;
         /// <summary>
         /// 儲存的入口物件
         /// </summary>
-        internal ResultPropertyCollection Properties { get; private set; }
-
+        internal DirectoryEntry Entry { get; private set; }
 
         /// <summary>
         /// 推入入口物件並預設為不須簽入
         /// </summary>
         /// <param name="entry">入口物件</param>
-        /// <param name="one">額外查詢的屬性</param>
-        internal RequiredCommitSet(in DirectoryEntry entry, in SearchResult one)
+        internal RequiredCommitSet(in DirectoryEntry entry)
         {
             RequiredCommit = false;  // 預設: 沒有被異動不須簽入
             RequiredReflash = false; // 預設: 沒有異動不須刷新
 
             Entry = entry;
-            Properties = one.Properties;
         }
 
-        /// <summary>
-        /// 儲存的入口物件是否需要被簽入異動
-        /// </summary>
-        private bool RequiredCommit;
         /// <summary>
         /// 設定有發生異動, 須執行推入行為
         /// </summary>
@@ -62,10 +58,6 @@ namespace ADService.Certification
         }
 
         /// <summary>
-        /// 儲存的入口物件是否需要被簽入異動
-        /// </summary>
-        private bool RequiredReflash;
-        /// <summary>
         /// 設定有發生異動或被影響, 須執行刷新行為
         /// </summary>
         internal void ReflashRequired() => RequiredReflash = true;
@@ -86,6 +78,7 @@ namespace ADService.Certification
             return RequiredCommit | RequiredReflash;
         }
     }
+    #endregion
 
     /// <summary>
     /// 傳遞修改內容證書
@@ -108,14 +101,8 @@ namespace ADService.Certification
 
             // 取得入口物件
             DirectoryEntry entry = Dispatcher.ByDistinguisedName(distinguishedName);
-            // [TODO] 應使用加密字串避免注入式攻擊
-            string encoderFiliter = LDAPConfiguration.GetORFiliter(Properties.C_DISTINGGUISHEDNAME, distinguishedName);
-            // 找尋某些額外參數
-            using (DirectorySearcher searcher = new DirectorySearcher(entry, encoderFiliter, LDAPObject.PropertiesToLoad, SearchScope.Base))
-            {
-                // 推入入口物件
-                dictionaryDistinguishedNameWitSet.Add(distinguishedName, new RequiredCommitSet(entry, searcher.FindOne()));
-            }
+            // 推入入口物件
+            dictionaryDistinguishedNameWitSet.Add(distinguishedName, new RequiredCommitSet(entry));
         }
 
         /// <summary>
@@ -143,18 +130,26 @@ namespace ADService.Certification
         /// <summary>
         /// 將取得的入口物件設置至暫存區
         /// </summary>
-        /// <param name="one">找尋獲得的物件</param>
+        /// <param name="entry">入口物件</param>
         /// <param name="distinguishedName">指定區分名稱</param>
-        internal void SetEntry(in SearchResult one, in string distinguishedName) => dictionaryDistinguishedNameWitSet.Add(distinguishedName, new RequiredCommitSet(one.GetDirectoryEntry(), one));
+        internal RequiredCommitSet SetEntry(in DirectoryEntry entry, in string distinguishedName)
+        {
+            // 創建站存結構
+            RequiredCommitSet requiredCommitSet = new RequiredCommitSet(entry);
+            // 推入字典
+            dictionaryDistinguishedNameWitSet.Add(distinguishedName, requiredCommitSet);
+            // 提供給外部
+            return requiredCommitSet;
+        }
 
         /// <summary>
         /// 推入相關影響後取得入口物件
         /// </summary>
         /// <returns>所有有影響的入口物件, 結構如右: Dictionary'區分名稱, 入口物件' </returns>
-        internal Dictionary<string, RequiredCommitSet> Commited()
+        internal Dictionary<string, DirectoryEntry> Commited()
         {
             // 用來儲存總共有多少項目需要提供給外部轉換
-            Dictionary<string, RequiredCommitSet> dictionarySetByDN = new Dictionary<string, RequiredCommitSet>(dictionaryDistinguishedNameWitSet.Count);
+            Dictionary<string, DirectoryEntry> dictionarySetByDN = new Dictionary<string, DirectoryEntry>(dictionaryDistinguishedNameWitSet.Count);
             // 遍歷目前註冊有產生影響的物件並取得相關的入口物件
             foreach (KeyValuePair<string, RequiredCommitSet> pair in dictionaryDistinguishedNameWitSet)
             {
@@ -164,7 +159,7 @@ namespace ADService.Certification
                 if (set.InvokedCommit() && !dictionarySetByDN.ContainsKey(pair.Key))
                 {
                     // 推入字典黨提供給外部進行資料轉換
-                    dictionarySetByDN.Add(pair.Key, set);
+                    dictionarySetByDN.Add(pair.Key, set.Entry);
                 }
             }
 
@@ -177,7 +172,7 @@ namespace ADService.Certification
                 if (set.InvokedReflash() && !dictionarySetByDN.ContainsKey(pair.Key))
                 {
                     // 推入字典黨提供給外部進行資料轉換
-                    dictionarySetByDN.Add(pair.Key, set);
+                    dictionarySetByDN.Add(pair.Key, set.Entry);
                 }
             }
 

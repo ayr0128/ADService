@@ -49,126 +49,70 @@ namespace ADService.Details
             return _Rights;
         }
 
-        /// <summary>
-        /// 取得提供的存取歸德中的 GUID HashSet
-        /// </summary>
-        /// <param name="isEffected">限制類型是否慘生影響</param>
-        /// <param name="accessRuleConverteds">取得存取規則</param>
-        /// <returns></returns>
-        internal static HashSet<Guid> GetGUIDs(in bool? isEffected, params AccessRuleConverted[] accessRuleConverteds)
-        {
-            // 整理權限 GUID
-            HashSet<Guid> accessRuleGUIDs = new HashSet<Guid>(accessRuleConverteds.Length);
-            // 只需處理非空 GUID 的部分 (包含沒有生效的)
-            foreach (AccessRuleConverted accessRuleConverted in accessRuleConverteds)
-            {
-                // 根據外部需求決定如何根據是否產生影響進行過濾
-                if (isEffected != null && accessRuleConverted.IsEffected != isEffected.Value)
-                {
-                    // 跳過
-                    continue;
-                }
-
-                // 使用強型別暫存方便閱讀
-                Guid attributeGUID = accessRuleConverted.AttributeGUID;
-                // 空的 GUID
-                if (attributeGUID.Equals(Guid.Empty))
-                {
-                    // 不必處理
-                    continue;
-                }
-
-                // 是否已經推入: 因為不同的安全性群組可能會持有相同的存取權限
-                if (accessRuleGUIDs.Contains(attributeGUID))
-                {
-                    // 跳過
-                    continue;
-                }
-
-                // 推入查詢
-                accessRuleGUIDs.Add(attributeGUID);
-            }
-            // 對外提供此 HashSet
-            return accessRuleGUIDs;
-        }
+        private readonly ActiveDirectoryAccessRule rawActiveDirectoryAccessRule;
 
         /// <summary>
         /// 目標鍵值
         /// </summary>
-        internal readonly Guid AttributeGUID;
+        internal Guid AttributeGUID => rawActiveDirectoryAccessRule.ObjectType;
         /// <summary>
         /// 是否允許
         /// </summary>
-        internal readonly bool WasAllow;
+        internal bool WasAllow => rawActiveDirectoryAccessRule.AccessControlType == AccessControlType.Allow;
         /// <summary>
         /// 是否從繼承取得
         /// </summary>
-        internal readonly bool IsInherited;
+        internal bool IsInherited => rawActiveDirectoryAccessRule.IsInherited;
         /// <summary>
         /// 是否產生影響
         /// </summary>
-        internal readonly bool IsEffected;
+        internal bool IsEffected
+        {
+            get
+            {
+                // 查看繼承方式決定是否對外提供
+                switch (rawActiveDirectoryAccessRule.InheritanceType)
+                {
+                    // 僅包含自己
+                    case ActiveDirectorySecurityInheritance.None:
+                        {
+                            /* 若 AD 系統正確運作, 發生繼承時此狀趟應只影響持有最原始權限的物件
+                                 - 若此權限從繼承而來, 則不對外轉換
+                            */
+                            return !IsInherited;
+                        }
+                    case ActiveDirectorySecurityInheritance.SelfAndChildren: // 包含自己與直接子系物件
+                    case ActiveDirectorySecurityInheritance.All:             // 包含自己與所有子系物件
+                        {
+                            // 若 AD 系統正確運作, 發生繼承時此狀趟應會影響各自應影響的範圍
+                            return true;
+                        }
+                    case ActiveDirectorySecurityInheritance.Children:    // 僅包含直接子系物件
+                    case ActiveDirectorySecurityInheritance.Descendents: // 包含所有子系物件
+                        {
+                            /* 若 AD 系統正確運作, 發生繼承時此狀趟應只影響持有繼承權限的物件
+                                 - 若此權限從繼承而來, 則對外轉換
+                            */
+                            return IsInherited;
+                        }
+                    // 其他的預設狀態
+                    default:
+                        {
+                            // 丟出例外: 因為此狀態沒有實作
+                            throw new LDAPExceptions($"存取規則:{rawActiveDirectoryAccessRule.IdentityReference} 設定物件時發現未實作的繼承狀態:{rawActiveDirectoryAccessRule.InheritanceType} 因而丟出例外, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
+                        }
+                }
+            }
+        }
         /// <summary>
         /// 存取規則
         /// </summary>
-        internal readonly AccessRuleRightFlags AccessRuleRights;
+        internal AccessRuleRightFlags AccessRuleRights => ToAccessRuleRightFlags(rawActiveDirectoryAccessRule.ActiveDirectoryRights);
 
         /// <summary>
         /// 設定物件類型限定與鍵值設定
         /// </summary>
-        /// <param name="unit">此 GUID 的相關資料</param>
-        /// <param name="protertySet">目標鍵值</param>
-        /// <param name="accessRule">存取規則, 整包船入取得目標需求資料</param>
-        internal AccessRuleConverted(in ActiveDirectoryAccessRule accessRule)
-        {
-            AttributeGUID = accessRule.ObjectType;
-
-            WasAllow = accessRule.AccessControlType == AccessControlType.Allow;
-            IsInherited = accessRule.IsInherited;
-            AccessRuleRights = ToAccessRuleRightFlags(accessRule.ActiveDirectoryRights);
-
-            // 查看繼承方式決定是否對外提供
-            switch (accessRule.InheritanceType)
-            {
-                // 僅包含自己
-                case ActiveDirectorySecurityInheritance.None:
-                    {
-                        /* 若 AD 系統正確運作, 發生繼承時此狀趟應只影響持有最原始權限的物件
-                             - 若此權限從繼承而來, 則不對外轉換
-                        */
-                        IsEffected = !accessRule.IsInherited;
-                    }
-                    break;
-                case ActiveDirectorySecurityInheritance.SelfAndChildren: // 包含自己與直接子系物件
-                case ActiveDirectorySecurityInheritance.All:             // 包含自己與所有子系物件
-                    {
-                        // 若 AD 系統正確運作, 發生繼承時此狀趟應會影響各自應影響的範圍
-                        IsEffected = true;
-                    }
-                    break;
-                case ActiveDirectorySecurityInheritance.Children:    // 僅包含直接子系物件
-                case ActiveDirectorySecurityInheritance.Descendents: // 包含所有子系物件
-                    {
-                        /* 若 AD 系統正確運作, 發生繼承時此狀趟應只影響持有繼承權限的物件
-                             - 若此權限從繼承而來, 則對外轉換
-                        */
-                        IsEffected = accessRule.IsInherited;
-                    }
-                    break;
-                // 其他的預設狀態
-                default:
-                    {
-                        // 丟出例外: 因為此狀態沒有實作
-                        throw new LDAPExceptions($"存取規則:{accessRule.IdentityReference} 設定物件時發現未實作的繼承狀態:{accessRule.InheritanceType} 因而丟出例外, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
-                    }
-            }
-
-            // 權限必須存在長度
-            if (AccessRuleRights == AccessRuleRightFlags.None)
-            {
-                // 應能取得對照的方法解析描述
-                throw new LDAPExceptions($"屬性:{AttributeGUID} 解析權限:{accessRule.ActiveDirectoryRights} 後發現無法轉換成功, 請聯繫程式維護人員", ErrorCodes.LOGIC_ERROR);
-            }
-        }
+        /// <param name="activeDirectoryAccessRule">存取規則, 整包船入取得目標需求資料</param>
+        internal AccessRuleConverted(in ActiveDirectoryAccessRule activeDirectoryAccessRule) => rawActiveDirectoryAccessRule = activeDirectoryAccessRule;
     }
 }

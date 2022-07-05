@@ -10,12 +10,14 @@ namespace ADService.Foundation
     /// <summary>
     /// 最基底的物件類型: 採用化學中的受質作為名稱代表其特性
     /// </summary>
-    public class LDAPObject
+    public class LDAPObject : LDAPProperties
     {
         /// <summary>
         /// 搜尋物件時使用的特性鍵值
         /// </summary>
-        internal static string[] PropertiesToLoad => new string[] { Properties.C_DISTINGGUISHEDNAME, Properties.C_ALLOWEDATTRIBUTES, Properties.C_ALLOWEDCHILDCLASSES };
+        internal static string[] PropertiesToLoad => new string[] {
+            Properties.C_DISTINGUISHEDNAME, // 物件區分名稱
+        };
 
         #region 創建物件以及創建描述
         /// <summary>
@@ -23,10 +25,9 @@ namespace ADService.Foundation
         /// </summary>
         /// <param name="entry">入口物件</param>
         /// <param name="dispatcher">入口物件創建器</param>
-        /// <param name="propertiesResult">透過找尋取得字的屬性</param>
         /// <returns>使用 object 封裝對外提供的物件</returns>
         /// <exception cref="LDAPExceptions">物件未實作工廠模式或實作過程中出現錯誤時丟出例外</exception>
-        internal static LDAPObject ToObject(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher, in ResultPropertyCollection propertiesResult)
+        internal static LDAPObject ToObject(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher)
         {
             // 解析物件類型
             CategoryTypes type = LDAPConfiguration.ParseCategory(entry.Properties);
@@ -36,28 +37,28 @@ namespace ADService.Foundation
                 case CategoryTypes.CONTAINER: // 容器
                     {
                         // 對外提供 '容器'
-                        return new LDAPContainer(entry, dispatcher, propertiesResult);
+                        return new LDAPContainer(entry, dispatcher);
                     }
                 case CategoryTypes.DOMAIN_DNS: // 網域
                     {
                         // 對外提供 '網域' 結構
-                        return new LDAPDomainDNS(entry, dispatcher, propertiesResult);
+                        return new LDAPDomainDNS(entry, dispatcher);
                     }
                 case CategoryTypes.ORGANIZATION_UNIT: // 組織單位
                     {
                         // 對外提供 '組織單位' 結構
-                        return new LDAPOrganizationUnit(entry, dispatcher, propertiesResult);
+                        return new LDAPOrganizationUnit(entry, dispatcher);
                     }
                 case CategoryTypes.ForeignSecurityPrincipals: // 內部安全性群組
                 case CategoryTypes.GROUP:                     // 群組
                     {
                         // 對外提供 '群組' 結構
-                        return new LDAPGroup(entry, dispatcher, propertiesResult);
+                        return new LDAPGroup(entry, dispatcher);
                     }
                 case CategoryTypes.PERSON: // 成員
                     {
                         // 對外提供 '成員' 結構
-                        return new LDAPPerson(entry, dispatcher, propertiesResult);
+                        return new LDAPPerson(entry, dispatcher);
                     }
                 default:
                     {
@@ -210,22 +211,17 @@ namespace ADService.Foundation
         }
 
         /// <summary>
-        /// 設定鍵值儲存與解析功能
-        /// </summary>
-        internal LDAPProperties StoredProperties;
-
-        /// <summary>
         /// 此物件的名稱
         /// </summary>
-        public string Name => StoredProperties.GetPropertySingle<string>(Properties.P_NAME);
+        public string Name => GetPropertySingle<string>(Properties.P_NAME);
         /// <summary>
         /// 此物件的區分名稱
         /// </summary>
-        public string DistinguishedName => StoredProperties.GetPropertySingle<string>(Properties.C_DISTINGGUISHEDNAME);
+        public string DistinguishedName => GetPropertySingle<string>(Properties.C_DISTINGUISHEDNAME);
         /// <summary>
         /// 此物件的全域唯一標識符
         /// </summary>
-        public string GUID => StoredProperties.GetPropertyGUID(Properties.C_OBJECTGUID);
+        public string GUID => GetPropertyGUID(Properties.C_OBJECTGUID);
         /// <summary>
         /// 容器類型
         /// </summary>
@@ -234,7 +230,7 @@ namespace ADService.Foundation
             get
             {
                 // 取得 類別 不存在應丟出例外
-                string storedValue = StoredProperties.GetPropertySingle<string>(Properties.C_OBJECTCATEGORY);
+                string storedValue = GetPropertySingle<string>(Properties.C_OBJECTCATEGORY);
                 // 轉換物件類型
                 return LDAPConfiguration.GetObjectType(storedValue);
             }
@@ -245,9 +241,8 @@ namespace ADService.Foundation
         /// </summary>
         /// <param name="entry">入口物件</param>
         /// <param name="dispatcher">入口物件創建器</param>
-        /// <param name="propertiesResult">透過找尋取得字的屬性</param>
         /// <exception cref="LDAPExceptions">解析鍵值不符合規則時對外丟出</exception>
-        internal LDAPObject(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher, in ResultPropertyCollection propertiesResult) => StoredProperties = new LDAPProperties(dispatcher, entry, propertiesResult);
+        internal LDAPObject(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher) : base(dispatcher, entry) { }
 
         /// <summary>
         /// 從提供的基礎物件中將特性鍵值轉換給呼叫者
@@ -265,8 +260,11 @@ namespace ADService.Foundation
                 return newObject;
             }
 
-            // 執行至此能保證 GUID 相同, 替換內部特性鍵值內容
-            StoredProperties = newObject.StoredProperties;
+            // 交換解析完成的目前持有屬性
+            dictionaryNameWithPropertyDetail = newObject.dictionaryNameWithPropertyDetail;
+            // 交換解析完成的目前持有存取規則
+            // 交換解析完成的目前持有存取規則
+            dictionarySIDWithAccessRuleConverteds = newObject.dictionarySIDWithAccessRuleConverteds;
             // 通知外部替換成功
             return this;
         }

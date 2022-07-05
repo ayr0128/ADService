@@ -23,8 +23,8 @@ namespace ADService.Details
         /// <summary>
         /// 建構藍本物件如何解析
         /// </summary>
-        /// <param name="schema">藍本物件</param>
         /// <param name="property">入口物件儲存資料</param>
+        /// <param name="isSingleValued">是否為單一值</param>
         internal PropertyDetail(in PropertyValueCollection property, in bool isSingleValued)
         {
             PropertyValue = property.Value;

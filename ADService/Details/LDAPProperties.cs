@@ -12,13 +12,13 @@ namespace ADService.Details
     /// <summary>
     /// 使用 JSON 做為基底的特性鍵值轉換器
     /// </summary>
-    internal sealed class LDAPProperties
+    public abstract class LDAPProperties
     {
         #region 取得所有設置參數
         /// <summary>
         /// 目前儲存的特性鍵值資料
         /// </summary>
-        private readonly Dictionary<string, PropertyDetail> dictionaryNameWithPropertyDetail = new Dictionary<string, PropertyDetail>();
+        internal Dictionary<string, PropertyDetail> dictionaryNameWithPropertyDetail = new Dictionary<string, PropertyDetail>();
 
         /// <summary>
         /// 整合屬性值轉換功能
@@ -34,27 +34,18 @@ namespace ADService.Details
             foreach (PropertyValueCollection value in properties)
             {
                 // 取得目標藍本描述: 內部將戰存屬性格式
-                UnitSchema[] unitSchemas = dispatcher.GetSchema(value.PropertyName);
+                UnitSchemaAttribute[] unitSchemaAttributes = dispatcher.GetUnitSchemaAttribute(value.PropertyName);
                 // 若無法取得則跳過處理
-                if (unitSchemas.Length == 0)
-                {
-                    // 跳過
-                    continue;
-                }
-
-                // 必定存在一個物件: 轉換成強情別方便閱讀
-                UnitSchemaAttribute unitAttribute = unitSchemas[0] as UnitSchemaAttribute;
-                // 若轉換失敗
-                if (unitAttribute == null)
+                if (unitSchemaAttributes.Length == 0)
                 {
                     // 拋出例外: 此部分數值是由 AD 設置產生, 因此退外提供伺服器錯誤
                     throw new LDAPExceptions($"物件:{value.PropertyName} 於解析過程中發現不是屬性卻被設置為屬性成員, 請聯絡程式維護人員", ErrorCodes.SERVER_ERROR);
                 }
 
                 // 宣告實體資料
-                PropertyDetail propertyDetail = new PropertyDetail(value, unitAttribute.IsSingleValued);
+                PropertyDetail propertyDetail = new PropertyDetail(value, unitSchemaAttributes[0].IsSingleValued);
                 // 整理屬性
-                dictionaryNameWithPropertyDetail.Add(unitAttribute.Name, propertyDetail);
+                dictionaryNameWithPropertyDetail.Add(unitSchemaAttributes[0].Name, propertyDetail);
             }
             // 轉換後對外提供項目
             return dictionaryNameWithPropertyDetail;
@@ -65,7 +56,7 @@ namespace ADService.Details
         /// <summary>
         /// 以 SID 記錄各條存取權限
         /// </summary>
-        private readonly Dictionary<string, List<AccessRuleConverted>> dictionarySIDWithAccessRuleConverteds = new Dictionary<string, List<AccessRuleConverted>>();
+        internal Dictionary<string, List<AccessRuleConverted>> dictionarySIDWithAccessRuleConverteds = new Dictionary<string, List<AccessRuleConverted>>();
 
         /// <summary>
         /// 整合權限轉換功能
@@ -100,25 +91,14 @@ namespace ADService.Details
         #endregion
 
         /// <summary>
-        /// 允許使用的屬性
-        /// </summary>
-        private readonly HashSet<string> AllowedAttributes;
-
-        /// <summary>
         /// 建構特性儲存與分析類別
         /// </summary>
         /// <param name="dispatcher">藍本物件</param>
         /// <param name="entry">入口物件</param>
-        /// <param name="propertiesResult">透過找尋取得字的屬性</param>
-        internal LDAPProperties(in LDAPConfigurationDispatcher dispatcher, in DirectoryEntry entry, in ResultPropertyCollection propertiesResult)
+        internal LDAPProperties(in LDAPConfigurationDispatcher dispatcher, in DirectoryEntry entry)
         {
             dictionaryNameWithPropertyDetail = ParseProperties(dispatcher, entry.Properties);
             dictionarySIDWithAccessRuleConverteds = ParseSecurityAccessRule(entry.ObjectSecurity);
-
-            // 將允許團入屬性改為陣列
-            string[] allowedAttributes = LDAPConfiguration.ParseMutipleValue<string>(Properties.C_ALLOWEDATTRIBUTES, propertiesResult);
-            // 轉換成可比對的屬性參數
-            AllowedAttributes = new HashSet<string>(allowedAttributes);
         }
 
         /// <summary>
@@ -130,45 +110,22 @@ namespace ADService.Details
         /// <exception cref="LDAPExceptions">當內部儲存資料為多筆時將拋出例外</exception>
         internal T GetPropertySingle<T>(in string propertyName)
         {
-            // 嘗試取得內容
-            bool isAllowed = GetProperty(propertyName, out PropertyDetail detail);
-            /* 下述任意情況出現時對外丟出例外
-                 1. 不支援且資料不存在
-                 2. 資料是單一述值十
-            */
-            if ((!isAllowed && detail == null) ||
-                (detail != null && !detail.IsSingleValue))
-            {
-                // 丟出例外: 因為此狀態沒有實作
-                throw new LDAPExceptions($"屬性:{propertyName} 應使用陣列方式進行轉換, 因使用了錯誤方法因而丟出例外, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
-            }
-
+            // 取得資料: 此處僅能取得已存在資料的欄位
+            dictionaryNameWithPropertyDetail.TryGetValue(propertyName, out PropertyDetail detail);
             // 提供查詢結果
-            return detail == null ? default(T) : (T)detail.PropertyValue;
+            return detail == null ? default : (T)detail.PropertyValue;
         }
 
         /// <summary>
         /// 根據鍵值取得儲存內容
         /// </summary>
         /// <param name="propertyName">特性參數</param>
-        /// <param name="convertedValue">實際資料</param>
         /// <returns> 資料是否存在 </returns>
         /// <exception cref="LDAPExceptions">當內部儲存資料為多筆時將拋出例外</exception>
         internal long GetPropertyInterval(in string propertyName)
         {
-            // 嘗試取得內容
-            bool isAllowed = GetProperty(propertyName, out PropertyDetail detail);
-            /* 下述任意情況出現時對外丟出例外
-                 1. 不支援且資料不存在
-                 2. 資料是單一述值十
-            */
-            if ((!isAllowed && detail == null) ||
-                (detail != null && !detail.IsSingleValue))
-            {
-                // 丟出例外: 因為此狀態沒有實作
-                throw new LDAPExceptions($"屬性:{propertyName} 應使用陣列方式進行轉換, 因使用了錯誤方法因而丟出例外, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
-            }
-
+            // 取得資料: 此處僅能取得已存在資料的欄位
+            dictionaryNameWithPropertyDetail.TryGetValue(propertyName, out PropertyDetail detail);
             // 資料不存在
             if (detail == null)
             {
@@ -194,19 +151,8 @@ namespace ADService.Details
         /// <exception cref="LDAPExceptions">當內部儲存資料為多筆時將拋出例外</exception>
         internal string GetPropertySID(in string propertyName)
         {
-            // 嘗試取得內容
-            bool isAllowed = GetProperty(propertyName, out PropertyDetail detail);
-            /* 下述任意情況出現時對外丟出例外
-                 1. 不支援且資料不存在
-                 2. 資料是單一述值十
-            */
-            if ((!isAllowed && detail == null) ||
-                (detail != null && !detail.IsSingleValue))
-            {
-                // 丟出例外: 因為此狀態沒有實作
-                throw new LDAPExceptions($"屬性:{propertyName} 應使用陣列方式進行轉換, 因使用了錯誤方法因而丟出例外, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
-            }
-
+            // 取得資料: 此處僅能取得已存在資料的欄位
+            dictionaryNameWithPropertyDetail.TryGetValue(propertyName, out PropertyDetail detail);
             // 轉換
             SecurityIdentifier securityIdentifier = detail == null ? new SecurityIdentifier(WellKnownSidType.NullSid, null) : new SecurityIdentifier((byte[])detail.PropertyValue, 0);
             // 提供查詢結果
@@ -221,19 +167,8 @@ namespace ADService.Details
         /// <exception cref="LDAPExceptions">當內部儲存資料為多筆時將拋出例外</exception>
         internal string GetPropertyGUID(in string propertyName)
         {
-            // 嘗試取得內容
-            bool isAllowed = GetProperty(propertyName, out PropertyDetail detail);
-            /* 下述任意情況出現時對外丟出例外
-                 1. 不支援且資料不存在
-                 2. 資料是單一述值十
-            */
-            if ((!isAllowed && detail == null) ||
-                (detail != null && !detail.IsSingleValue))
-            {
-                // 丟出例外: 因為此狀態沒有實作
-                throw new LDAPExceptions($"屬性:{propertyName} 應使用陣列方式進行轉換, 因使用了錯誤方法因而丟出例外, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
-            }
-
+            // 取得資料: 此處僅能取得已存在資料的欄位
+            dictionaryNameWithPropertyDetail.TryGetValue(propertyName, out PropertyDetail detail);
             // 轉換
             Guid guid = detail == null ? Guid.Empty : new Guid((byte[])detail.PropertyValue);
             // 提供查詢結果
@@ -249,19 +184,8 @@ namespace ADService.Details
         /// <exception cref="LDAPExceptions">當內部儲存資料為多筆時將拋出例外</exception>
         internal T[] GetPropertyMultiple<T>(in string propertyName)
         {
-            // 嘗試取得內容
-            bool isAllowed = GetProperty(propertyName, out PropertyDetail detail);
-            /* 下述任意情況出現時對外丟出例外
-                 1. 不支援且資料不存在
-                 2. 資料是單一述值十
-            */
-            if ((!isAllowed && detail == null) ||
-                (detail != null && detail.IsSingleValue))
-            {
-                // 丟出例外: 因為此狀態沒有實作
-                throw new LDAPExceptions($"屬性:{propertyName} 應使用陣列方式進行轉換, 因使用了錯誤方法因而丟出例外, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
-            }
-
+            // 取得資料: 此處僅能取得已存在資料的欄位
+            dictionaryNameWithPropertyDetail.TryGetValue(propertyName, out PropertyDetail detail);
             // 提供查詢結果
             if (detail == null || detail.SizeOf == 0)
             {
@@ -273,25 +197,11 @@ namespace ADService.Details
         }
 
         /// <summary>
-        /// 提供指定屬性鍵值取得支援情況與實際儲存資料
-        /// </summary>
-        /// <param name="propertyName">指定屬性鍵值</param>
-        /// <param name="detail">屬性鍵值目前儲存資料</param>
-        /// <returns>是否支援</returns>
-        internal bool GetProperty(in string propertyName, out PropertyDetail detail)
-        {
-            // 取得資料
-            bool isAttributeExist = dictionaryNameWithPropertyDetail.TryGetValue(propertyName, out detail);
-            // 是否支援: 支援與否和資料是否存在沒有直接關係
-            return isAttributeExist || AllowedAttributes.Contains(propertyName);
-        }
-
-        /// <summary>
         /// 使用指定群組的 SID 取得所有支援的屬性
         /// </summary>
         /// <param name="securitySIDs">可套用的安全性群組 SID</param>
         /// <returns>這些群組對應到的權限</returns>
-        internal AccessRuleConverted[] GetAccessRuleConverteds(params string[] securitySIDs)
+        internal AccessRuleConverted[] GetAccessRuleConverteds(in IEnumerable<string> securitySIDs)
         {
             // 總長度尚未確定
             List<AccessRuleConverted> accessRuleConvertedsResult = new List<AccessRuleConverted>();
