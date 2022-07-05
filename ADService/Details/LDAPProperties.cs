@@ -114,7 +114,7 @@ namespace ADService.Details
             // 取得資料: 此處僅能取得已存在資料的欄位
             dictionaryNameWithPropertyDetail.TryGetValue(propertyName, out PropertyDetail detail);
             // 提供查詢結果
-            return detail == null ? default(T) : (T)detail.PropertyValue;
+            return detail == null ? default : (T)detail.PropertyValue;
         }
 
         /// <summary>

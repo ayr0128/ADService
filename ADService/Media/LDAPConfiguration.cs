@@ -74,7 +74,7 @@ namespace ADService.Media
             if ((collection == null || collection.Count == 0))
             {
                 // 此特性鍵值必須存在因而丟出例外
-                return default(T);
+                return default;
             }
 
             // 對外提供轉換後型別
@@ -119,7 +119,7 @@ namespace ADService.Media
             if ((collection == null || collection.Count == 0))
             {
                 // 此特性鍵值必須存在因而丟出例外
-                return default(T);
+                return default;
             }
 
             // 對外提供轉換後型別
@@ -436,9 +436,8 @@ namespace ADService.Media
             foreach (KeyValuePair<string, UnitSchema> pair in dictionaryGUIDWithUnitSchema.ToArray())
             {
                 // 本次檢查的目標是物件藍本: 將基底藍本轉換成物件藍本
-                UnitSchemaAttribute unitSchemaAttribute = pair.Value as UnitSchemaAttribute;
                 // 是否能正確轉換成物件藍本
-                if (unitSchemaAttribute == null)
+                if (!(pair.Value is UnitSchemaAttribute unitSchemaAttribute))
                 {
                     // 只要無法轉換成物件藍本則都可以跳過
                     continue;
@@ -510,9 +509,8 @@ namespace ADService.Media
                 }
 
                 // 本次檢查的目標是物件藍本: 將基底藍本轉換成物件藍本
-                UnitSchemaAttribute unitSchemaAttribute = unitSchema as UnitSchemaAttribute;
                 // 是否能正確轉換成物件藍本
-                if (unitSchemaAttribute == null)
+                if (!(unitSchema is UnitSchemaAttribute unitSchemaAttribute))
                 {
                     // 只要無法轉換成物件藍本則都可以跳過
                     continue;
@@ -610,9 +608,8 @@ namespace ADService.Media
             foreach (KeyValuePair<string, UnitSchema> pair in dictionaryGUIDWithUnitSchema.ToArray())
             {
                 // 本次檢查的目標是物件藍本: 將基底藍本轉換成物件藍本
-                UnitSchemaClass unitSchemaClass = pair.Value as UnitSchemaClass;
                 // 是否能正確轉換成物件藍本
-                if (unitSchemaClass == null)
+                if (!(pair.Value is UnitSchemaClass unitSchemaClass))
                 {
                     // 只要無法轉換成物件藍本則都可以跳過
                     continue;
@@ -684,9 +681,8 @@ namespace ADService.Media
                 }
 
                 // 本次檢查的目標是物件藍本: 將基底藍本轉換成物件藍本
-                UnitSchemaClass unitSchemaClass = unitSchema as UnitSchemaClass;
                 // 是否能正確轉換成物件藍本
-                if (unitSchemaClass == null)
+                if (!(unitSchema is UnitSchemaClass unitSchemaClass))
                 {
                     // 只要無法轉換成物件藍本則都可以跳過
                     continue;
@@ -714,9 +710,8 @@ namespace ADService.Media
             foreach (KeyValuePair<string, UnitSchema> pair in dictionaryGUIDWithUnitSchema.ToArray())
             {
                 // 本次檢查的目標是物件藍本: 將基底藍本轉換成物件藍本
-                UnitSchemaClass unitSchemaClass = pair.Value as UnitSchemaClass;
                 // 是否能正確轉換成物件藍本
-                if (unitSchemaClass == null)
+                if (!(pair.Value is UnitSchemaClass unitSchemaClass))
                 {
                     // 只要無法轉換成物件藍本則都可以跳過
                     continue;
@@ -793,10 +788,8 @@ namespace ADService.Media
                     continue;
                 }
 
-                // 本次檢查的目標是物件藍本: 將基底藍本轉換成物件藍本
-                UnitSchemaClass unitSchemaClass = unitSchema as UnitSchemaClass;
                 // 是否能正確轉換成物件藍本
-                if (unitSchemaClass == null)
+                if (!(unitSchema is UnitSchemaClass unitSchemaClass))
                 {
                     // 只要無法轉換成物件藍本則都可以跳過
                     continue;
@@ -917,10 +910,8 @@ namespace ADService.Media
                         continue;
                     }
 
-                    // 轉成可包含的子物件
-                    UnitSchemaClass childrenUnitSchemaClass = unitSchema as UnitSchemaClass;
                     // 簡易防呆
-                    if (childrenUnitSchemaClass == null)
+                    if (!(unitSchema is UnitSchemaClass childrenUnitSchemaClass))
                     {
                         // 跳過
                         continue;
@@ -1126,10 +1117,8 @@ namespace ADService.Media
                     continue;
                 }
 
-                // 轉換成指定屬性類型
-                UnitSchemaAttribute unitSchemaAttribute = unitSchema as UnitSchemaAttribute;
                 // 轉換失敗時
-                if (unitSchemaAttribute == null)
+                if (!(unitSchema is UnitSchemaAttribute unitSchemaAttribute))
                 {
                     // 不存在時跳過: 可以丟例外
                     continue;

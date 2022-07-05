@@ -16,10 +16,6 @@ namespace ADService.Media
         /// 藍本的搜尋目標
         /// </summary>
         internal const string SCHEMA_CLASS = "classSchema";
-        /// <summary>
-        /// 藍本的搜尋目標
-        /// </summary>
-        private const string SCHEMA_CLASS_PROPERTY = "objectClassCategory";
 
         /// <summary>
         /// 何者的子物件
@@ -281,11 +277,6 @@ namespace ADService.Media
         }
 
         /// <summary>
-        /// 藍本物件的類型
-        /// </summary>
-        private readonly ClassCategory ClassType;
-
-        /// <summary>
         /// 藍本物件的遊河種類別衍伸
         /// </summary>
         private readonly string SubClassOf;
@@ -330,8 +321,6 @@ namespace ADService.Media
         /// <param name="properties">入口物件持有的屬性</param>
         internal UnitSchemaClass(in PropertyCollection properties) : base(properties)
         {
-            ClassType = LDAPConfiguration.ParseSingleValue<ClassCategory>(SCHEMA_CLASS_PROPERTY, properties);
-
             SubClassOf = LDAPConfiguration.ParseSingleValue<string>(SCHEMA_CLASS_SUBCLASSOF, properties);
             AuxiliaryClasses = LDAPConfiguration.ParseMutipleValue<string>(SCHEMA_CLASS_AUXILIARYCLASS, properties);
             SystemAuxiliaryClasses = LDAPConfiguration.ParseMutipleValue<string>(SCHEMA_CLASS_SYSTEMAUXILIARYCLASS, properties);
