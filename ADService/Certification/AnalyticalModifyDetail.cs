@@ -614,7 +614,7 @@ namespace ADService.Certification
                                 LDAPObject entryObject = LDAPObject.ToObject(set.Entry, certification.Dispatcher);
 
                                 // 整合各 SID 權向狀態
-                                LDAPPermissions permissionsProtocol = new LDAPPermissions(certification.Dispatcher, invoker, entryObject);
+                                LDAPPermissions permissionsProtocol = new LDAPPermissions(ref certification.Dispatcher, invoker, entryObject);
 
                                 // 是否可異動
                                 bool isProcessedEditable = permissionsProtocol.IsAllow(Properties.P_MEMBER, ActiveDirectoryRights.WriteProperty);

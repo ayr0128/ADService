@@ -10,6 +10,27 @@ namespace ADService.Media
     /// </summary>
     internal abstract class UnitSchema
     {
+        /// <summary>
+        /// 針對屬性使用存取權限, 查看下述列表
+        /// <list type="table">
+        ///     <item> <see cref="ActiveDirectoryRights.WriteProperty">寫入屬性</see> </item>
+        ///     <item> <see cref="ActiveDirectoryRights.ReadProperty">讀取屬性</see> </item>
+        /// </list>
+        /// </summary>
+        internal const ActiveDirectoryRights VALIDACCESSES_ATTRIBUTE = ActiveDirectoryRights.WriteProperty | ActiveDirectoryRights.ReadProperty;
+        /// <summary>
+        /// 針對類別使用存取權限, 查看下述列表
+        /// <list type="table">
+        ///     <item> <see cref="ActiveDirectoryRights.CreateChild">創建子系物件</see> </item>
+        ///     <item> <see cref="ActiveDirectoryRights.DeleteChild">刪除子系物件</see> </item>
+        ///     <item> <see cref="ActiveDirectoryRights.ListChildren">陳列子系容器內的物件</see> </item>
+        ///     <item> <see cref="ActiveDirectoryRights.DeleteTree">刪除術系</see> </item>
+        ///     <item> <see cref="ActiveDirectoryRights.ListObject">陳列物件的子系物件</see> </item>
+        ///     <item> <see cref="ActiveDirectoryRights.Delete">刪除本身</see> </item>
+        /// </list>
+        /// </summary>
+        internal const ActiveDirectoryRights VALIDACCESSES_CLASS = ActiveDirectoryRights.CreateChild | ActiveDirectoryRights.DeleteChild | ActiveDirectoryRights.ListChildren | ActiveDirectoryRights.ListObject | ActiveDirectoryRights.DeleteTree | ActiveDirectoryRights.Delete;
+
         #region 查詢相關資料
         /// <summary>
         /// 藍本的搜尋目標

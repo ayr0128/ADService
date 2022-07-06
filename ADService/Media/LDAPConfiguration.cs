@@ -1073,9 +1073,8 @@ namespace ADService.Media
         /// </summary>
         /// <param name="dispatcher">入口物件製作器</param>
         /// <param name="unitControlAccess">目標存取璇縣</param>
-        /// <param name="unitSchemas">此存取權限關聯的屬性</param>
         /// <returns>此存取權限為何種類型</returns>
-        internal ControlAccessType GeControlAccessAttributes(in LDAPConfigurationDispatcher dispatcher, in UnitControlAccess unitControlAccess, out UnitSchema[] unitSchemas)
+        internal UnitSchemaAttribute[] GetUnitSchemaAttribute(in LDAPConfigurationDispatcher dispatcher, in UnitControlAccess unitControlAccess)
         {
             // 轉成小寫
             string unitControlAccessGUIDLower = unitControlAccess.GUID.ToLower();
@@ -1120,7 +1119,7 @@ namespace ADService.Media
             }
 
             // 宣告總總長度
-            List<UnitSchema> unitSchemasCache = new List<UnitSchema>(propertySet.GUIDHashSet.Count);
+            List<UnitSchemaAttribute> unitSchemaAttributes = new List<UnitSchemaAttribute>(propertySet.GUIDHashSet.Count);
             // 遍歷權限
             foreach (string unitSchemaAttributeGUIDLower in propertySet.GUIDHashSet)
             {
@@ -1139,32 +1138,10 @@ namespace ADService.Media
                 }
 
                 // 加入對外提供細目
-                unitSchemasCache.Add(unitSchemaAttribute);
+                unitSchemaAttributes.Add(unitSchemaAttribute);
             }
-
-            // 轉換成為陣列
-            unitSchemas = unitSchemasCache.ToArray();
-            // 根據長度進行判斷
-            switch (unitSchemas.Length)
-            {
-                case 0:
-                    {
-                        // 不存在任何項目時必定是拓展權限
-                        return ControlAccessType.EXTENDED_RIGHT;
-                    }
-                case 1:
-                    {
-                        // 取得第 0 筆
-                        UnitSchemaAttribute unitSchemaAttribute = unitSchemasCache[0] as UnitSchemaAttribute;
-                        // 查看是否為群組項目
-                        return unitSchemaAttribute.IsPropertySet(unitControlAccessGUIDLower) ? ControlAccessType.PROPERTY_SET : ControlAccessType.VALIDATED_WRITE;
-                    }
-                default:
-                    {
-                        // 多筆時必定微群組設定
-                        return ControlAccessType.PROPERTY_SET;
-                    }
-            }
+            // 取得所有可用類型
+            return unitSchemaAttributes.ToArray();
         }
         #endregion
 

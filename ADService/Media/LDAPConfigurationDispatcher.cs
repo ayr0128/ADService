@@ -89,19 +89,18 @@ namespace ADService.Media
         internal UnitSchemaAttribute[] GetUnitSchemaAttribute(params string[] lDAPDisplayNames) => Configuration.GetUnitSchemaAttribute(this, lDAPDisplayNames);
 
         /// <summary>
+        /// 使用指定存取權限找到相關聯的屬性值, 並回傳存取類型
+        /// </summary>
+        /// <param name="unitControlAccess">目標存取璇縣</param>
+        /// <returns>此存取權限為何種類型</returns>
+        internal UnitSchemaAttribute[] GetUnitSchemaAttribute(in UnitControlAccess unitControlAccess) => Configuration.GetUnitSchemaAttribute(this, unitControlAccess);
+
+        /// <summary>
         /// 使用物件藍本取得所有存取控制權限
         /// </summary>
         /// <param name="unitSchemaClasses">查詢的物件藍本</param>
         /// <returns>指定額外權限物件, 可能不存在</returns>
         internal UnitControlAccess[] GeControlAccess(params UnitSchemaClass[] unitSchemaClasses) => Configuration.GeControlAccess(this, unitSchemaClasses);
-
-        /// <summary>
-        /// 使用指定存取權限找到相關聯的屬性值, 並回傳存取類型
-        /// </summary>
-        /// <param name="unitControlAccess">目標存取璇縣</param>
-        /// <param name="unitSchemaAttributes">此存取權限關聯的屬性</param>
-        /// <returns>此存取權限為何種類型</returns>
-        internal ControlAccessType GetControlAccessAttributes(in UnitControlAccess unitControlAccess, out UnitSchema[] unitSchemaAttributes) => Configuration.GeControlAccessAttributes(this, unitControlAccess, out unitSchemaAttributes);
 
         /// <summary>
         /// 使用展示名稱 進行搜尋指定目標藍本物件

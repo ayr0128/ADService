@@ -88,7 +88,7 @@ namespace ADService.Certification
         /// <summary>
         /// 紀錄外部提供的入口物件創建器
         /// </summary>
-        internal readonly LDAPConfigurationDispatcher Dispatcher;
+        internal LDAPConfigurationDispatcher Dispatcher;
 
         /// <summary>
         /// 初始化時須提供持有此簽證的持有者入口物件
