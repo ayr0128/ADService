@@ -45,21 +45,9 @@ namespace ADService.ControlAccessRule
         /// </summary>
         private readonly ControlAccess controlAccess = new ControlAccess();
         /// <summary>
-        /// 紀錄存取控制權縣的類型
+        /// 目標物件的隸屬類別
         /// </summary>
-        private readonly Dictionary<string, ControlAccessType> dictionaryControlAccessGUIDWithType;
-        /// <summary>
-        /// 目標物件可使用的屬性值
-        /// </summary>
-        private readonly string[] destinationAllowedAttributes;
-        /// <summary>
-        /// 目標物件類型可包含的下層物件
-        /// </summary>
-        private readonly UnitSchemaClass[] destinatioChildrenUnitSchemaClasses;
-        /// <summary>
-        /// 目標物件類型所支援的存取權限
-        /// </summary>
-        private readonly UnitControlAccess[] destinatioUnitControlAccesses;
+        private readonly UnitSchemaClass[] destinatioUnitSchemaClasses;
 
         /// <summary>
         /// 建構子: 取得指定影響類型的存取權限
@@ -67,23 +55,12 @@ namespace ADService.ControlAccessRule
         /// <param name="dispatcher">設定分配氣</param>
         /// <param name="invoker">呼叫者</param>
         /// <param name="destination">目標物件</param>
-        internal LDAPPermissions(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
+        internal LDAPPermissions(ref LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
         {
             // 取得物件持有類別
             string[] classNames = destination.GetPropertyMultiple<string>(Properties.C_OBJECTCLASS);
             // 透過物件持有類別取得所有可用屬性以及所有可用子類別
-            UnitSchemaClass[] unitSchemaClasses = dispatcher.GetClasses(classNames);
-            // 取得自身物件類型
-            Dictionary<string, UnitSchemaClass> dictionaryNameWithUnitSchemaClass = unitSchemaClasses.ToDictionary(unitSchemaClass => unitSchemaClass.Name);
-            // 透過物件實際類型取得類型藍本
-            dictionaryNameWithUnitSchemaClass.TryGetValue(classNames[classNames.Length - 1], out UnitSchemaClass destinationUnitSchemaClass);
-
-            // 取得可飽含的子類別
-            destinatioChildrenUnitSchemaClasses = dispatcher.GetChildrenClasess(unitSchemaClasses);
-            // 取得此類別支援的存取權限
-            destinatioUnitControlAccesses = dispatcher.GeControlAccess(unitSchemaClasses);
-            // 組合持有物件類型以及驅動物件類型
-            destinationAllowedAttributes = UnitSchemaClass.UniqueAttributeNames(unitSchemaClasses);
+            destinatioUnitSchemaClasses = dispatcher.GetClasses(classNames);
 
             // 支援的所有安全性群組 SID
             string[] invokerSecuritySIDs = invoker is IRevealerSecuritySIDs revealerSecuritySIDs ? revealerSecuritySIDs.Values : Array.Empty<string>();
@@ -98,31 +75,43 @@ namespace ADService.ControlAccessRule
             // 推入此參數
             invokerSecuritySIDHashSet.Add(extendedSID);
 
+            // 取得所有可用的存取規則: 包含不會生效的部分
+            AccessRuleConverted[] accessRuleConverteds = destination.GetAccessRuleConverteds(invokerSecuritySIDHashSet);
+            // 設置非空 GUID 的存取權限
+            SetControlAccessNoneEmpty(ref dispatcher, accessRuleConverteds);
+            // 設置空 GUID 的存取權限
+            SetControlAccessWasEmpty(ref dispatcher, accessRuleConverteds);
+        }
+
+        /// <summary>
+        /// 設置非空 GUID 的存取權限
+        /// </summary>
+        /// <param name="dispatcher">共用的設定分配氣</param>
+        /// <param name="accessRuleConverteds">目前的權限設置</param>
+        private void SetControlAccessNoneEmpty(ref LDAPConfigurationDispatcher dispatcher, params AccessRuleConverted[] accessRuleConverteds)
+        {
+            // 宣告 HashSet
+            HashSet<string> unitSchemaClassGUIDHashSet = new HashSet<string>(destinatioUnitSchemaClasses.Length);
+            // 遍歷並提供 HashSet
+            foreach (UnitSchemaClass unitSchemaClass in destinatioUnitSchemaClasses)
+            {
+                // 推入 
+                unitSchemaClassGUIDHashSet.Add(unitSchemaClass.SchemaGUID.ToLower());
+            }
+
+            // 取得可飽含的子類別
+            UnitControlAccess[] destinatioUnitControlAccesses = dispatcher.GeControlAccess(destinatioUnitSchemaClasses);
             // 將此類別可用的存取權限轉換成 GUID 對應的字典
             Dictionary<string, UnitControlAccess> dictionaryGUIDithUnitControlAccesses = destinatioUnitControlAccesses.ToDictionary(unitControlAccess => unitControlAccess.GUID.ToLower());
-            // 目標類別持有的存取控制
-            dictionaryControlAccessGUIDWithType = new Dictionary<string, ControlAccessType>(destinatioUnitControlAccesses.Length);
             // 使用查詢 SID 陣列取得所有存取權限 (包含沒有生效的)
-            foreach (AccessRuleConverted accessRuleConverted in destination.GetAccessRuleConverteds(invokerSecuritySIDHashSet))
+            foreach (AccessRuleConverted accessRuleConverted in accessRuleConverteds)
             {
+                // 取得對於此存取規則而言是否可用
+                bool isEffected = accessRuleConverted.IsEffected(unitSchemaClassGUIDHashSet);
                 // 不產生影響的物件不須進行動作
-                if (!accessRuleConverted.IsEffected)
+                if (!isEffected || accessRuleConverted.IsEmpty)
                 {
                     // 跳過
-                    continue;
-                }
-
-                // 是空GUID時需進行特殊動作
-                if (accessRuleConverted.AttributeGUID.Equals(Guid.Empty))
-                {
-                    // 所有屬性都需要設置一次全域的設定
-                    Array.ForEach(destinationAllowedAttributes, destinationAllowedAttribute => controlAccess.Set(destinationAllowedAttribute, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights));
-
-                    // 支援的類別物件也需要
-                    Array.ForEach(destinatioChildrenUnitSchemaClasses, destinatioChildrenUnitSchemaClass => controlAccess.Set(destinatioChildrenUnitSchemaClass.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights));
-
-                    // 最後設置自身
-                    controlAccess.Set(destinationUnitSchemaClass.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights);
                     continue;
                 }
 
@@ -132,27 +121,143 @@ namespace ADService.ControlAccessRule
                 if (dictionaryGUIDithUnitControlAccesses.TryGetValue(attributeGUIDLower, out UnitControlAccess unitControlAccess))
                 {
                     // 能從存取權限中取得時必定能從關聯取得對應狀態
-                    ControlAccessType controlAccessType = dispatcher.GetControlAccessAttributes(unitControlAccess, out UnitSchema[] unitSchemas);
-                    // 設置存取控制權縣關聯
-                    dictionaryControlAccessGUIDWithType.Add(unitControlAccess.Name, controlAccessType);
+                    UnitSchemaAttribute[] unitSchemaAttributes = dispatcher.GetUnitSchemaAttribute(unitControlAccess);
+                    // 遍歷得到的所有關聯屬性
+                    foreach (UnitSchemaAttribute unitSchemaAttribute in unitSchemaAttributes)
+                    {
+                        // 設置關聯屬性
+                        controlAccess.Set(unitSchemaAttribute.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights);
+                    }
 
-                    // 設置所有取得的屬性
-                    Array.ForEach(unitSchemas, unitSchemaAttribute => controlAccess.Set(unitSchemaAttribute.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights));
-
-                    // 執行完畢
-                    continue;
+                    // 是否為拓展權限
+                    bool isExtendedRights = (accessRuleConverted.AccessRuleRights & ActiveDirectoryRights.ExtendedRight) == ActiveDirectoryRights.ExtendedRight;
+                    // 沒有任何關聯屬性而且存取權限本身為拓展權限
+                    if (unitSchemaAttributes.Length == 0 && isExtendedRights)
+                    {
+                        // 設置自身的權限
+                        controlAccess.Set(unitControlAccess.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights);
+                    }
                 }
-
-                // 取得參數名稱
-                UnitSchema unitSchema = dispatcher.GetUnitSchema(accessRuleConverted.AttributeGUID);
-                // 無法取得對應屬性資料
-                if (unitSchema == null)
+                else
                 {
-                    // 代表有不支援的存取璇縣
+                    // 取得參數名稱
+                    UnitSchema unitSchema = dispatcher.GetUnitSchema(accessRuleConverted.AttributeGUID);
+                    // 若此  GUID 無法取得屬性值, 這代表此 GUID 為非本物件能支援的存取權限
+                    if (unitSchema == null)
+                    {
+                        // 非本物件支援的存取權限可以跳過
+                        continue;
+                    }   
+                    
+                    // 設置自身的權限
+                    controlAccess.Set(unitSchema.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 設置空 GUID 的存取權限
+        /// </summary>
+        /// <param name="dispatcher">共用的設定分配氣</param>
+        /// <param name="accessRuleConverteds">目前的權限設置</param>
+        private void SetControlAccessWasEmpty(ref LDAPConfigurationDispatcher dispatcher, params AccessRuleConverted[] accessRuleConverteds)
+        {
+            // 宣告 HashSet
+            HashSet<string> unitSchemaClassGUIDHashSet = new HashSet<string>(destinatioUnitSchemaClasses.Length);
+            // 遍歷並提供 HashSet
+            foreach (UnitSchemaClass unitSchemaClass in destinatioUnitSchemaClasses)
+            {
+                // 推入 
+                unitSchemaClassGUIDHashSet.Add(unitSchemaClass.SchemaGUID.ToLower());
+            }
+
+            // 取得可飽含的子類別
+            UnitControlAccess[] destinatioUnitControlAccesses = dispatcher.GeControlAccess(destinatioUnitSchemaClasses);
+            // 取得所有允許的屬性
+            string[] allowedAttributes = UnitSchemaClass.UniqueAttributeNames(destinatioUnitSchemaClasses);
+            // 使用查詢 SID 陣列取得所有存取權限 (包含沒有生效的)
+            foreach (AccessRuleConverted accessRuleConverted in accessRuleConverteds)
+            {
+                // 取得對於此存取規則而言是否可用
+                bool isEffected = accessRuleConverted.IsEffected(unitSchemaClassGUIDHashSet);
+                // 不產生影響的物件不須進行動作
+                if (!isEffected || !accessRuleConverted.IsEmpty)
+                {
+                    // 跳過
                     continue;
                 }
 
-                controlAccess.Set(unitSchema.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights);
+                // 遍歷所有可用的權限
+                foreach (UnitControlAccess unitControlAccess in destinatioUnitControlAccesses)
+                {
+                    // 惡技能填入的瞿縣
+                    ActiveDirectoryRights activeDirectoryRightsControlAccesses = accessRuleConverted.AccessRuleRights & unitControlAccess.ValidAccesses;
+                    // 不包含任意一組時
+                    if (activeDirectoryRightsControlAccesses == 0)
+                    {
+                        // 跳過
+                        continue;
+                    }
+
+                    // 能從存取權限中取得時必定能從關聯取得對應狀態
+                    UnitSchemaAttribute[] unitSchemaAttributes = dispatcher.GetUnitSchemaAttribute(unitControlAccess);
+                    // 遍歷得到的所有關聯屬性
+                    foreach (UnitSchemaAttribute unitSchemaAttribute in unitSchemaAttributes)
+                    {
+                        // 設置關聯屬性
+                        controlAccess.Set(unitSchemaAttribute.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, activeDirectoryRightsControlAccesses);
+                    }
+
+                    // 是否為拓展權限
+                    bool isExtendedRights = (activeDirectoryRightsControlAccesses & ActiveDirectoryRights.ExtendedRight) == ActiveDirectoryRights.ExtendedRight;
+                    // 沒有任何關聯屬性而且存取權限本身為拓展權限
+                    if (unitSchemaAttributes.Length == 0 && isExtendedRights)
+                    {
+                        // 設置自身的權限
+                        controlAccess.Set(unitControlAccess.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, activeDirectoryRightsControlAccesses);
+                    }
+                }
+
+                // 檢查是否含有屬性設置
+                ActiveDirectoryRights activeDirectoryRightsAttirbutes = accessRuleConverted.AccessRuleRights & UnitSchema.VALIDACCESSES_ATTRIBUTE;
+                // 含有屬性設置權限時
+                if (activeDirectoryRightsAttirbutes != 0)
+                {
+                    // 所有可支援的屬性都會被設置成對應類別
+                    foreach (UnitSchemaAttribute unitSchemaAttribute in dispatcher.GetUnitSchemaAttribute(allowedAttributes))
+                    {
+                        // 設置自身的權限
+                        controlAccess.Set(unitSchemaAttribute.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, activeDirectoryRightsAttirbutes);
+                    }
+                }
+
+                // 只對自身類別發生作用的權限
+                const ActiveDirectoryRights activeDirectoryRightsSelf = ActiveDirectoryRights.Delete | ActiveDirectoryRights.ListChildren;
+                // 檢查是否含有屬性設置
+                ActiveDirectoryRights activeDirectoryRightsClass = accessRuleConverted.AccessRuleRights & UnitSchema.VALIDACCESSES_CLASS;
+                // 對類別有用的數值去除僅作用於自身的: 即是能使用在子物件上的權限
+                ActiveDirectoryRights activeDirectoryRightsClassChild = activeDirectoryRightsClass & ~activeDirectoryRightsSelf;
+                // 子物件權限存在時含有屬性設置權限時
+                if (activeDirectoryRightsClassChild != 0)
+                {
+                    // 所有可支援的屬性都會被設置成對應類別
+                    foreach (UnitSchemaClass unitSchemaClass in dispatcher.GetChildrenClasess(destinatioUnitSchemaClasses))
+                    {
+                        // 設置自身的權限
+                        controlAccess.Set(unitSchemaClass.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, activeDirectoryRightsClassChild);
+                    }
+                }
+
+                // 對類別有用的數值去除僅作用於自身的: 即是能使用在自身的權限
+                ActiveDirectoryRights activeDirectoryRightsClassSelf = activeDirectoryRightsClass & activeDirectoryRightsSelf;
+                // 自身權限存在時含有屬性設置權限時
+                if (activeDirectoryRightsClassSelf != 0)
+                {
+                    // 最後一個物件即為此類別的曲類類型
+                    UnitSchemaClass unitSchemaClass = destinatioUnitSchemaClasses.Last();
+                    // 設置自身的權限
+                    controlAccess.Set(unitSchemaClass.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, activeDirectoryRightsClassSelf);
+                }
             }
         }
 

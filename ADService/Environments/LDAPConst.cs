@@ -5,29 +5,6 @@ namespace ADService.Environments
     /// <summary>
     /// 物件類別類型
     /// </summary>
-    internal enum ControlAccessType : int
-    {
-        /// <summary>
-        /// 預設: 部分抽象類型使用了此類別
-        /// </summary>
-        NONE,
-        /// <summary>
-        /// 拓展權限
-        /// </summary>
-        EXTENDED_RIGHT,
-        /// <summary>
-        /// 屬性組
-        /// </summary>
-        PROPERTY_SET,
-        /// <summary>
-        /// 寫入有效
-        /// </summary>
-        VALIDATED_WRITE,
-    }
-
-    /// <summary>
-    /// 物件類別類型
-    /// </summary>
     internal enum ClassCategory : int
     {
         /// <summary>
