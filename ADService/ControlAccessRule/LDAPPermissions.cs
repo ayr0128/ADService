@@ -1,5 +1,4 @@
 using ADService.Details;
-using ADService.Environments;
 using ADService.Features;
 using ADService.Foundation;
 using ADService.Media;
@@ -43,7 +42,7 @@ namespace ADService.ControlAccessRule
         /// <summary>
         /// 允許的存取權限
         /// </summary>
-        private readonly ControlAccess controlAccess = new ControlAccess();
+        private readonly ControlAccessRights controlAccessRights = new ControlAccessRights();
         /// <summary>
         /// 目標物件的隸屬類別
         /// </summary>
@@ -126,7 +125,7 @@ namespace ADService.ControlAccessRule
                     foreach (UnitSchemaAttribute unitSchemaAttribute in unitSchemaAttributes)
                     {
                         // 設置關聯屬性
-                        controlAccess.Set(unitSchemaAttribute.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights);
+                        controlAccessRights.Set(unitSchemaAttribute.Name, accessRuleConverted.WasAllow, accessRuleConverted.AccessRuleRights);
                     }
 
                     // 是否為拓展權限
@@ -135,7 +134,7 @@ namespace ADService.ControlAccessRule
                     if (unitSchemaAttributes.Length == 0 && isExtendedRights)
                     {
                         // 設置自身的權限
-                        controlAccess.Set(unitControlAccess.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights);
+                        controlAccessRights.Set(unitControlAccess.Name, accessRuleConverted.WasAllow, accessRuleConverted.AccessRuleRights);
                     }
                 }
                 else
@@ -150,7 +149,7 @@ namespace ADService.ControlAccessRule
                     }   
                     
                     // 設置自身的權限
-                    controlAccess.Set(unitSchema.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights);
+                    controlAccessRights.Set(unitSchema.Name, accessRuleConverted.WasAllow, accessRuleConverted.AccessRuleRights);
                 }
             }
         }
@@ -171,10 +170,16 @@ namespace ADService.ControlAccessRule
                 unitSchemaClassGUIDHashSet.Add(unitSchemaClass.SchemaGUID.ToLower());
             }
 
-            // 取得可飽含的子類別
-            UnitControlAccess[] destinatioUnitControlAccesses = dispatcher.GeControlAccess(destinatioUnitSchemaClasses);
+            // 取得輔助類別
+            UnitSchemaClass[] drivedUnitSchemaClasses = dispatcher.GetDrivedClasses(destinatioUnitSchemaClasses);
+            // 宣告一個新的陣列來存放輔助類別與需求類別
+            List<UnitSchemaClass> attributesUnitSchemaClass = new List<UnitSchemaClass>(destinatioUnitSchemaClasses.Length + drivedUnitSchemaClasses.Length);
+            // 增加原始類別
+            attributesUnitSchemaClass.AddRange(destinatioUnitSchemaClasses);
+            // 增加輔助類別
+            attributesUnitSchemaClass.AddRange(drivedUnitSchemaClasses);
             // 取得所有允許的屬性
-            string[] allowedAttributes = UnitSchemaClass.UniqueAttributeNames(destinatioUnitSchemaClasses);
+            string[] allowedAttributes = UnitSchemaClass.UniqueAttributeNames(attributesUnitSchemaClass);
             // 使用查詢 SID 陣列取得所有存取權限 (包含沒有生效的)
             foreach (AccessRuleConverted accessRuleConverted in accessRuleConverteds)
             {
@@ -188,7 +193,7 @@ namespace ADService.ControlAccessRule
                 }
 
                 // 遍歷所有可用的權限
-                foreach (UnitControlAccess unitControlAccess in destinatioUnitControlAccesses)
+                foreach (UnitControlAccess unitControlAccess in dispatcher.GeControlAccess(destinatioUnitSchemaClasses))
                 {
                     // 惡技能填入的瞿縣
                     ActiveDirectoryRights activeDirectoryRightsControlAccesses = accessRuleConverted.AccessRuleRights & unitControlAccess.ValidAccesses;
@@ -205,7 +210,7 @@ namespace ADService.ControlAccessRule
                     foreach (UnitSchemaAttribute unitSchemaAttribute in unitSchemaAttributes)
                     {
                         // 設置關聯屬性
-                        controlAccess.Set(unitSchemaAttribute.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, activeDirectoryRightsControlAccesses);
+                        controlAccessRights.Set(unitSchemaAttribute.Name, accessRuleConverted.WasAllow, activeDirectoryRightsControlAccesses);
                     }
 
                     // 是否為拓展權限
@@ -214,7 +219,7 @@ namespace ADService.ControlAccessRule
                     if (unitSchemaAttributes.Length == 0 && isExtendedRights)
                     {
                         // 設置自身的權限
-                        controlAccess.Set(unitControlAccess.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, activeDirectoryRightsControlAccesses);
+                        controlAccessRights.Set(unitControlAccess.Name, accessRuleConverted.WasAllow, activeDirectoryRightsControlAccesses);
                     }
                 }
 
@@ -227,12 +232,12 @@ namespace ADService.ControlAccessRule
                     foreach (UnitSchemaAttribute unitSchemaAttribute in dispatcher.GetUnitSchemaAttribute(allowedAttributes))
                     {
                         // 設置自身的權限
-                        controlAccess.Set(unitSchemaAttribute.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, activeDirectoryRightsAttirbutes);
+                        controlAccessRights.Set(unitSchemaAttribute.Name, accessRuleConverted.WasAllow, activeDirectoryRightsAttirbutes);
                     }
                 }
 
                 // 只對自身類別發生作用的權限
-                const ActiveDirectoryRights activeDirectoryRightsSelf = ActiveDirectoryRights.Delete | ActiveDirectoryRights.ListChildren;
+                const ActiveDirectoryRights activeDirectoryRightsSelf = ActiveDirectoryRights.Delete | ActiveDirectoryRights.ListObject;
                 // 檢查是否含有屬性設置
                 ActiveDirectoryRights activeDirectoryRightsClass = accessRuleConverted.AccessRuleRights & UnitSchema.VALIDACCESSES_CLASS;
                 // 對類別有用的數值去除僅作用於自身的: 即是能使用在子物件上的權限
@@ -244,7 +249,7 @@ namespace ADService.ControlAccessRule
                     foreach (UnitSchemaClass unitSchemaClass in dispatcher.GetChildrenClasess(destinatioUnitSchemaClasses))
                     {
                         // 設置自身的權限
-                        controlAccess.Set(unitSchemaClass.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, activeDirectoryRightsClassChild);
+                        controlAccessRights.Set(unitSchemaClass.Name, accessRuleConverted.WasAllow, activeDirectoryRightsClassChild);
                     }
                 }
 
@@ -253,10 +258,8 @@ namespace ADService.ControlAccessRule
                 // 自身權限存在時含有屬性設置權限時
                 if (activeDirectoryRightsClassSelf != 0)
                 {
-                    // 最後一個物件即為此類別的曲類類型
-                    UnitSchemaClass unitSchemaClass = destinatioUnitSchemaClasses.Last();
-                    // 設置自身的權限
-                    controlAccess.Set(unitSchemaClass.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, activeDirectoryRightsClassSelf);
+                    // 設置自身的權限: 影響自身的改用空字串進進行動作
+                    controlAccessRights.Set(string.Empty, accessRuleConverted.WasAllow, activeDirectoryRightsClassSelf);
                 }
             }
         }
@@ -267,6 +270,6 @@ namespace ADService.ControlAccessRule
         /// <param name="name">目標群取權限</param>
         /// <param name="activeDirectoryRights">任意一個權限存在就是允許</param>
         /// <returns>是否可用</returns>
-        internal bool IsAllow(in string name, in ActiveDirectoryRights activeDirectoryRights) => (controlAccess.Get(name) & activeDirectoryRights) != 0;
+        internal bool IsAllow(in string name, in ActiveDirectoryRights activeDirectoryRights) => (controlAccessRights.Get(name) & activeDirectoryRights) != 0;
     }
 }

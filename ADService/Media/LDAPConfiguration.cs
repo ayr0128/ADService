@@ -600,7 +600,7 @@ namespace ADService.Media
         /// <param name="dispatcher">提供 連線權限的分配氣</param>
         /// <param name="ldapDisplayNames">需要查詢的物件展示名稱</param>
         /// <returns>轉換成基底藍本的物件類型</returns>
-        internal UnitSchemaClass[] GetOriginClasses(in LDAPConfigurationDispatcher dispatcher, params string[] ldapDisplayNames)
+        internal UnitSchemaClass[] GetnClasses(in LDAPConfigurationDispatcher dispatcher, params string[] ldapDisplayNames)
         {
             // 最大長度必定為執行續安全字典的長度
             Dictionary<string, UnitSchemaClass> dictionaryLDAPDisplayNameWithUnitSchemaClass = new Dictionary<string, UnitSchemaClass>(dictionaryGUIDWithUnitSchema.Count);
@@ -756,20 +756,6 @@ namespace ADService.Media
                 // 重新建立藍本結構
                 foreach (UnitSchemaClass unitSchemaClass in UnitSchemaClass.GetWithLDAPDisplayNames(dispatcher, researchedLDAPDisplayNames))
                 {
-                    // 是否為史提類型
-                    if (!unitSchemaClass.IsClassCategory(ClassCategory.STRUCTURAL_CLASS))
-                    {
-                        // 不是則跳過
-                        continue;
-                    }
-
-                    // 是否為系統使用
-                    if (unitSchemaClass.SystemOnly)
-                    {
-                        // 是系統使用跳過
-                        continue;
-                    }
-
                     // 更新的 GUID 字串必須是小寫
                     string schemaGUIDLower = unitSchemaClass.SchemaGUID.ToLower();
                     // 避免託管記憶體洩漏
@@ -826,14 +812,14 @@ namespace ADService.Media
         internal UnitSchemaClass[] GetChildrenClasses(in LDAPConfigurationDispatcher dispatcher, params UnitSchemaClass[] unitSchemaClasses)
         {
             // 將資料換成小寫的 GUID 作為鍵值的字典
-            Dictionary<string, UnitSchemaClass> dictionaryNameWithUnitSchemaClass = unitSchemaClasses.ToDictionary(unitSchemaClass => unitSchemaClass.Name.ToLower());
+            Dictionary<string, UnitSchemaClass> dictionaryNameWithUnitSchemaClass = new Dictionary<string, UnitSchemaClass>(unitSchemaClasses.Length);
             // 即將用來搜尋的 GUID
-            HashSet<string> researchedNames = new HashSet<string>(dictionaryNameWithUnitSchemaClass.Count);
-            // 轉換成物件類型 GUID 與是否過期的字典
-            foreach (KeyValuePair<string, UnitSchemaClass> pair in dictionaryNameWithUnitSchemaClass)
+            HashSet<string> researchedNames = new HashSet<string>(unitSchemaClasses.Length);
+            // 過濾掉不可用來當子物件的資料
+            foreach (UnitSchemaClass unitSchemaClass in unitSchemaClasses)
             {
                 // 取得父層的 GUID 小寫
-                string schemaClassGUIDLower = pair.Value.SchemaGUID.ToLower();
+                string schemaClassGUIDLower = unitSchemaClass.SchemaGUID.ToLower();
                 // 取得藍本額外權限關聯
                 if (dictionarySchemaClassGUIDWithChildrenUnitSchemaClassGUIDs.TryGetValue(schemaClassGUIDLower, out PropertySet propertySet) && !propertySet.IsExpired(EXPIRES_DURATION))
                 {
@@ -841,18 +827,34 @@ namespace ADService.Media
                     continue;
                 }
 
+                // 加入作為搜尋物件
+                dictionaryNameWithUnitSchemaClass.Add(unitSchemaClass.Name, unitSchemaClass);
                 // 組成應搜尋出更新物件的字典黨
-                researchedNames.Add(pair.Key);
+                researchedNames.Add(unitSchemaClass.Name);
             }
 
             // 找尋目標藍本結構
             if (researchedNames.Count != 0)
             {
                 // 取得可隸屬於指定藍本類型物件的下層類型藍本
-                UnitSchemaClass[] unitSchemaClassChirden = UnitSchemaClass.GetWithSuperiorLDAPDisplayNames(dispatcher, researchedNames);
+                List<UnitSchemaClass> unitSchemaClassChirden = new List<UnitSchemaClass>();
                 // 遍歷存取權限並更新
-                foreach (UnitSchemaClass unitSchemaClass in unitSchemaClassChirden)
+                foreach (UnitSchemaClass unitSchemaClass in UnitSchemaClass.GetWithSuperiorLDAPDisplayNames(dispatcher, researchedNames))
                 {
+                    // 是否為系統物件
+                    if (unitSchemaClass.SystemOnly)
+                    {
+                        // 是則跳過
+                        continue;
+                    }
+
+                    // 是否為結構化類別
+                    if (!unitSchemaClass.IsClassCategory(ClassCategory.STRUCTURAL_CLASS))
+                    {
+                        // 否則跳過
+                        continue;
+                    }
+
                     // 查詢時須使用小寫的 GUID
                     string unitSchemaGUIDLower = unitSchemaClass.SchemaGUID.ToLower();
                     // 避免託管記憶體洩漏
@@ -863,6 +865,9 @@ namespace ADService.Media
                         newUnitSchemaClass,
                         (GUID, oldUnitSchemaClass) => newUnitSchemaClass
                     );
+
+                    // 可添加作為子類別
+                    unitSchemaClassChirden.Add(unitSchemaClass);
                 }
 
                 // 更新資料
@@ -992,8 +997,8 @@ namespace ADService.Media
                     dictionaryGUIDWithUnitControlAccess.AddOrUpdate(
                         unitControlAccessGUIDLower,
                         newUnitControlAccess,
-                        (GUID, oldUnitControlAccess) => newUnitControlAccess
-                    );
+                        (GUID, oldUnitControlAccess) => oldUnitControlAccess.IsExpired(EXPIRES_DURATION) ? newUnitControlAccess : oldUnitControlAccess
+                    );;
                 }
 
                 // 更新資料

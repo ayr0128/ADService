@@ -259,10 +259,10 @@ namespace ADService.Media
         /// <param name="unitSchemaClass">指定藍本物件</param>
         /// <param name="unitSchemaClasses">傳入的物件類型藍本</param>
         /// <returns>可做為內容物的物件 GUID </returns>
-        internal static string[] WhichChildrenWith(in UnitSchemaClass unitSchemaClass, params UnitSchemaClass[] unitSchemaClasses)
+        internal static string[] WhichChildrenWith(in UnitSchemaClass unitSchemaClass, in IEnumerable<UnitSchemaClass> unitSchemaClasses)
         {
             // 依賴存取權限大小最大微傳入物件的長度
-            List<string> unitSchemaClassGUIDs = new List<string>(unitSchemaClasses.Length);
+            List<string> unitSchemaClassGUIDs = new List<string>();
             // 遍歷所有存取權限
             foreach (UnitSchemaClass childrenUnitSchemaClass in unitSchemaClasses)
             {
