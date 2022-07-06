@@ -83,7 +83,7 @@ namespace ADService.Certification
             foreach (string attributeName in AttributeNames)
             {
                 // 檢驗支援項目: 具有查看旗標
-                if (!permissions.IsAllow(attributeName, AccessRuleRightFlags.PropertyRead))
+                if (!permissions.IsAllow(attributeName, ActiveDirectoryRights.ReadProperty))
                 {
                     // 不具有查看旗標時: 就可以忽略修改旗標, 因為看不到等於不能修改
                     continue;
@@ -92,7 +92,7 @@ namespace ADService.Certification
                 // 將對外提供的處理項目
                 InvokeCondition invokeCondition;
                 // 是否可異動
-                bool isEditable = permissions.IsAllow(attributeName, AccessRuleRightFlags.PropertyWrite);
+                bool isEditable = permissions.IsAllow(attributeName, ActiveDirectoryRights.WriteProperty);
                 // 對外提供項目有個需要特例處理
                 switch (attributeName)
                 {
@@ -100,9 +100,8 @@ namespace ADService.Certification
                     case Properties.P_MEMBER:
                         {
                             // 取得介面
-                            IRevealerMember revealerMember = destination as IRevealerMember;
                             // 介面不存在時代表此權限不必提供
-                            if (revealerMember == null)
+                            if (!(destination is IRevealerMember revealerMember))
                             {
                                 // 跳過此處理
                                 continue;
@@ -121,7 +120,7 @@ namespace ADService.Certification
                             };
 
                             // 異動能否包含自幾
-                            bool isContainSelf = permissions.IsAllow(attributeName, AccessRuleRightFlags.Self);
+                            bool isContainSelf = permissions.IsAllow(attributeName, ActiveDirectoryRights.Self);
                             // 是否可以進行異動: 只有在能異動的情況下進行動作
                             if (isEditable || isContainSelf)
                             {
@@ -148,9 +147,8 @@ namespace ADService.Certification
                     case Properties.P_MEMBEROF:
                         {
                             // 取得介面
-                            IRevealerMemberOf revealerMemberOf = destination as IRevealerMemberOf;
                             // 介面不存在時代表此權限不必提供
-                            if (revealerMemberOf == null)
+                            if (!(destination is IRevealerMemberOf revealerMemberOf))
                             {
                                 // 跳過此處理
                                 continue;
@@ -399,17 +397,15 @@ namespace ADService.Certification
                 }
 
                 // 是否可異動
-                bool isEditable = permissions.IsAllow(attributeName, AccessRuleRightFlags.PropertyWrite);
+                bool isEditable = permissions.IsAllow(attributeName, ActiveDirectoryRights.WriteProperty);
                 // 使用存取鍵值去處理
                 switch (attributeName)
                 {
                     #region 成員: 驗證
                     case Properties.P_MEMBER:
                         {
-                            // 檢查目標物件能否取得隸屬群組介面
-                            IRevealerMember revealerMember = destination as IRevealerMember;
                             // 無法取得
-                            if (revealerMember == null)
+                            if (!(destination is IRevealerMember revealerMember))
                             {
                                 // 若觸發此處例外: 則有可能遭受網路攻擊
                                 throw new LDAPExceptions($"類型:{destination.Type} 的物件:{distinguishedNameDestination} 於異動細節內容時發現傳輸的異動協議:{attributeName} 不能套用至目標物件, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
@@ -479,7 +475,7 @@ namespace ADService.Certification
                                             }
 
                                             // 異動能否包含自身
-                                            bool isContainSelf = permissions.IsAllow(attributeName, AccessRuleRightFlags.Self);
+                                            bool isContainSelf = permissions.IsAllow(attributeName, ActiveDirectoryRights.Self);
                                             // 遍歷所有項目轉換成入口物件
                                             foreach (SearchResult one in all)
                                             {
@@ -519,10 +515,8 @@ namespace ADService.Certification
                     #region 隸屬群組: 驗證
                     case Properties.P_MEMBEROF:
                         {
-                            // 檢查目標物件能否取得隸屬群組介面
-                            IRevealerMemberOf revealerMemberOf = destination as IRevealerMemberOf;
                             // 無法取得
-                            if (revealerMemberOf == null)
+                            if (!(destination is IRevealerMemberOf revealerMemberOf))
                             {
                                 // 若觸發此處例外: 則有可能遭受網路攻擊
                                 throw new LDAPExceptions($"類型:{destination.Type} 的物件:{distinguishedNameDestination} 於異動細節內容時發現傳輸的異動協議:{attributeName} 不能套用至目標物件, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
@@ -623,9 +617,9 @@ namespace ADService.Certification
                                 LDAPPermissions permissionsProtocol = new LDAPPermissions(certification.Dispatcher, invoker, entryObject);
 
                                 // 是否可異動
-                                bool isProcessedEditable = permissionsProtocol.IsAllow(Properties.P_MEMBER, AccessRuleRightFlags.PropertyWrite);
+                                bool isProcessedEditable = permissionsProtocol.IsAllow(Properties.P_MEMBER, ActiveDirectoryRights.WriteProperty);
                                 // 異動能否包含自身
-                                bool isProcessedContainSelf = permissionsProtocol.IsAllow(Properties.P_MEMBER, AccessRuleRightFlags.Self); 
+                                bool isProcessedContainSelf = permissionsProtocol.IsAllow(Properties.P_MEMBER, ActiveDirectoryRights.Self); 
                                 /* 根據異動目標判斷異動權限是否不可用
                                      1. 異動資料是自己, 不包含異動自己的權限
                                      2. 異動資料不是自己, 不包含異動的權限
@@ -802,10 +796,8 @@ namespace ADService.Certification
                     #region 成員: 實際修改
                     case Properties.P_MEMBER:
                         {
-                            // 檢查目標物件能否取得隸屬群組介面
-                            IRevealerMember revealerMember = destination as IRevealerMember;
                             // 無法取得
-                            if (revealerMember == null)
+                            if (!(destination is IRevealerMember revealerMember))
                             {
                                 // 應於檢驗處理完成, 此處不應進入
                                 continue;
@@ -858,10 +850,8 @@ namespace ADService.Certification
                     #region 隸屬群組: 實際修改
                     case Properties.P_MEMBEROF:
                         {
-                            // 檢查目標物件能否取得隸屬群組介面
-                            IRevealerMemberOf revealerMemberOf = destination as IRevealerMemberOf;
                             // 無法取得
-                            if (revealerMemberOf == null)
+                            if (!(destination is IRevealerMemberOf revealerMemberOf))
                             {
                                 // 應於檢驗處理完成, 此處不應進入
                                 continue;

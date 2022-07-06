@@ -1,5 +1,6 @@
 ﻿using ADService.Protocol;
 using System.Collections.Generic;
+using System.DirectoryServices;
 
 namespace ADService.ControlAccessRule
 {
@@ -11,11 +12,11 @@ namespace ADService.ControlAccessRule
         /// <summary>
         /// 內部存取用的對應規則: 允許
         /// </summary>
-        private Dictionary<string, InheritedAccessRule> dictionaryNameWithInheritedAccessRuleAllowed = new Dictionary<string, InheritedAccessRule>();
+        private readonly Dictionary<string, InheritedAccessRule> dictionaryNameWithInheritedAccessRuleAllowed = new Dictionary<string, InheritedAccessRule>();
         /// <summary>
         /// 內部存取用的對應規則: 拒絕
         /// </summary>
-        private Dictionary<string, InheritedAccessRule> dictionaryNameWithInheritedAccessRuleDisllowed = new Dictionary<string, InheritedAccessRule>();
+        private readonly Dictionary<string, InheritedAccessRule> dictionaryNameWithInheritedAccessRuleDisllowed = new Dictionary<string, InheritedAccessRule>();
 
         /// <summary>
         /// 內部使用, 設置相關存取權限
@@ -23,8 +24,8 @@ namespace ADService.ControlAccessRule
         /// <param name="name">目標名稱</param>
         /// <param name="wasAllow">是否允許</param>
         /// <param name="isInherited">是否透過繼承取得</param>
-        /// <param name="accessRuleRightFlags">設置的旗標</param>
-        internal void Set(in string name, in bool wasAllow, in bool isInherited, in AccessRuleRightFlags accessRuleRightFlags)
+        /// <param name="activeDirectoryRights">設置的旗標</param>
+        internal void Set(in string name, in bool wasAllow, in bool isInherited, in ActiveDirectoryRights activeDirectoryRights)
         {
             // 根據允許或拒絕取得實際操作目標
             Dictionary<string, InheritedAccessRule> dictionaryNameWithInheritedAccessRule = wasAllow ? dictionaryNameWithInheritedAccessRuleAllowed : dictionaryNameWithInheritedAccessRuleDisllowed;
@@ -39,20 +40,20 @@ namespace ADService.ControlAccessRule
             }
 
             // 使用劑成狀態將旗標填入
-            inheritedAccessRule.Set(isInherited, accessRuleRightFlags);
+            inheritedAccessRule.Set(isInherited, activeDirectoryRights);
         }
 
         /// <summary>
         /// 內部使用, 設置相關存取權限
         /// </summary>
         /// <param name="name">目標名稱</param>
-        internal AccessRuleRightFlags Get(in string name)
+        internal ActiveDirectoryRights Get(in string name)
         {
             // 需取得全域設置與指定的名稱屬性
             string[] attributesNames = new string[] { string.Empty, name };
 
             // 疊加的允許權限
-            AccessRuleRightFlags accessRuleRightFlagsAllow = AccessRuleRightFlags.None;
+            ActiveDirectoryRights activeDirectoryRightsAllow = 0;
             // 先取得允許
             foreach (string attributesName in attributesNames)
             {
@@ -64,11 +65,11 @@ namespace ADService.ControlAccessRule
                 }
 
                 // 疊加存取規則
-                accessRuleRightFlagsAllow |= inheritedAccessRule.Get();
+                activeDirectoryRightsAllow |= inheritedAccessRule.Get();
             }
 
             // 疊加的拒絕權限
-            AccessRuleRightFlags accessRuleRightFlagsDisallow = AccessRuleRightFlags.None;
+            ActiveDirectoryRights ActiveDirectoryRightsDeny = 0;
             // 先取得允許
             foreach (string attributesName in attributesNames)
             {
@@ -80,11 +81,11 @@ namespace ADService.ControlAccessRule
                 }
 
                 // 疊加存取規則
-                accessRuleRightFlagsDisallow |= inheritedAccessRule.Get();
+                ActiveDirectoryRightsDeny |= inheritedAccessRule.Get();
             }
 
             // 允許權限必須被拒絕權限遮蔽
-            return accessRuleRightFlagsAllow & ~accessRuleRightFlagsDisallow;
+            return activeDirectoryRightsAllow & ~ActiveDirectoryRightsDeny;
         }
     }
 }

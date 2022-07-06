@@ -70,6 +70,7 @@
   <ItemGroup>
     <Compile Include="Certification\Analytical.cs" />
     <Compile Include="Certification\AnalyticalChangePassword.cs" />
+    <Compile Include="Certification\AnalyticalCreateOrganizationUnit.cs" />
     <Compile Include="Certification\AnalyticalCreateGroup.cs" />
     <Compile Include="Certification\AnalyticalModifyDetail.cs" />
     <Compile Include="Certification\AnalyticalMoveTo.cs" />
@@ -91,6 +92,7 @@
     <Compile Include="Media\UnitControlAccess.cs" />
     <Compile Include="Media\UnitSchemaAttribute.cs" />
     <Compile Include="Media\UnitSchema.cs" />
+    <Compile Include="Protocol\CreateOrganizationUnit.cs" />
     <Compile Include="Protocol\CreateGroup.cs" />
     <Compile Include="Protocol\CreateUser.cs" />
     <Compile Include="Protocol\Properties.cs" />

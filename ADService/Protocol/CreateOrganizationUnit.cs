@@ -3,12 +3,12 @@
 namespace ADService.Protocol
 {
     /// <summary>
-    /// 創建群組需求的參數
+    /// 創建組織單位需求的參數
     /// </summary>
-    public sealed class CreateGroup
+    public sealed class CreateOrganizationUnit
     {
         /// <summary>
-        /// 目標物件的名稱, 全域唯一, 如果發現重複會無法進行動作
+        /// 目標物件的名稱, 局部唯一, 如果發現重複會無法進行動作
         /// </summary>
         public string Name = string.Empty;
     }

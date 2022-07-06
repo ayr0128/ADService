@@ -35,11 +35,10 @@ namespace ADService.Certification
             }
 
             // 取得是否支援創建目標物件
-            bool isAllow = permissions.IsAllow(valuePerson, AccessRuleRightFlags.ChildrenCreate);
+            bool isAllow = permissions.IsAllow(valuePerson, ActiveDirectoryRights.CreateChild);
             // 檢查是否具備權限
             if (!isAllow)
             {
-                return (null, $"因物件類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 不具有:{AccessRuleRightFlags.ChildrenCreate} 權限因而無法提供創建功能");
             }
 
             /* 一般需求參數限制如下所述:
@@ -72,13 +71,13 @@ namespace ADService.Certification
             // 取得成員字串
             Dictionary<CategoryTypes, string> dictionaryCategoryTypeWithValue = LDAPCategory.GetAccessRulesByTypes(categoryType);
             // 必須要能取得 [使用者] 的定內容
-            if (!dictionaryCategoryTypeWithValue.TryGetValue(categoryType, out string valuePerson))
+            if (!dictionaryCategoryTypeWithValue.TryGetValue(categoryType, out string valueGroup))
             {
                 return false;
             }
 
             // 取得是否支援創建目標物件
-            bool isAllow = permissions.IsAllow(valuePerson, AccessRuleRightFlags.ChildrenCreate);
+            bool isAllow = permissions.IsAllow(valueGroup, ActiveDirectoryRights.CreateChild);
             // 檢查是否具備權限
             if (!isAllow)
             {
@@ -102,11 +101,7 @@ namespace ADService.Certification
                 using (DirectorySearcher searcher = new DirectorySearcher(root, encoderFiliter, LDAPObject.PropertiesToLoad))
                 {
                     // 不得搜尋到任何物件
-                    if (searcher.FindOne() != null)
-                    {
-                        // 對外無權限
-                        return false;
-                    }
+                    return searcher.FindOne() == null;
                 }
             }
 

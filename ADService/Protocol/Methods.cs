@@ -34,6 +34,10 @@
         /// </summary>
         public const string M_CREATEGROUP = "CreateGroup";
         /// <summary>
+        /// 創建成員: 額外呼叫
+        /// </summary>
+        public const string M_CREATEORGANIZATIONUNIT = "CreateOrganizationUnit";
+        /// <summary>
         /// 重置密碼: 額外權限, 直接作為右鍵方法使用
         /// </summary>
         public const string M_CHANGEPWD = "ChangePWD";

@@ -6,6 +6,7 @@ using ADService.Protocol;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.DirectoryServices;
 
 namespace ADService.Certification
 {
@@ -29,7 +30,7 @@ namespace ADService.Certification
             }
 
             // 不存在 '重製密碼' 的額外權限
-            if (!permissions.IsAllow(Properties.EX_RESETPASSWORD, AccessRuleRightFlags.RightExtended))
+            if (!permissions.IsAllow(Properties.EX_RESETPASSWORD, ActiveDirectoryRights.ExtendedRight))
             {
                 // 對外提供失敗
                 return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{Properties.EX_RESETPASSWORD} 的額外權限");

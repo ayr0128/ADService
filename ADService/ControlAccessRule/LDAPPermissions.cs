@@ -6,6 +6,7 @@ using ADService.Media;
 using ADService.Protocol;
 using System;
 using System.Collections.Generic;
+using System.DirectoryServices;
 using System.Linq;
 using System.Security.Principal;
 
@@ -115,13 +116,10 @@ namespace ADService.ControlAccessRule
                 if (accessRuleConverted.AttributeGUID.Equals(Guid.Empty))
                 {
                     // 所有屬性都需要設置一次全域的設定
-                    Array.ForEach(destinationAllowedAttributes, destinationAllowedAttribute =>
-                    {
-                        controlAccess.Set(destinationAllowedAttribute, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights);
-                    });
+                    Array.ForEach(destinationAllowedAttributes, destinationAllowedAttribute => controlAccess.Set(destinationAllowedAttribute, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights));
 
                     // 支援的類別物件也需要
-                    Array.ForEach(destinatioChildrenUnitSchemaClasses, destinatioChildrenUnitSchemaClass => controlAccess.Set(destinatioChildrenUnitSchemaClass.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights) );
+                    Array.ForEach(destinatioChildrenUnitSchemaClasses, destinatioChildrenUnitSchemaClass => controlAccess.Set(destinatioChildrenUnitSchemaClass.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights));
 
                     // 最後設置自身
                     controlAccess.Set(destinationUnitSchemaClass.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights);
@@ -139,7 +137,7 @@ namespace ADService.ControlAccessRule
                     dictionaryControlAccessGUIDWithType.Add(unitControlAccess.Name, controlAccessType);
 
                     // 設置所有取得的屬性
-                    Array.ForEach(unitSchemas, unitSchemaAttribute => controlAccess.Set(unitSchemaAttribute.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights) );
+                    Array.ForEach(unitSchemas, unitSchemaAttribute => controlAccess.Set(unitSchemaAttribute.Name, accessRuleConverted.WasAllow, accessRuleConverted.IsInherited, accessRuleConverted.AccessRuleRights));
 
                     // 執行完畢
                     continue;
@@ -162,8 +160,8 @@ namespace ADService.ControlAccessRule
         /// 取得指定屬性職是否存在指定權限
         /// </summary>
         /// <param name="name">目標群取權限</param>
-        /// <param name="accessRuleRightFlagsLimited">任意一個權限存在就是允許</param>
+        /// <param name="activeDirectoryRights">任意一個權限存在就是允許</param>
         /// <returns>是否可用</returns>
-        internal bool IsAllow(in string name, in AccessRuleRightFlags accessRuleRightFlagsLimited) => (controlAccess.Get(name) & accessRuleRightFlagsLimited) != AccessRuleRightFlags.None;
+        internal bool IsAllow(in string name, in ActiveDirectoryRights activeDirectoryRights) => (controlAccess.Get(name) & activeDirectoryRights) != 0;
     }
 }

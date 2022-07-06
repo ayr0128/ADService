@@ -24,13 +24,16 @@ namespace ADService.Certification
         internal static readonly Dictionary<string, Analytical> dictionaryMethodWithAnalytical = new List<Analytical>() {
             new AnalyticalReName(),         // 重新命名
             new AnalyticalMoveTo(),         // 移動
-            new AnalyticalShowDetail(),     // 展示細節
-            new AnalyticalModifyDetail(),   // 異動細節
             new AnalyticalChangePassword(), // 重置密碼
             new AnalyticalResetPassword(),  // 強制重設密碼
-            new AnalyticalShowCreateable(), // 創毽子物件
-            new AnalyticalCreateUser(),     // 創建成員
-            new AnalyticalCreateGroup(),    // 創建群組
+
+            new AnalyticalShowDetail(),   // 展示細節
+            new AnalyticalModifyDetail(), // 異動細節
+
+            new AnalyticalShowCreateable(),         // 創毽子物件
+            new AnalyticalCreateUser(),             // 創建成員
+            new AnalyticalCreateGroup(),            // 創建群組
+            new AnalyticalCreateOrganizationUnit(), // 創建組織單位
         }.ToDictionary(analytical => analytical.Name);
         #endregion
 
@@ -202,6 +205,7 @@ namespace ADService.Certification
 
                 // 整合各 SID 權向狀態
                 LDAPPermissions permissions = new LDAPPermissions(Dispatcher, Invoker, Destination);
+
                 // 遍歷權限驗證協議是否可用
                 return analytical.Authenicate(ref certification, Invoker, Destination, protocol, permissions);
             }
@@ -252,6 +256,7 @@ namespace ADService.Certification
 
                 // 整合各 SID 權向狀態
                 LDAPPermissions permissions = new LDAPPermissions(Dispatcher, Invoker, Destination);
+
                 // 驗證是否可用
                 bool authenicateSuccess = analytical.Authenicate(ref certification, Invoker, Destination, protocol, permissions);
                 // 檢查驗證是否成功
