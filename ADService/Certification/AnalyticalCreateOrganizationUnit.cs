@@ -12,17 +12,17 @@ namespace ADService.Certification
     /// <summary>
     /// 異動持有屬性
     /// </summary>
-    internal sealed class AnalyticalCreateGroup : Analytical
+    internal sealed class AnalyticalCreateOrganizationUnit : Analytical
     {
         /// <summary>
         /// 可處理的類型
         /// [TODO] 改為成從 LDAP 組成定義
         /// </summary>
-        private const CategoryTypes categoryType = CategoryTypes.GROUP;
+        private const CategoryTypes categoryType = CategoryTypes.ORGANIZATION_UNIT;
         /// <summary>
         /// 呼叫基底建構子
         /// </summary>
-        internal AnalyticalCreateGroup() : base(Methods.M_CREATEGROUP, false) { }
+        internal AnalyticalCreateOrganizationUnit() : base(Methods.M_CREATEORGANIZATIONUNIT, false) { }
 
         internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination, LDAPPermissions permissions)
         {
@@ -51,7 +51,7 @@ namespace ADService.Certification
             const ProtocolAttributeFlags commonFlags = ProtocolAttributeFlags.EDITABLE;
             // 需求內容: 採用封盒動作
             Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object> {
-                { InvokeCondition.RECEIVEDTYPE, typeof(CreateGroup).Name },
+                { InvokeCondition.RECEIVEDTYPE, typeof(CreateOrganizationUnit).Name },
             };
 
             // 持有項目時就外部就能夠異動
@@ -61,7 +61,7 @@ namespace ADService.Certification
         internal override bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions)
         {
             // 解析成創建成員所需參數
-            CreateGroup createGroup = protocol?.ToObject<CreateGroup>();
+            CreateOrganizationUnit createGroup = protocol?.ToObject<CreateOrganizationUnit>();
             // 創建資料不存在
             if (createGroup == null)
             {
@@ -72,13 +72,13 @@ namespace ADService.Certification
             // 取得成員字串
             Dictionary<CategoryTypes, string> dictionaryCategoryTypeWithValue = LDAPCategory.GetAccessRulesByTypes(categoryType);
             // 必須要能取得 [使用者] 的定內容
-            if (!dictionaryCategoryTypeWithValue.TryGetValue(categoryType, out string valueGroup))
+            if (!dictionaryCategoryTypeWithValue.TryGetValue(categoryType, out string valueOrganizationUnit))
             {
                 return false;
             }
 
             // 取得是否支援創建目標物件
-            bool isAllow = permissions.IsAllow(valueGroup, ActiveDirectoryRights.CreateChild);
+            bool isAllow = permissions.IsAllow(valueOrganizationUnit, ActiveDirectoryRights.CreateChild);
             // 檢查是否具備權限
             if (!isAllow)
             {
@@ -94,12 +94,12 @@ namespace ADService.Certification
             }
 
             // 取得根目錄物件: 
-            using (DirectoryEntry root = certification.Dispatcher.DomainRoot())
+            using (DirectoryEntry root = certification.Dispatcher.ByDistinguisedName(destination.DistinguishedName))
             {
                 // 任一符合則不正確
-                string encoderFiliter = $"{LDAPConfiguration.GetORFiliter(Properties.P_CN, createGroup.Name)}";
+                string encoderFiliter = LDAPConfiguration.GetORFiliter(Properties.P_OU, createGroup.Name);
                 // 找尋符合條件的物件
-                using (DirectorySearcher searcher = new DirectorySearcher(root, encoderFiliter, LDAPObject.PropertiesToLoad))
+                using (DirectorySearcher searcher = new DirectorySearcher(root, encoderFiliter, LDAPObject.PropertiesToLoad, SearchScope.OneLevel))
                 {
                     // 不得搜尋到任何物件
                     return searcher.FindOne() == null;
@@ -122,7 +122,7 @@ namespace ADService.Certification
             // 取得成員字串
             Dictionary<CategoryTypes, string> dictionaryCategoryTypeWithValue = LDAPCategory.GetAccessRulesByTypes(categoryType);
             // 必須要能取得 [使用者] 的定內容
-            if (!dictionaryCategoryTypeWithValue.TryGetValue(categoryType, out string valueGroup))
+            if (!dictionaryCategoryTypeWithValue.TryGetValue(categoryType, out string valueOrganizationUnit))
             {
                 return;
             }
@@ -137,7 +137,7 @@ namespace ADService.Certification
             }
 
             // 創建新的子物件
-            DirectoryEntry newGroup = setProcessed.Entry.Children.Add($"{Properties.P_CN}={createGroup.Name}", valueGroup);
+            DirectoryEntry newGroup = setProcessed.Entry.Children.Add($"{Properties.P_OU}={createGroup.Name}", valueOrganizationUnit);
             // 直接推入
             newGroup.CommitChanges();
             // 更新

@@ -45,6 +45,17 @@ namespace ADService.Certification
                 invokedAble.Add(analyticalCreateGroup.Name);
             }
 
+            // 宣告異動細節分析氣
+            AnalyticalCreateOrganizationUnit analyticalCreateOrganizationUnit = new AnalyticalCreateOrganizationUnit();
+            // 是否能展示須根據是否能異動決定
+            (InvokeCondition conditionOrganizationUnit, _) = analyticalCreateOrganizationUnit.Invokable(dispatcher, invoker, destination, permissions);
+            // 能夠取得條件時
+            if (conditionOrganizationUnit != null)
+            {
+                // 推入作為可使用方法
+                invokedAble.Add(analyticalCreateOrganizationUnit.Name);
+            }
+
             // 若不可呼叫
             if (invokedAble.Count == 0)
             {

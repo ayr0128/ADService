@@ -39,7 +39,7 @@ namespace ADService.Certification
             }
 
             // 目標物件的父層組織單位是否具有 '刪除子物件' 的寫入權限
-            bool isDeleteable = permissions.IsAllow(categoryValue, AccessRuleRightFlags.ChildrenDelete | AccessRuleRightFlags.Delete);
+            bool isDeleteable = permissions.IsAllow(categoryValue, ActiveDirectoryRights.DeleteChild | ActiveDirectoryRights.Delete);
             // 兩種權限都不具備時
             if (!isDeleteable)
             {
@@ -121,7 +121,7 @@ namespace ADService.Certification
             }
 
             // 目標物件的父層組織單位是否具有 '刪除子物件' 的寫入權限
-            bool isDeleteable = permissions.IsAllow(categoryValue, AccessRuleRightFlags.ChildrenDelete | AccessRuleRightFlags.Delete);
+            bool isDeleteable = permissions.IsAllow(categoryValue, ActiveDirectoryRights.DeleteChild | ActiveDirectoryRights.Delete);
             // 兩種權限都不具備時
             if (!isDeleteable)
             {
@@ -171,7 +171,7 @@ namespace ADService.Certification
                     /* 下述認依條件成立, 驗證失敗
                          - 不具備 '子物件類型' 的創建權限
                     */
-                    return permissionsProtocol.IsAllow(categoryValue, AccessRuleRightFlags.ChildrenCreate);
+                    return permissionsProtocol.IsAllow(categoryValue, ActiveDirectoryRights.CreateChild);
                 }
             }
         }

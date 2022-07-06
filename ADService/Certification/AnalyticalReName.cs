@@ -30,7 +30,7 @@ namespace ADService.Certification
             }
 
             // 不存在 '名稱' 的寫入權限
-            if (!permissions.IsAllow(Properties.P_NAME, AccessRuleRightFlags.PropertyWrite))
+            if (!permissions.IsAllow(Properties.P_NAME, ActiveDirectoryRights.WriteProperty))
             {
                 // 對外提供失敗
                 return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{Properties.P_NAME} 的寫入權限");
@@ -48,7 +48,7 @@ namespace ADService.Certification
                         // 組織群組需另外需求以下的權限
                         const string attributeName = Properties.P_CN;
                         // 不存在 '類型名稱' 的寫入權限
-                        if (!permissions.IsAllow(attributeName, AccessRuleRightFlags.PropertyWrite))
+                        if (!permissions.IsAllow(attributeName, ActiveDirectoryRights.WriteProperty))
                         {
                             // 對外提供失敗
                             return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{attributeName} 的寫入權限");
@@ -61,7 +61,7 @@ namespace ADService.Certification
                         // 組織群組需另外需求以下的權限
                         const string attributeName = Properties.P_OU;
                         // 不存在 '類型名稱' 的寫入權限
-                        if (!permissions.IsAllow(attributeName, AccessRuleRightFlags.PropertyWrite))
+                        if (!permissions.IsAllow(attributeName, ActiveDirectoryRights.WriteProperty))
                         {
                             // 對外提供失敗
                             return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{attributeName} 的寫入權限");
