@@ -47,7 +47,6 @@ namespace ADService.ControlAccessRule
         /// 目標物件的隸屬類別
         /// </summary>
         private readonly UnitSchemaClass[] destinationUnitSchemaClasses;
-
         /// <summary>
         /// 建構子: 取得指定影響類型的存取權限
         /// </summary>
