@@ -669,7 +669,7 @@ namespace ADService.Media
             }
 
             // 使用屬性 GUID 的長度作為容器大小
-            List<UnitSchemaClass> unitSchemaClasses = new List<UnitSchemaClass>(researchedGUIDs.Count);
+            Dictionary<string, UnitSchemaClass> dictionarySubClassOfWithUnitSchemaClas = new Dictionary<string, UnitSchemaClass>(researchedGUIDs.Count);
             // 遍歷集成並將資料對外提供
             foreach (string unitSchemaGUID in researchedGUIDs)
             {
@@ -688,12 +688,39 @@ namespace ADService.Media
                     continue;
                 }
 
-                // 設置成對外提供項目
-                unitSchemaClasses.Add(unitSchemaClass);
+                // 名稱與子類別相同, 必定是頂端類別
+                if (unitSchemaClass.Name == unitSchemaClass.SubClassOf)
+                {
+                    // 使用空字串作為頂端類別
+                    dictionarySubClassOfWithUnitSchemaClas.Add(string.Empty, unitSchemaClass);
+                }
+                else
+                {
+                    // 使用空字串作為頂端類別
+                    dictionarySubClassOfWithUnitSchemaClas.Add(unitSchemaClass.SubClassOf, unitSchemaClass);
+                }
             }
 
+            // 對外提供的項目必定是整理後的種輛
+            UnitSchemaClass[] unitSchemaClasses = new UnitSchemaClass[dictionarySubClassOfWithUnitSchemaClas.Count];
+            // 第一個元素必定是以空字串作為鍵值的類型物件
+            string subClassOf = string.Empty;
+            // 根據取得子類別並替換的動作可以取得正確順序
+            for (int index = 0; index < dictionarySubClassOfWithUnitSchemaClas.Count; index++)
+            {
+                // 取得目標鍵值的物件
+                if (!dictionarySubClassOfWithUnitSchemaClas.TryGetValue(subClassOf, out UnitSchemaClass unitSchemaClass))
+                {
+                    throw new LDAPExceptions($"取得物件類別:{string.Join(",", researchedGUIDs)} 時無法正確取得:{string.Join(",", dictionarySubClassOfWithUnitSchemaClas.Keys)} 中的元素:{subClassOf}", ErrorCodes.LOGIC_ERROR);
+                }
+
+                // 設置滯對應陣列內
+                unitSchemaClasses[index] = unitSchemaClass;
+                // 替換鍵值
+                subClassOf = unitSchemaClass.Name;
+            }
             // 轉換成陣列對外提供
-            return unitSchemaClasses.ToArray();
+            return unitSchemaClasses;
         }
 
         /// <summary>

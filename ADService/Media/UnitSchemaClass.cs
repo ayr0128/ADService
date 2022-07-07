@@ -285,7 +285,7 @@ namespace ADService.Media
         /// <summary>
         /// 藍本物件的遊河種類別衍伸
         /// </summary>
-        private readonly string SubClassOf;
+        internal readonly string SubClassOf;
 
         /// <summary>
         /// 藍本物件的類型
