@@ -96,7 +96,7 @@ namespace ADService.Media
         /// <summary>
         /// 系統旗標
         /// </summary>
-        private readonly SystemFlags systemFlags;
+        protected readonly SystemFlags systemFlags;
 
         /// <summary>
         /// 啟用時間

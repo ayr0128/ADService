@@ -235,6 +235,13 @@ namespace ADService.ControlAccessRule
                     // 所有可支援的屬性都會被設置成對應類別
                     foreach (UnitSchemaAttribute unitSchemaAttribute in dispatcher.GetUnitSchemaAttribute(allowedAttributes))
                     {
+                        // 取得是否為可用參數
+                        if(!unitSchemaAttribute.isEffecteive)
+                        {
+                            // 不可用參數需跳過
+                            continue;
+                        }
+
                         // 設置自身的權限
                         controlAccessRights.Set(unitSchemaAttribute.Name, accessRuleConverted.WasAllow, activeDirectoryRightsAttirbutes);
                     }

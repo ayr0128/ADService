@@ -1,4 +1,5 @@
-﻿using ADService.Protocol;
+﻿using ADService.Environments;
+using ADService.Protocol;
 using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
@@ -11,6 +12,7 @@ namespace ADService.Media
     /// </summary>
     internal sealed class UnitSchemaAttribute : UnitSchema
     {
+        #region 屬性解析與取得
         /// <summary>
         /// 藍本的搜尋目標
         /// </summary>
@@ -129,13 +131,17 @@ namespace ADService.Media
                 }
             }
         }
+        #endregion
 
         /// <summary>
-        /// 查看提供的存取權限 GUID 是否為群組組合
+        /// 如果是下述名稱, 則列為可用參數
         /// </summary>
-        /// <param name="unitControlAccessGUIDLower">存取權限 GUID, 記得轉小寫</param>
-        /// <returns>是否為群組設定</returns>
-        internal bool IsPropertySet(in string unitControlAccessGUIDLower) => unitControlAccessGUIDLower == SecurityGUID.ToLower();
+        const string EFFECTIVE_NAME = "entryTTL";
+
+        /// <summary>
+        /// 檢查此參數是否可提供給外部使用, 規則如右 <see href="https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-adts/c16a23d1-6847-4b25-9f6b-f09fc29e8627">規則過濾</see>
+        /// </summary>
+        internal bool isEffecteive => (systemFlags & SystemFlags.ATTRIBUTE_CONSTRUCTED) == SystemFlags.NONE || Name == EFFECTIVE_NAME;
 
         /// <summary>
         /// 使用欄位 <see cref="SCHEMA_ATTRIBUTE_ISSINGLEVALUED"> 是否一筆 </see> 取得的相關字串
