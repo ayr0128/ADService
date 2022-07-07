@@ -139,11 +139,6 @@ namespace ADService.Media
             // 強制轉型並取得系統旗標
             AccessRuleControl = (ActiveDirectoryRights)Enum.ToObject(typeof(ActiveDirectoryRights), storedActiveDirectoryRights);
 
-            // 取得內部儲存的類型
-            int storedActiveDirectoryRights = LDAPConfiguration.ParseSingleValue<int>(ATTRIBUTE_CONTROLACCESS_VALIDACCESSES, properties);
-            // 強制轉型並取得系統旗標
-            AccessRuleControl = (ActiveDirectoryRights)Enum.ToObject(typeof(ActiveDirectoryRights), storedActiveDirectoryRights);
-
             // 避免意外情況先改成統一小寫
             string[] appliesToGUID = LDAPConfiguration.ParseMutipleValue<string>(ATTRIBUTE_CONTROLACCESS_APPLIESTO, properties);
             // 宣告容器大小
