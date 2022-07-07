@@ -71,6 +71,7 @@ namespace ADService.Certification
         ///    <item> <see cref="Methods.M_SHOWDETAIL">物件細節參數</see> </item>
         ///    <item> <see cref="Methods.M_CHANGEPWD">重置密碼</see> </item>
         ///    <item> <see cref="Methods.M_RESETPWD">強制重設密碼</see> </item>
+        ///    <item> <see cref="Methods.M_SHOWCRATEABLE">新增</see> </item>
         /// </list>
         /// </summary>
         /// <returns>可用方法與預期接收參數, 格式如右 Dictionary '功能, 協議描述' </returns>

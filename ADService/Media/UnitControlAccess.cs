@@ -101,7 +101,7 @@ namespace ADService.Media
         /// <summary>
         /// 使用欄位 <see cref="ATTRIBUTE_CONTROLACCESS_VALIDACCESSES"> 可用用權限 </see> 取得的相關字串
         /// </summary>
-        internal ActiveDirectoryRights ValidAccesses { get; private set; }
+        internal ActiveDirectoryRights AccessRuleControl { get; private set; }
 
         /// <summary>
         /// 使用欄位 <see cref="ATTRIBUTE_CONTROLACCESS_APPLIESTO"> GUID </see> 取得的相關字串
@@ -134,6 +134,11 @@ namespace ADService.Media
             Name = LDAPConfiguration.ParseSingleValue<string>(ATTRIBUTE_CONTROLACCESS_PROPERTY, properties);
             GUID = LDAPConfiguration.ParseSingleValue<string>(ATTRIBUTE_CONTROLACCESS_GUID, properties);
             ValidAccesses = LDAPConfiguration.ParseSingleValue<ActiveDirectoryRights>(ATTRIBUTE_CONTROLACCESS_VALIDACCESSES, properties);
+
+            // 取得內部儲存的類型
+            int storedActiveDirectoryRights = LDAPConfiguration.ParseSingleValue<int>(ATTRIBUTE_CONTROLACCESS_VALIDACCESSES, properties);
+            // 強制轉型並取得系統旗標
+            AccessRuleControl = (ActiveDirectoryRights)Enum.ToObject(typeof(ActiveDirectoryRights), storedActiveDirectoryRights);
 
             // 避免意外情況先改成統一小寫
             string[] appliesToGUID = LDAPConfiguration.ParseMutipleValue<string>(ATTRIBUTE_CONTROLACCESS_APPLIESTO, properties);

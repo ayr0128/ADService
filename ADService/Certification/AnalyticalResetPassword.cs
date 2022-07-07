@@ -15,6 +15,8 @@ namespace ADService.Certification
     /// </summary>
     internal sealed class AnalyticalResetPassword : Analytical
     {
+        const string ACCESS_ATTRIBUTE_NAME = Properties.EX_RESETPASSWORD;
+
         /// <summary>
         /// 呼叫基底建構子
         /// </summary>
@@ -30,10 +32,10 @@ namespace ADService.Certification
             }
 
             // 不存在 '重製密碼' 的額外權限
-            if (!permissions.IsAllow(Properties.EX_RESETPASSWORD, ActiveDirectoryRights.ExtendedRight))
+            if (!permissions.IsAllow(ACCESS_ATTRIBUTE_NAME, ActiveDirectoryRights.ExtendedRight))
             {
                 // 對外提供失敗
-                return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{Properties.EX_RESETPASSWORD} 的額外權限");
+                return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{ACCESS_ATTRIBUTE_NAME} 的額外權限");
             }
 
             // 具有修改名稱權限
@@ -52,6 +54,13 @@ namespace ADService.Certification
 
         internal override bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions)
         {
+            // 不存在 '重製密碼' 的額外權限
+            if (!permissions.IsAllow(ACCESS_ATTRIBUTE_NAME, ActiveDirectoryRights.ExtendedRight))
+            {
+                // 對外提供失敗
+                return false;
+            }
+
             // 將協議轉換成改變密碼用格式
             string setPWDProtocol = protocol?.ToObject<string>();
             // 簡易檢查: 新密碼是否為空
