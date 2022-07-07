@@ -2,6 +2,7 @@
 using ADService.Environments;
 using ADService.Media;
 using ADService.Protocol;
+using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
 
@@ -186,6 +187,33 @@ namespace ADService.Foundation
             OrganizationUnit = DistinguishedName.Substring(index + Name.Length + 1);
             // 對外返回成功
             return true;
+        }
+
+        /// <summary>
+        /// 此物件是否可被移動
+        /// </summary>
+        public bool IsEnbleMove => (systemFlag & SystemFlags.MOVE_DISABLE) == SystemFlags.NONE;
+        /// <summary>
+        /// 是否可重新命盟
+        /// </summary>
+        public bool IsEnableReName => (systemFlag & SystemFlags.RENAME_DISABLE) == SystemFlags.NONE;
+        /// <summary>
+        /// 是否可移除
+        /// </summary>
+        public bool IsEnableDelete => (systemFlag & SystemFlags.DELETE_DISABLE) == SystemFlags.NONE;
+
+        /// <summary>
+        /// 此物件的名稱
+        /// </summary>
+        internal SystemFlags systemFlag
+        {
+            get
+            {
+                // 取得內部儲存的類型
+                int storedSystemFlags = GetPropertySingle<int>(Properties.C_SYSTEMFLAGS);
+                // 強制轉型並取得系統旗標
+                return (SystemFlags)Enum.ToObject(typeof(SystemFlags), storedSystemFlags);
+            }
         }
 
         /// <summary>
