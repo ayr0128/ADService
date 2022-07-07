@@ -16,28 +16,68 @@ namespace ADService.ControlAccessRule
     /// </summary>
     internal sealed class LDAPPermissions
     {
+        #region 安全性主體
         /// <summary>
         /// 系統自訂群組 SELF 的安全性 SID
         /// </summary>
-        internal static string SID_SELF
-        {
-            get
-            {
-                SecurityIdentifier self = new SecurityIdentifier(WellKnownSidType.SelfSid, null);
-                return self.Translate(typeof(SecurityIdentifier)).ToString();
-            }
-        }
+        internal static string SID_SELF => GetSID(WellKnownSidType.SelfSid);
         /// <summary>
         /// 系統自訂群組 EVERYONE 的安全性 SID
         /// </summary>
-        internal static string SID_EVERYONE
+        internal static string SID_EVERYONE => GetSID(WellKnownSidType.WorldSid);
+        /// <summary>
+        /// 根據提供的 SID 類型取得相關的開頭
+        /// </summary>
+        /// <param name="sidType">指定 SID 類型</param>
+        /// <returns>相關字串</returns>
+        internal static string GetSID(in WellKnownSidType sidType)
         {
-            get
-            {
-                SecurityIdentifier everyone = new SecurityIdentifier(WellKnownSidType.WorldSid, null);
-                return everyone.Translate(typeof(SecurityIdentifier)).ToString();
-            }
+            // 宣告 SecurityIdentifier 實體
+            SecurityIdentifier everyone = new SecurityIdentifier(sidType, null);
+            // 翻譯成對應文字
+            return everyone.Translate(typeof(SecurityIdentifier)).ToString();
         }
+
+        /// <summary>
+        /// 視為安全性撙的 SID
+        /// </summary>
+        internal static WellKnownSidType[] SecuritySIDTypes = new WellKnownSidType[]
+        {
+            WellKnownSidType.AccountAdministratorSid,    // 帳號管理群組
+            WellKnownSidType.AccountDomainAdminsSid,     // 網域管理群組
+            WellKnownSidType.AccountEnterpriseAdminsSid, // 企業系統管理群組
+            WellKnownSidType.BuiltinAccountOperatorsSid, // 帳戶操作員
+            WellKnownSidType.BuiltinAdministratorsSid,   // 管理員
+        };
+
+        /// <summary>
+        /// 提供的隸屬群組中是否有安全性群組
+        /// </summary>
+        /// <param name="groupSIDs">隸屬群組</param>
+        /// <returns>是否包含安全性主體</returns>
+        internal static bool IsSecurityPrincipals(in IEnumerable<string> groupSIDs)
+        {
+            // 是否為安全性主體
+            bool isSecurityPrincipals = false;
+            // 遍歷群組 SID
+            foreach (string groupSID in groupSIDs)
+            {
+                // 上一次檢查後確認為安全性主體
+                if (isSecurityPrincipals)
+                {
+                    // 跳過
+                    break;
+                }
+
+                // 解析成安瘸性識別字串
+                SecurityIdentifier securityIdentifier = new SecurityIdentifier(groupSID);
+                // 疊加彆疊加是否為安全性主體
+                Array.ForEach(SecuritySIDTypes, securitySIDType => isSecurityPrincipals |= securityIdentifier.IsWellKnown(securitySIDType));
+            }
+            // 回傳結果
+            return isSecurityPrincipals;
+        }
+        #endregion
 
         /// <summary>
         /// 允許的存取權限
@@ -48,6 +88,12 @@ namespace ADService.ControlAccessRule
         /// </summary>
         private readonly UnitSchemaClass[] destinationUnitSchemaClasses;
         /// <summary>
+        /// 是否可編輯目標物的安全性
+        /// </summary>
+        internal readonly bool IsSecurityEditable;
+
+
+        /// <summary>
         /// 建構子: 取得指定影響類型的存取權限
         /// </summary>
         /// <param name="dispatcher">設定分配氣</param>
@@ -57,8 +103,6 @@ namespace ADService.ControlAccessRule
         {
             // 取得物件持有類別
             string[] classNames = destination.GetPropertyMultiple<string>(Properties.C_OBJECTCLASS);
-            // 透過物件持有類別取得所有可用屬性以及所有可用子類別
-            destinationUnitSchemaClasses = dispatcher.GetClasses(classNames);
 
             // 支援的所有安全性群組 SID
             string[] invokerSecuritySIDs = invoker is IRevealerSecuritySIDs revealerSecuritySIDs ? revealerSecuritySIDs.Values : Array.Empty<string>();
@@ -72,6 +116,11 @@ namespace ADService.ControlAccessRule
             string extendedSID = destination is IRevealerSID revealerSID && invokerSecuritySIDHashSet.Contains(revealerSID.Value) ? SID_SELF : SID_EVERYONE;
             // 推入此參數
             invokerSecuritySIDHashSet.Add(extendedSID);
+
+            // 透過物件持有類別取得所有可用屬性以及所有可用子類別
+            destinationUnitSchemaClasses = dispatcher.GetClasses(classNames);
+            // 設定是否安全性主體
+            IsSecurityEditable = IsSecurityPrincipals(invokerSecuritySIDHashSet);
 
             // 取得所有可用的存取規則: 包含不會生效的部分
             AccessRuleConverted[] accessRuleConverteds = destination.GetAccessRuleConverteds(invokerSecuritySIDHashSet);
