@@ -3,26 +3,67 @@
 namespace ADService.Environments
 {
     /// <summary>
-    /// 物件類別類型
+    /// 物件的系統旗標直
     /// </summary>
-    internal enum ClassCategory : int
+    [Flags]
+    internal enum SystemFlags : uint
     {
         /// <summary>
-        /// 預設: 部分抽象類型使用了此類別
+        /// 預設, 通常不使用
         /// </summary>
-        NONE,
+        NONE = 0x00000000,
         /// <summary>
-        /// 結構化類別
+        /// 根據下述規則進行判斷
+        /// <list type="table">
+        ///     <item> <term>當 Attribute 性持有此旗標時</term> 不可複製 </item>
+        ///     <item> <term>當 Cross-Ref 持有此旗標時</term> 物件位於 NTDS </item>
+        /// </list>
         /// </summary>
-        STRUCTURAL_CLASS,
+        REPLICATED_DISABLE_REFOBJECT_IN_NTDS = 0x00000001,
         /// <summary>
-        /// 抽象畫類別
+        /// 根據下述規則進行判斷
+        /// <list type="table">
+        ///     <item> <term>當 Attribute 性持有此旗標時</term> 可複製 </item>
+        ///     <item> <term>當 Cross-Ref 持有此旗標時</term> 物件位於 Domains </item>
+        /// </list>
         /// </summary>
-        ABSTRUCT_CLASS,
+        REPLICATED_ENABLE_REFOBJECT_IN_DOMAIN = 0x00000002,
         /// <summary>
-        /// 輔助用類別
+        /// 當 Attribute 性持有此旗標時, 此為建構完成的屬性
         /// </summary>
-        AUXILIARY_CLASS,
+        ATTRIBUTE_CONSTRUCTED = 0x00000004,
+        /// <summary>
+        /// 設置時, 視為類型 1 的物件, 這些物件將被設置於系統基礎藍本中
+        /// </summary>
+        SYSTEM_BASE_SCHEMA = 0x00000010,
+        /// <summary>
+        /// 執行刪除時, 不將物件移至戰存區進而直接移除
+        /// </summary>
+        DELETED_IMMEDIATELY = 0x02000000,
+        /// <summary>
+        /// 不可移動
+        /// </summary>
+        MOVE_DISABLE = 0x04000000,
+        /// <summary>
+        /// 不可重新命名
+        /// </summary>
+        RENAME_DISABLE = 0x08000000,
+        /// <summary>
+        /// 設定中, 必須持有此旗標物件才可以在受限制的情況下進行移動, 否則不能移動
+        /// </summary>
+        CONFIGURATION_MOVE_ENABLE_ON_RESTRICTIONS = 0x10000000,
+        /// <summary>
+        /// 設定中, 必須持有此旗標物件可以在不受受限制的情況下進行移動, 否則不能移動
+        /// </summary>
+        CONFIGURATION_MOVE_ENABLE_NOT_RESTRICTIONS = 0x20000000,
+        /// <summary>
+        /// 設定中, 必須持有此旗標物件可以進行重新命名, 否則不能
+        /// </summary>
+        CONFIGURATION_RENAME_ENABLE = 0x40000000,
+        /// <summary>
+        /// 不可刪除
+        /// </summary>
+        DELETE_DISABLE = 0x80000000,
     }
 
     /// <summary>

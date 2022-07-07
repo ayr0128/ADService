@@ -36,6 +36,12 @@ namespace ADService.Certification
                 return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{Properties.P_NAME} 的寫入權限");
             }
 
+            // 物件本市是否被系統禁止移動
+            if (!destination.IsEnableReName)
+            {
+                // 對外提供失敗
+                return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需被系統禁止重新命名");
+            }
 
             // 此權限需要根據目標物件類型取得
             switch (destination.Type)
@@ -96,6 +102,13 @@ namespace ADService.Certification
                 || name == destination.Name)
             {
                 // 返回失敗
+                return false;
+            }
+
+            // 物件本市是否被系統禁止移動
+            if (!destination.IsEnableReName)
+            {
+                // 對外提供失敗
                 return false;
             }
 

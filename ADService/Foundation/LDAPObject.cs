@@ -2,6 +2,7 @@
 using ADService.Environments;
 using ADService.Media;
 using ADService.Protocol;
+using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
 
@@ -173,40 +174,45 @@ namespace ADService.Foundation
         {
             // 預設回傳空字串: 代表本身是根目錄
             OrganizationUnit = string.Empty;
-            // 根據類型決定如何解析出父層組織單位
-            switch (Type)
+            // 是否為網域跟目錄
+            if (Type == CategoryTypes.DOMAIN_DNS)
             {
-                case CategoryTypes.CONTAINER:                 // 容器
-                case CategoryTypes.PERSON:                    // 成員
-                case CategoryTypes.ForeignSecurityPrincipals: // 內部安全群組
-                case CategoryTypes.GROUP:                     // 群組
-                    {
-                        // 重新命名用的結構
-                        string nameFormat = $"{Properties.P_CN.ToUpper()}={Name}";
-                        // 找到名稱的位置: 必定能找到
-                        int index = DistinguishedName.IndexOf(nameFormat);
-                        // 切割字串取得目標所在的組織單位
-                        OrganizationUnit = DistinguishedName.Substring(index + nameFormat.Length + 1);
-                        // 對外返回成功
-                        return true;
-                    }
-                case CategoryTypes.ORGANIZATION_UNIT:
-                    {
-                        // 重新命名用的結構
-                        string nameFormat = $"{Properties.P_OU.ToUpper()}={Name}";
-                        // 找到名稱的位置: 必定能找到
-                        int index = DistinguishedName.IndexOf(nameFormat);
-                        // 切割字串取得目標所在的組織單位
-                        OrganizationUnit = DistinguishedName.Substring(index + nameFormat.Length + 1);
-                        // 對外返回成功
-                        return true;
-                    }
-                case CategoryTypes.DOMAIN_DNS:
-                default:
-                    {
-                        // 回傳: 沒有父層組織單位
-                        return false;
-                    }
+                // 網域跟目錄不持有父曾
+                return false;
+            }
+
+            // 找到名稱的位置: 必定能找到
+            int index = DistinguishedName.IndexOf(Name);
+            // 切割字串取得目標所在的組織單位
+            OrganizationUnit = DistinguishedName.Substring(index + Name.Length + 1);
+            // 對外返回成功
+            return true;
+        }
+
+        /// <summary>
+        /// 此物件是否可被移動
+        /// </summary>
+        public bool IsEnbleMove => (systemFlag & SystemFlags.MOVE_DISABLE) == SystemFlags.NONE;
+        /// <summary>
+        /// 是否可重新命盟
+        /// </summary>
+        public bool IsEnableReName => (systemFlag & SystemFlags.RENAME_DISABLE) == SystemFlags.NONE;
+        /// <summary>
+        /// 是否可移除
+        /// </summary>
+        public bool IsEnableDelete => (systemFlag & SystemFlags.DELETE_DISABLE) == SystemFlags.NONE;
+
+        /// <summary>
+        /// 此物件的名稱
+        /// </summary>
+        internal SystemFlags systemFlag
+        {
+            get
+            {
+                // 取得內部儲存的類型
+                int storedSystemFlags = GetPropertySingle<int>(Properties.C_SYSTEMFLAGS);
+                // 強制轉型並取得系統旗標
+                return (SystemFlags)Enum.ToObject(typeof(SystemFlags), storedSystemFlags);
             }
         }
 

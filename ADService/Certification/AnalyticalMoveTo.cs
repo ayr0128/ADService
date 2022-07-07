@@ -47,6 +47,13 @@ namespace ADService.Certification
                 return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有目標:{categoryValue} 的刪除權限且父層:{organizationUnitDN} 需具有子物件刪除權限");
             }
 
+            // 物件本市是否被系統禁止移動
+            if (!destination.IsEnbleMove)
+            {
+                // 對外提供失敗
+                return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需被系統禁止移動");
+            }
+
             // 宣告重新命名分析氣
             AnalyticalReName analyticalReName = new AnalyticalReName();
             // 檢查是否可以喚醒重新命名: 只需要查看是否成功
@@ -95,6 +102,13 @@ namespace ADService.Certification
             if (string.IsNullOrEmpty(distinguishedName))
             {
                 // 對外提供失敗與空資料
+                return false;
+            }
+
+            // 物件本市是否被系統禁止移動
+            if (!destination.IsEnbleMove)
+            {
+                // 對外提供失敗
                 return false;
             }
 

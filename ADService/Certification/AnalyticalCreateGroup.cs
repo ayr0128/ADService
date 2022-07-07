@@ -20,6 +20,11 @@ namespace ADService.Certification
         /// </summary>
         private const CategoryTypes categoryType = CategoryTypes.GROUP;
         /// <summary>
+        /// 用來檢查的必要渠縣
+        /// </summary>
+        private const ActiveDirectoryRights activeDirectoryRights = ActiveDirectoryRights.CreateChild;
+
+        /// <summary>
         /// 呼叫基底建構子
         /// </summary>
         internal AnalyticalCreateGroup() : base(Methods.M_CREATEGROUP, false) { }
@@ -35,11 +40,11 @@ namespace ADService.Certification
             }
 
             // 取得是否支援創建目標物件
-            bool isAllow = permissions.IsAllow(valuePerson, ActiveDirectoryRights.CreateChild);
+            bool isAllow = permissions.IsAllow(valuePerson, activeDirectoryRights);
             // 檢查是否具備權限
             if (!isAllow)
             {
-                return (null, $"因物件類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 不具有:{ActiveDirectoryRights.CreateChild} 權限因而無法提供創建功能");
+                return (null, $"因物件類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 不具有:{activeDirectoryRights} 權限因而無法提供創建功能");
             }
 
             /* 一般需求參數限制如下所述:
@@ -78,7 +83,7 @@ namespace ADService.Certification
             }
 
             // 取得是否支援創建目標物件
-            bool isAllow = permissions.IsAllow(valueGroup, ActiveDirectoryRights.CreateChild);
+            bool isAllow = permissions.IsAllow(valueGroup, activeDirectoryRights);
             // 檢查是否具備權限
             if (!isAllow)
             {

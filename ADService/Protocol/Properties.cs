@@ -21,6 +21,10 @@
         /// 密碼
         /// </summary>
         public const string C_UNICODEPWD = "unicodePwd";
+        /// <summary>
+        /// 系統旗標
+        /// </summary>
+        public const string C_SYSTEMFLAGS = "systemFlags";
 
         /// <summary>
         /// 物件類型

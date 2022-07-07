@@ -22,6 +22,11 @@ namespace ADService.Certification
         /// </summary>
         private const CategoryTypes categoryType = CategoryTypes.PERSON;
         /// <summary>
+        /// 用來檢查的必要渠縣
+        /// </summary>
+        private const ActiveDirectoryRights activeDirectoryRights = ActiveDirectoryRights.CreateChild;
+
+        /// <summary>
         /// 可自行填入的資料
         /// </summary>
         private readonly static string[] ENABLE_ATTRIBUTES = new string[]
@@ -48,11 +53,11 @@ namespace ADService.Certification
             }
 
             // 取得是否支援創建目標物件
-            bool isAllow = permissions.IsAllow(valuePerson, ActiveDirectoryRights.CreateChild);
+            bool isAllow = permissions.IsAllow(valuePerson, activeDirectoryRights);
             // 檢查是否具備權限
             if (!isAllow)
             {
-                return (null, $"因物件類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 不具有:{ActiveDirectoryRights.CreateChild} 權限因而無法提供創建功能");
+                return (null, $"因物件類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 不具有:{activeDirectoryRights} 權限因而無法提供創建功能");
             }
 
             // 預期項目: 必定是字串
@@ -101,7 +106,7 @@ namespace ADService.Certification
             }
 
             // 取得是否支援創建目標物件
-            bool isAllow = permissions.IsAllow(valuePerson, ActiveDirectoryRights.CreateChild);
+            bool isAllow = permissions.IsAllow(valuePerson, activeDirectoryRights);
             // 檢查是否具備權限
             if (!isAllow)
             {

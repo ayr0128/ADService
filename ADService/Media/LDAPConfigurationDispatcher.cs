@@ -1,9 +1,6 @@
-﻿using ADService.Environments;
-using ADService.Protocol;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
-using System.Linq;
 using System.Runtime.InteropServices;
 
 namespace ADService.Media
@@ -58,21 +55,14 @@ namespace ADService.Media
         /// </summary>
         /// <param name="ldapDisplayNames">類別物件的展示名稱</param>
         /// <returns>類別物件藍本</returns>
-        internal UnitSchemaClass[] GetClasses(params string[] ldapDisplayNames)
-        {
-            // 透過物件持有類別取得所有可用屬性以及所有可用子類別
-            UnitSchemaClass[] originUnitSchemaClasses = Configuration.GetOriginClasses(this, ldapDisplayNames);
-            // 取得所有指定類別的可用輔助類別
-            UnitSchemaClass[] drivedUnitSchemaClasses = Configuration.GetDrivedClasses(this, originUnitSchemaClasses);
-            // 整合上述兩者
-            List<UnitSchemaClass> unitSchemaClasses = new List<UnitSchemaClass>(originUnitSchemaClasses.Length + drivedUnitSchemaClasses.Length);
-            // 推入原始類別藍本
-            unitSchemaClasses.AddRange(originUnitSchemaClasses);
-            // 推入驅動類別藍本
-            unitSchemaClasses.AddRange(drivedUnitSchemaClasses);
-            // 對外提供資料
-            return unitSchemaClasses.ToArray();
-        }
+        internal UnitSchemaClass[] GetClasses(params string[] ldapDisplayNames) => Configuration.GetnClasses(this, ldapDisplayNames);
+
+        /// <summary>
+        /// 取得指定展示名稱的物件類別藍本
+        /// </summary>
+        /// <param name="unitSchemaClasses">取得指定類別持有的輔助物件</param>
+        /// <returns>類別物件藍本</returns>
+        internal UnitSchemaClass[] GetDrivedClasses(params UnitSchemaClass[] unitSchemaClasses) => Configuration.GetDrivedClasses(this, unitSchemaClasses);
 
         /// <summary>
         /// 取得以類別藍本物件為父層的類別
