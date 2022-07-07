@@ -1,5 +1,4 @@
-﻿using ADService.Environments;
-using ADService.Protocol;
+﻿using ADService.Protocol;
 using System;
 using System.Collections.Generic;
 using System.DirectoryServices;

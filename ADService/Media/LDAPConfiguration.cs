@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.DirectoryServices;
 using System.Linq;
 using System.Security.Principal;
-using System.Text;
 
 namespace ADService.Media
 {
@@ -831,7 +830,7 @@ namespace ADService.Media
         }
 
         /// <summary>
-        /// 透過展示名稱取額指定額外全縣
+        /// 透過展示名稱取額指定額外全縣, 運作邏輯如此 <see href="https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-adts/7fe0cbc5-33e1-4ce1-9c7c-f7df9933c90a">連結所述</see>
         /// </summary>
         /// <param name="dispatcher">入口物件製作器</param>
         /// <param name="unitSchemaClasses">可作為父層藍本物件的類型</param>
@@ -875,8 +874,8 @@ namespace ADService.Media
                         continue;
                     }
 
-                    // 是否為結構化類別
-                    if (!unitSchemaClass.IsClassCategory(ClassCategory.STRUCTURAL_CLASS))
+                    // 是否為符合規則的結構類別
+                    if (unitSchemaClass.IsAbstruct || unitSchemaClass.IsAuxiliary)
                     {
                         // 否則跳過
                         continue;

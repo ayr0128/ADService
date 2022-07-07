@@ -182,6 +182,8 @@ namespace ADService.ControlAccessRule
             string[] allowedAttributes = UnitSchemaClass.UniqueAttributeNames(attributesUnitSchemaClass);
             // 由於經過排序動作: 自身持有類別的最後一項必定是驅動類別
             UnitSchemaClass destinationUnitSchemaClass = destinationUnitSchemaClasses.Last();
+            // 透過物件類型取得可用子物件類型
+            UnitSchemaClass[] childrenUnitSchemaClasses = dispatcher.GetChildrenClasess(destinationUnitSchemaClasses);
             // 使用查詢 SID 陣列取得所有存取權限 (包含沒有生效的)
             foreach (AccessRuleConverted accessRuleConverted in accessRuleConverteds)
             {
@@ -198,7 +200,7 @@ namespace ADService.ControlAccessRule
                 foreach (UnitControlAccess unitControlAccess in dispatcher.GeControlAccess(destinationUnitSchemaClasses))
                 {
                     // 惡技能填入的瞿縣
-                    ActiveDirectoryRights activeDirectoryRightsControlAccesses = accessRuleConverted.AccessRuleRights & unitControlAccess.ValidAccesses;
+                    ActiveDirectoryRights activeDirectoryRightsControlAccesses = accessRuleConverted.AccessRuleRights & unitControlAccess.AccessRuleControl;
                     // 不包含任意一組時
                     if (activeDirectoryRightsControlAccesses == 0)
                     {
@@ -248,7 +250,7 @@ namespace ADService.ControlAccessRule
                 if (activeDirectoryRightsClassChild != 0)
                 {
                     // 所有可支援的屬性都會被設置成對應類別
-                    foreach (UnitSchemaClass unitSchemaClass in dispatcher.GetChildrenClasess(destinationUnitSchemaClasses))
+                    foreach (UnitSchemaClass unitSchemaClass in childrenUnitSchemaClasses)
                     {
                         // 設置自身的權限
                         controlAccessRights.Set(unitSchemaClass.Name, accessRuleConverted.WasAllow, activeDirectoryRightsClassChild);

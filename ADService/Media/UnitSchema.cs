@@ -1,4 +1,5 @@
-﻿using ADService.Protocol;
+﻿using ADService.Environments;
+using ADService.Protocol;
 using System;
 using System.DirectoryServices;
 using System.Text;
@@ -93,6 +94,11 @@ namespace ADService.Media
         internal readonly string SchemaGUID;
 
         /// <summary>
+        /// 系統旗標
+        /// </summary>
+        private readonly SystemFlags systemFlags;
+
+        /// <summary>
         /// 啟用時間
         /// </summary>
         private readonly DateTime EnableTime = DateTime.UtcNow;
@@ -110,9 +116,13 @@ namespace ADService.Media
         /// <param name="properties">入口物件持有的屬性</param>
         internal UnitSchema(in PropertyCollection properties)
         {
-            // 將名稱轉換成小寫
             Name = LDAPConfiguration.ParseSingleValue<string>(SCHEMA_PROPERTY, properties);
             SchemaGUID = LDAPConfiguration.ParseGUID(SCHEMA_GUID, properties);
+
+            // 取得內部儲存的類型
+            int storedSystemFlags = LDAPConfiguration.ParseSingleValue<int>(Properties.C_SYSTEMFLAGS, properties);
+            // 強制轉型並取得系統旗標
+            systemFlags = (SystemFlags)Enum.ToObject(typeof(SystemFlags), storedSystemFlags);
         }
     }
 }

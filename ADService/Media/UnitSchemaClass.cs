@@ -1,5 +1,4 @@
-﻿using ADService.Environments;
-using ADService.Protocol;
+﻿using ADService.Protocol;
 using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
@@ -184,9 +183,9 @@ namespace ADService.Media
                 // 推入父層類別
                 drivedClassNames.Add(unitSchemaClass.SubClassOf);
                 // 推入輔助類別
-                Array.ForEach(unitSchemaClass.AuxiliaryClasses, className => drivedClassNames.Add(className));
+                Array.ForEach(unitSchemaClass.auxiliaryClasses, className => drivedClassNames.Add(className));
                 // 推入系統輔助類別
-                Array.ForEach(unitSchemaClass.SystemAuxiliaryClasses, className => drivedClassNames.Add(className));
+                Array.ForEach(unitSchemaClass.systemAuxiliaryClasses, className => drivedClassNames.Add(className));
             }
             // 遍歷要求的物件類型移除自身
             Array.ForEach(unitSchemaClasses, unitSchemaClass => drivedClassNames.Remove(unitSchemaClass.Name));
@@ -206,13 +205,13 @@ namespace ADService.Media
             foreach (UnitSchemaClass unitSchemaClass in unitSchemaClasses)
             {
                 // 推入必定存在的屬性名稱
-                Array.ForEach(unitSchemaClass.MustContain, attributeName => uniqueAttributeNames.Add(attributeName));
+                Array.ForEach(unitSchemaClass.mustContain, attributeName => uniqueAttributeNames.Add(attributeName));
                 // 推入系土要求必定存在的屬性名稱
-                Array.ForEach(unitSchemaClass.SystemMustContain, attributeName => uniqueAttributeNames.Add(attributeName));
+                Array.ForEach(unitSchemaClass.systemMustContain, attributeName => uniqueAttributeNames.Add(attributeName));
                 // 推入必可能在的屬性名稱
-                Array.ForEach(unitSchemaClass.MayContain, attributeName => uniqueAttributeNames.Add(attributeName));
+                Array.ForEach(unitSchemaClass.mayContain, attributeName => uniqueAttributeNames.Add(attributeName));
                 // 推入系土要求可能存在的屬性名稱
-                Array.ForEach(unitSchemaClass.SystemMayContain, attributeName => uniqueAttributeNames.Add(attributeName));
+                Array.ForEach(unitSchemaClass.systemMayContain, attributeName => uniqueAttributeNames.Add(attributeName));
             }
 
             // 宣告容器
@@ -286,51 +285,51 @@ namespace ADService.Media
         /// 藍本物件的遊河種類別衍伸
         /// </summary>
         internal readonly string SubClassOf;
-
-        /// <summary>
-        /// 藍本物件的類型
-        /// </summary>
-        private readonly ClassCategory ClassType;
-
         /// <summary>
         /// 是否為系統使用
         /// </summary>
         internal bool SystemOnly { get; private set; }
 
+
+        /// <summary>
+        /// 藍本物件的類型
+        /// </summary>
+        private readonly int objecyClassCategory;
+
         /// <summary>
         /// 輔助物件列表
         /// </summary>
-        private readonly string[] AuxiliaryClasses;
+        private readonly string[] auxiliaryClasses;
         /// <summary>
         /// 輔助物件列表: 僅系統可見
         /// </summary>
-        private readonly string[] SystemAuxiliaryClasses;
+        private readonly string[] systemAuxiliaryClasses;
 
         /// <summary>
         /// 必定持有的屬性
         /// </summary>
-        private readonly string[] MustContain;
+        private readonly string[] mustContain;
         /// <summary>
         /// 系統要求必定持有的屬性
         /// </summary>
-        private readonly string[] SystemMustContain;
+        private readonly string[] systemMustContain;
         /// <summary>
         /// 可能持有的屬性
         /// </summary>
-        private readonly string[] MayContain;
+        private readonly string[] mayContain;
         /// <summary>
         /// 系統要求可能持有的屬性
         /// </summary>
-        private readonly string[] SystemMayContain;
+        private readonly string[] systemMayContain;
 
         /// <summary>
         /// 可以做為上層物件的類型
         /// </summary>
-        private readonly HashSet<string> PossSuperiors;
+        private readonly HashSet<string> possSuperiors;
         /// <summary>
         /// 系統要求可以做為上層物件的類型
         /// </summary>
-        private readonly HashSet<string> SystemPossSuperiors;
+        private readonly HashSet<string> systemPossSuperiors;
 
         /// <summary>
         /// 實作藍本結構
@@ -338,20 +337,21 @@ namespace ADService.Media
         /// <param name="properties">入口物件持有的屬性</param>
         internal UnitSchemaClass(in PropertyCollection properties) : base(properties)
         {
-            ClassType = LDAPConfiguration.ParseSingleValue<ClassCategory>(SCHEMA_CLASS_PROPERTY, properties);
+            SubClassOf = LDAPConfiguration.ParseSingleValue<string>(SCHEMA_CLASS_SUBCLASSOF, properties);
             SystemOnly = LDAPConfiguration.ParseSingleValue<bool>(SCHEMA_CLASS_SYSTEMONLY, properties);
 
-            SubClassOf = LDAPConfiguration.ParseSingleValue<string>(SCHEMA_CLASS_SUBCLASSOF, properties);
-            AuxiliaryClasses = LDAPConfiguration.ParseMutipleValue<string>(SCHEMA_CLASS_AUXILIARYCLASS, properties);
-            SystemAuxiliaryClasses = LDAPConfiguration.ParseMutipleValue<string>(SCHEMA_CLASS_SYSTEMAUXILIARYCLASS, properties);
+            objecyClassCategory = LDAPConfiguration.ParseSingleValue<int>(SCHEMA_CLASS_PROPERTY, properties);
 
-            MustContain = LDAPConfiguration.ParseMutipleValue<string>(SCHEMA_CLASS_MUSTCONTAIN, properties);
-            SystemMustContain = LDAPConfiguration.ParseMutipleValue<string>(SCHEMA_CLASS_SYSTEMMUSTCONTAIN, properties);
-            MayContain = LDAPConfiguration.ParseMutipleValue<string>(SCHEMA_CLASS_MAYCONTAIN, properties);
-            SystemMayContain = LDAPConfiguration.ParseMutipleValue<string>(SCHEMA_CLASS_SYSTEMMAYCONTAIN, properties);
+            auxiliaryClasses = LDAPConfiguration.ParseMutipleValue<string>(SCHEMA_CLASS_AUXILIARYCLASS, properties);
+            systemAuxiliaryClasses = LDAPConfiguration.ParseMutipleValue<string>(SCHEMA_CLASS_SYSTEMAUXILIARYCLASS, properties);
 
-            PossSuperiors = new HashSet<string>(LDAPConfiguration.ParseMutipleValue<string>(SCHEMA_CLASS_POSSSUPERIORS, properties));
-            SystemPossSuperiors = new HashSet<string>(LDAPConfiguration.ParseMutipleValue<string>(SCHEMA_CLASS_SYSTEMPOSSSUPERIORS, properties));
+            mustContain = LDAPConfiguration.ParseMutipleValue<string>(SCHEMA_CLASS_MUSTCONTAIN, properties);
+            systemMustContain = LDAPConfiguration.ParseMutipleValue<string>(SCHEMA_CLASS_SYSTEMMUSTCONTAIN, properties);
+            mayContain = LDAPConfiguration.ParseMutipleValue<string>(SCHEMA_CLASS_MAYCONTAIN, properties);
+            systemMayContain = LDAPConfiguration.ParseMutipleValue<string>(SCHEMA_CLASS_SYSTEMMAYCONTAIN, properties);
+
+            possSuperiors = new HashSet<string>(LDAPConfiguration.ParseMutipleValue<string>(SCHEMA_CLASS_POSSSUPERIORS, properties));
+            systemPossSuperiors = new HashSet<string>(LDAPConfiguration.ParseMutipleValue<string>(SCHEMA_CLASS_SYSTEMPOSSSUPERIORS, properties));
         }
 
         /// <summary>
@@ -359,12 +359,18 @@ namespace ADService.Media
         /// </summary>
         /// <param name="unitSchemaClasNameLower">指定物件蕾型藍本的名稱</param>
         /// <returns>是否可作為指定藍本物件的內容物</returns>
-        internal bool IsChildrenWith(in string unitSchemaClasNameLower) => PossSuperiors.Contains(unitSchemaClasNameLower) || SystemPossSuperiors.Contains(unitSchemaClasNameLower);
+        internal bool IsChildrenWith(in string unitSchemaClasNameLower) => possSuperiors.Contains(unitSchemaClasNameLower) || systemPossSuperiors.Contains(unitSchemaClasNameLower);
         /// <summary>
-        /// 是否為指定的類別物件類型
+        /// 是否為實作類別
         /// </summary>
-        /// <param name="classCategory">指定類型物件</param>
-        /// <returns>是否為指定類型物件</returns>
-        internal bool IsClassCategory(in ClassCategory classCategory) => ClassType == classCategory;
+        internal bool IsStructural => objecyClassCategory == 1;
+        /// <summary>
+        /// 是否為抽象類別
+        /// </summary>
+        internal bool IsAbstruct => objecyClassCategory == 2;
+        /// <summary>
+        /// 是否為輔助類別
+        /// </summary>
+        internal bool IsAuxiliary => objecyClassCategory == 3;
     }
 }
