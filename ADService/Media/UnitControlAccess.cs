@@ -133,7 +133,6 @@ namespace ADService.Media
         {
             Name = LDAPConfiguration.ParseSingleValue<string>(ATTRIBUTE_CONTROLACCESS_PROPERTY, properties);
             GUID = LDAPConfiguration.ParseSingleValue<string>(ATTRIBUTE_CONTROLACCESS_GUID, properties);
-            ValidAccesses = LDAPConfiguration.ParseSingleValue<ActiveDirectoryRights>(ATTRIBUTE_CONTROLACCESS_VALIDACCESSES, properties);
 
             // 取得內部儲存的類型
             int storedActiveDirectoryRights = LDAPConfiguration.ParseSingleValue<int>(ATTRIBUTE_CONTROLACCESS_VALIDACCESSES, properties);

@@ -110,9 +110,6 @@ namespace ADService.Certification
                     return searcher.FindOne() == null;
                 }
             }
-
-            // 否則返回成功
-            return true;
         }
 
         internal override void Invoke(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions)
