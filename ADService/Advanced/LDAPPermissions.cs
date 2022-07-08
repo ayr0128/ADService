@@ -16,7 +16,7 @@ namespace ADService.Advanced
         /// <summary>
         /// 允許的存取權限
         /// </summary>
-        private readonly CombineAccessRights combineAccessRights = new CombineAccessRights();
+        private readonly CombinePermissions combinePermissions = new CombinePermissions();
         /// <summary>
         /// 紀錄目標物件
         /// </summary>
@@ -93,7 +93,7 @@ namespace ADService.Advanced
                     foreach (UnitSchemaAttribute unitSchemaAttribute in unitSchemaAttributes)
                     {
                         // 設置關聯屬性
-                        combineAccessRights.Set(unitSchemaAttribute.Name, accessRuleConverted.WasAllow, accessRuleConverted.AccessRuleRights);
+                        combinePermissions.Set(unitSchemaAttribute.Name, accessRuleConverted.WasAllow, accessRuleConverted.AccessRuleRights);
                     }
 
                     // 是否為拓展權限
@@ -102,7 +102,7 @@ namespace ADService.Advanced
                     if (unitSchemaAttributes.Length == 0 && isExtendedRights)
                     {
                         // 設置自身的權限
-                        combineAccessRights.Set(unitControlAccess.Name, accessRuleConverted.WasAllow, accessRuleConverted.AccessRuleRights);
+                        combinePermissions.Set(unitControlAccess.Name, accessRuleConverted.WasAllow, accessRuleConverted.AccessRuleRights);
                     }
                 }
                 else
@@ -117,7 +117,7 @@ namespace ADService.Advanced
                     }   
                     
                     // 設置自身的權限
-                    combineAccessRights.Set(unitSchema.Name, accessRuleConverted.WasAllow, accessRuleConverted.AccessRuleRights);
+                    combinePermissions.Set(unitSchema.Name, accessRuleConverted.WasAllow, accessRuleConverted.AccessRuleRights);
                 }
             }
         }
@@ -182,7 +182,7 @@ namespace ADService.Advanced
                     foreach (UnitSchemaAttribute unitSchemaAttribute in unitSchemaAttributes)
                     {
                         // 設置關聯屬性
-                        combineAccessRights.Set(unitSchemaAttribute.Name, accessRuleConverted.WasAllow, activeDirectoryRightsControlAccesses);
+                        combinePermissions.Set(unitSchemaAttribute.Name, accessRuleConverted.WasAllow, activeDirectoryRightsControlAccesses);
                     }
 
                     // 是否為拓展權限
@@ -191,7 +191,7 @@ namespace ADService.Advanced
                     if (unitSchemaAttributes.Length == 0 && isExtendedRights)
                     {
                         // 設置自身的權限
-                        combineAccessRights.Set(unitControlAccess.Name, accessRuleConverted.WasAllow, activeDirectoryRightsControlAccesses);
+                        combinePermissions.Set(unitControlAccess.Name, accessRuleConverted.WasAllow, activeDirectoryRightsControlAccesses);
                     }
                 }
 
@@ -211,7 +211,7 @@ namespace ADService.Advanced
                         }
 
                         // 設置自身的權限
-                        combineAccessRights.Set(unitSchemaAttribute.Name, accessRuleConverted.WasAllow, activeDirectoryRightsAttirbutes);
+                        combinePermissions.Set(unitSchemaAttribute.Name, accessRuleConverted.WasAllow, activeDirectoryRightsAttirbutes);
                     }
                 }
 
@@ -228,7 +228,7 @@ namespace ADService.Advanced
                     foreach (UnitSchemaClass unitSchemaClass in childrenUnitSchemaClasses)
                     {
                         // 設置自身的權限
-                        combineAccessRights.Set(unitSchemaClass.Name, accessRuleConverted.WasAllow, activeDirectoryRightsClassChild);
+                        combinePermissions.Set(unitSchemaClass.Name, accessRuleConverted.WasAllow, activeDirectoryRightsClassChild);
                     }
                 }
 
@@ -246,7 +246,7 @@ namespace ADService.Advanced
                 if (activeDirectoryRightsClassSelf != 0)
                 {
                     // 使用驅動類別的名稱註冊作為權限持有目標
-                    combineAccessRights.Set(destinationUnitSchemaClass.Name, accessRuleConverted.WasAllow, activeDirectoryRightsClassSelf);
+                    combinePermissions.Set(destinationUnitSchemaClass.Name, accessRuleConverted.WasAllow, activeDirectoryRightsClassSelf);
                 }
             }
         }
@@ -258,6 +258,6 @@ namespace ADService.Advanced
         /// <param name="name">目標群取權限</param>
         /// <param name="activeDirectoryRights">任意一個權限存在就是允許</param>
         /// <returns>是否可用</returns>
-        internal bool IsAllow(in string name, in ActiveDirectoryRights activeDirectoryRights) => (combineAccessRights.Get(name) & activeDirectoryRights) != 0;
+        internal bool IsAllow(in string name, in ActiveDirectoryRights activeDirectoryRights) => (combinePermissions.Get(name) & activeDirectoryRights) != 0;
     }
 }

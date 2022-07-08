@@ -220,6 +220,8 @@ namespace ADService.Certification
             return new LDAPPermissions(ref Dispatcher, destination, memberOfSIDs);
         }
 
+        
+
         /// <summary>
         /// 紀錄發生影響的相關入口物件
         /// </summary>

@@ -6,7 +6,7 @@ namespace ADService.Advanced
     /// <summary>
     /// 紀錄的存取規則
     /// </summary>
-    internal class CombineAccessRights
+    internal class CombinePermissions
     {
         /// <summary>
         /// 內部存取用的對應規則: 允許
