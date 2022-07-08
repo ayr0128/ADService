@@ -366,7 +366,7 @@ namespace ADService.Certification
             // 紀錄處理目標的區分名稱
             string distinguishedNameDestination = permissions.Destination.DistinguishedName;
             // 紀錄喚起者的區分名稱
-            string distinguishedNameInvoker = permissions.Invoker.DistinguishedName;
+            string distinguishedNameInvoker = certification.Invoker.DistinguishedName;
 
             // 應存在修改目標
             if (certification.GetEntry(distinguishedNameDestination) == null)
@@ -614,8 +614,7 @@ namespace ADService.Certification
                                 LDAPObject entryObject = LDAPObject.ToObject(set.Entry, certification.Dispatcher);
 
                                 // 整合各 SID 權向狀態
-                                LDAPPermissions permissionsProtocol = new LDAPPermissions(ref certification.Dispatcher, permissions.Invoker, entryObject);
-
+                                LDAPPermissions permissionsProtocol = certification.CreatePermissions(entryObject);
                                 // 是否可異動
                                 bool isProcessedEditable = permissionsProtocol.IsAllow(Properties.P_MEMBER, ActiveDirectoryRights.WriteProperty);
                                 // 異動能否包含自身

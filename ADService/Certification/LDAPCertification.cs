@@ -83,12 +83,12 @@ namespace ADService.Certification
             try
             {
                 // 推入並設置入口物件
-                CertificationProperties certification = new CertificationProperties(Dispatcher, Destination.DistinguishedName);
+                CertificationProperties certification = new CertificationProperties(Dispatcher, Invoker);
                 // 轉換成釋放用介面
                 iRelease = certification;
-                // 整合各 SID 權向狀態
-                LDAPPermissions permissions = new LDAPPermissions(ref Dispatcher, Invoker, Destination);
 
+                // 整合各 SID 權向狀態
+                LDAPPermissions permissions = certification.CreatePermissions(Destination);
                 // 最多回傳的長度是所有的項目都支援
                 Dictionary<string, InvokeCondition> dictionaryAttributeNameWithProtocol = new Dictionary<string, InvokeCondition>(dictionaryMethodWithAnalytical.Count);
                 // 遍歷權限並檢查是否可以喚醒
@@ -165,11 +165,12 @@ namespace ADService.Certification
                 }
 
                 // 推入並設置入口物件
-                CertificationProperties certification = new CertificationProperties(Dispatcher, Destination.DistinguishedName);
+                CertificationProperties certification = new CertificationProperties(Dispatcher, Invoker);
                 // 轉換成釋放用介面
                 iRelease = certification;
+
                 // 整合各 SID 權向狀態
-                LDAPPermissions permissions = new LDAPPermissions(ref Dispatcher, Invoker, Destination);
+                LDAPPermissions permissions = certification.CreatePermissions(Destination);
                 // 取得結果
                 (InvokeCondition condition, _) = analytical.Invokable(ref certification, permissions);
                 // 無法啟動代表無法呼叫
@@ -222,12 +223,12 @@ namespace ADService.Certification
             try
             {
                 // 推入並設置入口物件
-                CertificationProperties certification = new CertificationProperties(Dispatcher, Destination.DistinguishedName);
+                CertificationProperties certification = new CertificationProperties(Dispatcher, Invoker);
                 // 轉換成釋放用介面
                 iRelease = certification;
-                // 整合各 SID 權向狀態
-                LDAPPermissions permissions = new LDAPPermissions(ref Dispatcher, Invoker, Destination);
 
+                // 整合各 SID 權向狀態
+                LDAPPermissions permissions = certification.CreatePermissions(Destination);
                 // 遍歷權限驗證協議是否可用
                 return analytical.Authenicate(ref certification, protocol, permissions);
             }
@@ -271,12 +272,12 @@ namespace ADService.Certification
             try
             {
                 // 推入並設置入口物件
-                CertificationProperties certification = new CertificationProperties(Dispatcher, Destination.DistinguishedName);
+                CertificationProperties certification = new CertificationProperties(Dispatcher, Invoker);
                 // 轉換成釋放用介面
                 iRelease = certification;
-                // 整合各 SID 權向狀態
-                LDAPPermissions permissions = new LDAPPermissions(ref Dispatcher, Invoker, Destination);
 
+                // 整合各 SID 權向狀態
+                LDAPPermissions permissions = certification.CreatePermissions(Destination);
                 // 驗證是否可用
                 bool authenicateSuccess = analytical.Authenicate(ref certification, protocol, permissions);
                 // 檢查驗證是否成功

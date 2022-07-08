@@ -181,7 +181,7 @@ namespace ADService.Certification
                     }
 
                     // 整合各 SID 權向狀態
-                    LDAPPermissions permissionsProtocol = new LDAPPermissions(ref certification.Dispatcher, permissions.Invoker, entryObject);
+                    LDAPPermissions permissionsProtocol = certification.CreatePermissions(entryObject);
                     /* 下述認依條件成立, 驗證失敗
                          - 不具備 '子物件類型' 的創建權限
                     */
