@@ -29,7 +29,7 @@ namespace ADService.Certification
         /// </summary>
         internal AnalyticalCreateGroup() : base(Methods.M_CREATEGROUP, false) { }
 
-        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination, LDAPPermissions permissions)
+        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, LDAPPermissions permissions)
         {
             // 取得成員字串
             Dictionary<CategoryTypes, string> dictionaryCategoryTypeWithValue = LDAPCategory.GetAccessRulesByTypes(categoryType);
@@ -44,7 +44,7 @@ namespace ADService.Certification
             // 檢查是否具備權限
             if (!isAllow)
             {
-                return (null, $"因物件類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 不具有:{activeDirectoryRights} 權限因而無法提供創建功能");
+                return (null, $"因物件類型:{permissions.Destination.Type} 的目標物件:{permissions.Destination.DistinguishedName} 不具有:{activeDirectoryRights} 權限因而無法提供創建功能");
             }
 
             /* 一般需求參數限制如下所述:
@@ -63,7 +63,7 @@ namespace ADService.Certification
             return (new InvokeCondition(commonFlags, dictionaryProtocolWithDetail), string.Empty);
         }
 
-        internal override bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions)
+        internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, LDAPPermissions permissions)
         {
             // 解析成創建成員所需參數
             CreateGroup createGroup = protocol?.ToObject<CreateGroup>();
@@ -112,7 +112,7 @@ namespace ADService.Certification
             }
         }
 
-        internal override void Invoke(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions)
+        internal override void Invoke(ref CertificationProperties certification, in JToken protocol, LDAPPermissions permissions)
         {
             // 解析成創建成員所需參數
             CreateGroup createGroup = protocol?.ToObject<CreateGroup>();
@@ -133,7 +133,7 @@ namespace ADService.Certification
             }
 
             // 取得是否具有目標物件
-            RequiredCommitSet setProcessed = certification.GetEntry(destination.DistinguishedName);
+            RequiredCommitSet setProcessed = certification.GetEntry(permissions.Destination.DistinguishedName);
             // 若入口物件不存在
             if (setProcessed == null)
             {

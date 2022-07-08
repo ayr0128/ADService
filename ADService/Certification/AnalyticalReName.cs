@@ -20,31 +20,31 @@ namespace ADService.Certification
         /// </summary>
         internal AnalyticalReName() : base(Methods.M_RENAME) { }
 
-        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination, LDAPPermissions permissions)
+        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, LDAPPermissions permissions)
         {
             // 根目錄不應重新命名
-            if (!destination.GetOrganizationUnit(out _))
+            if (!permissions.Destination.GetOrganizationUnit(out _))
             {
                 // 對外提供失敗
-                return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 是根目錄不應嘗試進行重新命名");
+                return (null, $"類型:{permissions.Destination.Type} 的目標物件:{permissions.Destination.DistinguishedName} 是根目錄不應嘗試進行重新命名");
             }
 
             // 不存在 '名稱' 的寫入權限
             if (!permissions.IsAllow(Properties.P_NAME, ActiveDirectoryRights.WriteProperty))
             {
                 // 對外提供失敗
-                return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{Properties.P_NAME} 的寫入權限");
+                return (null, $"類型:{permissions.Destination.Type} 的目標物件:{permissions.Destination.DistinguishedName} 需具有存取規則:{Properties.P_NAME} 的寫入權限");
             }
 
             // 物件本市是否被系統禁止移動
-            if (!destination.IsEnableReName)
+            if (!permissions.Destination.IsEnableReName)
             {
                 // 對外提供失敗
-                return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需被系統禁止重新命名");
+                return (null, $"類型:{permissions.Destination.Type} 的目標物件:{permissions.Destination.DistinguishedName} 需被系統禁止重新命名");
             }
 
             // 此權限需要根據目標物件類型取得
-            switch (destination.Type)
+            switch (permissions.Destination.Type)
             {
                 // 群組
                 case CategoryTypes.GROUP:
@@ -57,7 +57,7 @@ namespace ADService.Certification
                         if (!permissions.IsAllow(attributeName, ActiveDirectoryRights.WriteProperty))
                         {
                             // 對外提供失敗
-                            return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{attributeName} 的寫入權限");
+                            return (null, $"類型:{permissions.Destination.Type} 的目標物件:{permissions.Destination.DistinguishedName} 需具有存取規則:{attributeName} 的寫入權限");
                         }
                     }
                     break;
@@ -70,7 +70,7 @@ namespace ADService.Certification
                         if (!permissions.IsAllow(attributeName, ActiveDirectoryRights.WriteProperty))
                         {
                             // 對外提供失敗
-                            return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{attributeName} 的寫入權限");
+                            return (null, $"類型:{permissions.Destination.Type} 的目標物件:{permissions.Destination.DistinguishedName} 需具有存取規則:{attributeName} 的寫入權限");
                         }
                     }
                     break;
@@ -90,7 +90,7 @@ namespace ADService.Certification
             return (new InvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside), string.Empty);
         }
 
-        internal override bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions)
+        internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, LDAPPermissions permissions)
         {
             // 將重新命名的新名字
             string name = protocol?.ToObject<string>() ?? string.Empty;
@@ -99,27 +99,27 @@ namespace ADService.Certification
                  2. 與原名稱相同
             */
             if (string.IsNullOrEmpty(name)
-                || name == destination.Name)
+                || name == permissions.Destination.Name)
             {
                 // 返回失敗
                 return false;
             }
 
             // 物件本市是否被系統禁止移動
-            if (!destination.IsEnableReName)
+            if (!permissions.Destination.IsEnableReName)
             {
                 // 對外提供失敗
                 return false;
             }
 
             // 由於必定會經過喚起檢查, 因此目標物件必定有隸屬組織單位
-            destination.GetOrganizationUnit(out string distinguishedName);
+            permissions.Destination.GetOrganizationUnit(out string distinguishedName);
 
             // 重新命名用的結構
             string nameInFormat;
             #region 重新命名動作實作
             // 根據類型決定如何處理
-            switch (destination.Type)
+            switch (permissions.Destination.Type)
             {
                 // 組織單位
                 case CategoryTypes.ORGANIZATION_UNIT:
@@ -169,7 +169,7 @@ namespace ADService.Certification
                              2. 電腦物件重新命名: 此問題單純為尚未實作, 須追加電腦類型物件
                              3. 權限處理有漏洞需檢查整體解析過程
                         */
-                        throw new LDAPExceptions($"類型:{destination.Type} 的物件:{destination.DistinguishedName} 於檢驗異動名稱時發現尚未實作, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
+                        throw new LDAPExceptions($"類型:{permissions.Destination.Type} 的物件:{permissions.Destination.DistinguishedName} 於檢驗異動名稱時發現尚未實作, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
                     }
             }
             #endregion
@@ -178,7 +178,7 @@ namespace ADService.Certification
             return !string.IsNullOrEmpty(nameInFormat);
         }
 
-        internal override void Invoke(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions)
+        internal override void Invoke(ref CertificationProperties certification, in JToken protocol, LDAPPermissions permissions)
         {
             // 將重新命名的新名字
             string name = protocol?.ToObject<string>() ?? string.Empty;
@@ -190,7 +190,7 @@ namespace ADService.Certification
             }
 
             // 取得修改目標的入口物件
-            RequiredCommitSet set = certification.GetEntry(destination.DistinguishedName);
+            RequiredCommitSet set = certification.GetEntry(permissions.Destination.DistinguishedName);
             // 應存在修改目標
             if (set == null)
             {
@@ -202,7 +202,7 @@ namespace ADService.Certification
             string nameInFormat;
             #region 重新命名動作實作
             // 根據類型決定如何處理
-            switch (destination.Type)
+            switch (permissions.Destination.Type)
             {
                 // 組織單位
                 case CategoryTypes.ORGANIZATION_UNIT:
@@ -227,7 +227,7 @@ namespace ADService.Certification
                              2. 電腦物件重新命名: 此問題單純為尚未實作, 須追加電腦類型物件
                              3. 權限處理有漏洞需檢查整體解析過程
                         */
-                        throw new LDAPExceptions($"類型:{destination.Type} 的物件:{destination.DistinguishedName} 於檢驗異動名稱時發現尚未實作, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
+                        throw new LDAPExceptions($"類型:{permissions.Destination.Type} 的物件:{permissions.Destination.DistinguishedName} 於檢驗異動名稱時發現尚未實作, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
                     }
             }
             #endregion

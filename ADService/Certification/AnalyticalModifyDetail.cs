@@ -74,7 +74,7 @@ namespace ADService.Certification
         /// <param name="isShowed">是否展示在功能列表</param>
         internal AnalyticalModifyDetail(in string name, in bool isShowed) : base(name, isShowed) { }
 
-        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination, LDAPPermissions permissions)
+        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, LDAPPermissions permissions)
         {
             // 要對外回傳的所有項目: 預設容器大小等於所有需要轉換的項目
             Dictionary<string, InvokeCondition> dictionaryAttributesNameWithCondition = new Dictionary<string, InvokeCondition>(AttributeNames.Count);
@@ -101,7 +101,7 @@ namespace ADService.Certification
                         {
                             // 取得介面
                             // 介面不存在時代表此權限不必提供
-                            if (!(destination is IRevealerMember revealerMember))
+                            if (!(permissions.Destination is IRevealerMember revealerMember))
                             {
                                 // 跳過此處理
                                 continue;
@@ -148,7 +148,7 @@ namespace ADService.Certification
                         {
                             // 取得介面
                             // 介面不存在時代表此權限不必提供
-                            if (!(destination is IRevealerMemberOf revealerMemberOf))
+                            if (!(permissions.Destination is IRevealerMemberOf revealerMemberOf))
                             {
                                 // 跳過此處理
                                 continue;
@@ -185,7 +185,7 @@ namespace ADService.Certification
                     case Properties.P_USERACCOUNTCONTROL:
                         {
                             // 目前持有的資訊內容
-                            AccountControlFlags storedValue = destination.GetPropertySingle<AccountControlFlags>(attributeName);
+                            AccountControlFlags storedValue = permissions.Destination.GetPropertySingle<AccountControlFlags>(attributeName);
 
                             // 將儲存的資料轉換成對外協議
                             AccountControlProtocols accountControlProtocols = AccountControlFromFlagsToProtocols(storedValue);
@@ -221,7 +221,7 @@ namespace ADService.Certification
                     case Properties.P_PWDLASTSET:
                         {
                             // 目前持有的資訊內容
-                            long storedValue = destination.GetPropertyInterval(attributeName);
+                            long storedValue = permissions.Destination.GetPropertyInterval(attributeName);
 
                             /* 由於處理邏輯所以數值將以下列方式轉換成旗標
                                  - 數值為 0: 啟用下次登入時需修改密碼
@@ -260,7 +260,7 @@ namespace ADService.Certification
                     case Properties.P_SUPPORTEDENCRYPTIONTYPES:
                         {
                             // 目前持有的資訊內容
-                            EncryptedType storedValue = destination.GetPropertySingle<EncryptedType>(attributeName);
+                            EncryptedType storedValue = permissions.Destination.GetPropertySingle<EncryptedType>(attributeName);
 
                             // 初始化
                             AccountControlProtocols accountControlProtocols = AccountControlProtocols.NONE;
@@ -301,7 +301,7 @@ namespace ADService.Certification
                     default:
                         {
                             // 目前持有的資訊內容
-                            string storedValue = destination.GetPropertySingle<string>(attributeName);
+                            string storedValue = permissions.Destination.GetPropertySingle<string>(attributeName);
 
                             // 預期項目: 必定是字串
                             Type typeString = typeof(string);
@@ -345,7 +345,7 @@ namespace ADService.Certification
             // 沒有任何可以對外回傳的項目
             if (dictionaryAttributesNameWithCondition.Count == 0)
             {
-                return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 不具有任何可以異動的屬性權限");
+                return (null, $"類型:{permissions.Destination.Type} 的目標物件:{permissions.Destination.DistinguishedName} 不具有任何可以異動的屬性權限");
             }
 
             /* 一般需求參數限制如下所述:
@@ -361,18 +361,18 @@ namespace ADService.Certification
             return (new InvokeCondition(commonFlags, dictionaryProtocolWithDetailOutside), string.Empty);
         }
 
-        internal override bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions)
+        internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, LDAPPermissions permissions)
         {
             // 紀錄處理目標的區分名稱
-            string distinguishedNameDestination = destination.DistinguishedName;
+            string distinguishedNameDestination = permissions.Destination.DistinguishedName;
             // 紀錄喚起者的區分名稱
-            string distinguishedNameInvoker = invoker.DistinguishedName;
+            string distinguishedNameInvoker = permissions.Invoker.DistinguishedName;
 
             // 應存在修改目標
             if (certification.GetEntry(distinguishedNameDestination) == null)
             {
                 // 若觸發此處例外必定為程式漏洞
-                throw new LDAPExceptions($"類型:{destination.Type} 的物件:{distinguishedNameDestination} 於異動細節內容時發現不存在目標入口物件, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
+                throw new LDAPExceptions($"類型:{permissions.Destination.Type} 的物件:{distinguishedNameDestination} 於異動細節內容時發現不存在目標入口物件, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
             }
 
             // 轉換異動項目
@@ -381,7 +381,7 @@ namespace ADService.Certification
             if (dictionaryAttributeNameWithDetail == null || dictionaryAttributeNameWithDetail.Count == 0)
             {
                 // 若觸發此處例外: 則有可能遭受網路攻擊
-                throw new LDAPExceptions($"類型:{destination.Type} 的物件:{distinguishedNameDestination} 於異動細節內容時發現傳輸的協議:{protocol} 不符合規則, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
+                throw new LDAPExceptions($"類型:{permissions.Destination.Type} 的物件:{distinguishedNameDestination} 於異動細節內容時發現傳輸的協議:{protocol} 不符合規則, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
             }
 
             // 紀錄未處理的項目
@@ -405,10 +405,10 @@ namespace ADService.Certification
                     case Properties.P_MEMBER:
                         {
                             // 無法取得
-                            if (!(destination is IRevealerMember revealerMember))
+                            if (!(permissions.Destination is IRevealerMember revealerMember))
                             {
                                 // 若觸發此處例外: 則有可能遭受網路攻擊
-                                throw new LDAPExceptions($"類型:{destination.Type} 的物件:{distinguishedNameDestination} 於異動細節內容時發現傳輸的異動協議:{attributeName} 不能套用至目標物件, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
+                                throw new LDAPExceptions($"類型:{permissions.Destination.Type} 的物件:{distinguishedNameDestination} 於異動細節內容時發現傳輸的異動協議:{attributeName} 不能套用至目標物件, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
                             }
 
                             // 透過目前持有項目與接收到的協議
@@ -422,7 +422,7 @@ namespace ADService.Certification
                             if (unprocessedDNs.Length != 0)
                             {
                                 // 推入無法處理描述中
-                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"因項目:{string.Join(",", unprocessedDNs)} 不符合存取規則而無法進行類型:{destination.Type} 物件:{distinguishedNameDestination} 的參數:{attributeName} 異動細節");
+                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"因項目:{string.Join(",", unprocessedDNs)} 不符合存取規則而無法進行類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 的參數:{attributeName} 異動細節");
                                 // 跳過下方的實際異動
                                 continue;
                             }
@@ -469,7 +469,7 @@ namespace ADService.Certification
                                             if (all.Count != researchDNHashSet.Count)
                                             {
                                                 // 推入無法處理描述中
-                                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"因項目:{string.Join(",", researchDNHashSet)} 有部分非需求類型無法進行類型:{destination.Type} 物件:{distinguishedNameDestination} 的參數:{attributeName} 異動細節");
+                                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"因項目:{string.Join(",", researchDNHashSet)} 有部分非需求類型無法進行類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 的參數:{attributeName} 異動細節");
                                                 // 跳過下方的實際異動
                                                 continue;
                                             }
@@ -505,7 +505,7 @@ namespace ADService.Certification
                             if (unprocessedDNHashSet.Count != 0)
                             {
                                 // 推入無法處理描述中
-                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"因項目:{string.Join(",", unprocessedDNHashSet)} 不符合存取權限而無法進行類型:{destination.Type} 物件:{distinguishedNameDestination} 的參數:{attributeName} 異動細節");
+                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"因項目:{string.Join(",", unprocessedDNHashSet)} 不符合存取權限而無法進行類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 的參數:{attributeName} 異動細節");
                                 // 跳過下方的實際異動
                                 continue;
                             }
@@ -516,10 +516,10 @@ namespace ADService.Certification
                     case Properties.P_MEMBEROF:
                         {
                             // 無法取得
-                            if (!(destination is IRevealerMemberOf revealerMemberOf))
+                            if (!(permissions.Destination is IRevealerMemberOf revealerMemberOf))
                             {
                                 // 若觸發此處例外: 則有可能遭受網路攻擊
-                                throw new LDAPExceptions($"類型:{destination.Type} 的物件:{distinguishedNameDestination} 於異動細節內容時發現傳輸的異動協議:{attributeName} 不能套用至目標物件, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
+                                throw new LDAPExceptions($"類型:{permissions.Destination.Type} 的物件:{distinguishedNameDestination} 於異動細節內容時發現傳輸的異動協議:{attributeName} 不能套用至目標物件, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
                             }
 
                             // 透過目前持有項目與接收到的協議
@@ -533,7 +533,7 @@ namespace ADService.Certification
                             if (unprocessedDNs.Length != 0)
                             {
                                 // 推入無法處理描述中
-                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"因項目:{string.Join(",", unprocessedDNs)} 不符合項目而無法進行類型:{destination.Type} 物件:{distinguishedNameDestination} 的參數:{attributeName} 異動細節");
+                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"因項目:{string.Join(",", unprocessedDNs)} 不符合項目而無法進行類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 的參數:{attributeName} 異動細節");
                                 // 跳過下方的實際異動
                                 continue;
                             }
@@ -578,7 +578,7 @@ namespace ADService.Certification
                                             if (all.Count != researchDNHashSet.Count)
                                             {
                                                 // 推入無法處理描述中
-                                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"因項目:{string.Join(",", researchDNHashSet)} 有部分非需求類型無法進行類型:{destination.Type} 物件:{distinguishedNameDestination} 的參數:{attributeName} 異動細節");
+                                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"因項目:{string.Join(",", researchDNHashSet)} 有部分非需求類型無法進行類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 的參數:{attributeName} 異動細節");
                                                 // 跳過下方的實際異動
                                                 continue;
                                             }
@@ -614,7 +614,7 @@ namespace ADService.Certification
                                 LDAPObject entryObject = LDAPObject.ToObject(set.Entry, certification.Dispatcher);
 
                                 // 整合各 SID 權向狀態
-                                LDAPPermissions permissionsProtocol = new LDAPPermissions(ref certification.Dispatcher, invoker, entryObject);
+                                LDAPPermissions permissionsProtocol = new LDAPPermissions(ref certification.Dispatcher, permissions.Invoker, entryObject);
 
                                 // 是否可異動
                                 bool isProcessedEditable = permissionsProtocol.IsAllow(Properties.P_MEMBER, ActiveDirectoryRights.WriteProperty);
@@ -635,7 +635,7 @@ namespace ADService.Certification
                             if (unprocessedDNHashSet.Count != 0)
                             {
                                 // 推入無法處理描述中
-                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"因項目:{string.Join(",", unprocessedDNHashSet)} 不符合存取權限而無法進行類型:{destination.Type} 物件:{distinguishedNameDestination} 的參數:{attributeName} 異動細節");
+                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"因項目:{string.Join(",", unprocessedDNHashSet)} 不符合存取權限而無法進行類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 的參數:{attributeName} 異動細節");
                                 // 跳過下方的實際異動
                                 continue;
                             }
@@ -649,7 +649,7 @@ namespace ADService.Certification
                             if (!isEditable)
                             {
                                 // 推入無法處理描述中
-                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因不具有異動權限而無法對類型:{destination.Type} 物件:{distinguishedNameDestination} 進行異動細節");
+                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因不具有異動權限而無法對類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 進行異動細節");
                                 // 跳過下方的實際異動
                                 continue;
                             }
@@ -662,7 +662,7 @@ namespace ADService.Certification
                             if (isExsitControl)
                             {
                                 // 推入無法處理描述中
-                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因異動內容含有非法異動而無法對類型:{destination.Type} 物件:{distinguishedNameDestination} 進行異動細節");
+                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因異動內容含有非法異動而無法對類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 進行異動細節");
                                 // 跳過此處理
                                 continue;
                             }
@@ -690,7 +690,7 @@ namespace ADService.Certification
                             if (!isEditable)
                             {
                                 // 推入無法處理描述中
-                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因不具有異動權限而無法對類型:{destination.Type} 物件:{distinguishedNameDestination} 進行異動細節");
+                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因不具有異動權限而無法對類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 進行異動細節");
                                 // 跳過下方的實際異動
                                 continue;
                             }
@@ -703,7 +703,7 @@ namespace ADService.Certification
                             if (isExsitControl)
                             {
                                 // 推入無法處理描述中
-                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因異動內容含有非法異動而無法對類型:{destination.Type} 物件:{distinguishedNameDestination} 進行異動細節");
+                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因異動內容含有非法異動而無法對類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 進行異動細節");
                                 // 跳過此處理
                                 continue;
                             }
@@ -717,7 +717,7 @@ namespace ADService.Certification
                             if (!isEditable)
                             {
                                 // 推入無法處理描述中
-                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因不具有異動權限而無法對類型:{destination.Type} 物件:{distinguishedNameDestination} 進行異動細節");
+                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因不具有異動權限而無法對類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 進行異動細節");
                                 // 跳過下方的實際異動
                                 continue;
                             }
@@ -730,7 +730,7 @@ namespace ADService.Certification
                             if (isExsitControl)
                             {
                                 // 推入無法處理描述中
-                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因異動內容含有非法異動而無法對類型:{destination.Type} 物件:{distinguishedNameDestination} 進行異動細節");
+                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因異動內容含有非法異動而無法對類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 進行異動細節");
                                 // 跳過此處理
                                 continue;
                             }
@@ -744,7 +744,7 @@ namespace ADService.Certification
                             if (!isEditable)
                             {
                                 // 推入無法處理描述中
-                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因不具有異動權限而無法對類型:{destination.Type} 物件:{distinguishedNameDestination} 進行異動細節");
+                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因不具有異動權限而無法對類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 進行異動細節");
                                 // 跳過下方的實際異動
                                 continue;
                             }
@@ -758,12 +758,12 @@ namespace ADService.Certification
             return dictionaryFailureAttributeNameWithMessage.Count == 0;
         }
 
-        internal override void Invoke(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions)
+        internal override void Invoke(ref CertificationProperties certification, in JToken protocol, LDAPPermissions permissions)
         {
             // 紀錄目標的區分名稱
-            string distinguishedNameDestination = destination.DistinguishedName;
+            string distinguishedNameDestination = permissions.Destination.DistinguishedName;
             // 取得修改目標的入口物件
-            RequiredCommitSet setDestination = certification.GetEntry(destination.DistinguishedName);
+            RequiredCommitSet setDestination = certification.GetEntry(permissions.Destination.DistinguishedName);
             // 簡易防呆: 應於驗證處完成檢驗
             if (setDestination == null)
             {
@@ -797,7 +797,7 @@ namespace ADService.Certification
                     case Properties.P_MEMBER:
                         {
                             // 無法取得
-                            if (!(destination is IRevealerMember revealerMember))
+                            if (!(permissions.Destination is IRevealerMember revealerMember))
                             {
                                 // 應於檢驗處理完成, 此處不應進入
                                 continue;
@@ -851,7 +851,7 @@ namespace ADService.Certification
                     case Properties.P_MEMBEROF:
                         {
                             // 無法取得
-                            if (!(destination is IRevealerMemberOf revealerMemberOf))
+                            if (!(permissions.Destination is IRevealerMemberOf revealerMemberOf))
                             {
                                 // 應於檢驗處理完成, 此處不應進入
                                 continue;
@@ -912,7 +912,7 @@ namespace ADService.Certification
                             // 取得這個參數可調整的參數
                             AccountControlFlags accountControlFlagsMask = AccountControlFromProtocolsToFlags(ACOUNTCONTROL_MASK);
                             // 取得目前持有的屬性
-                            AccountControlFlags storedValue = destination.GetPropertySingle<AccountControlFlags>(attributeName);
+                            AccountControlFlags storedValue = permissions.Destination.GetPropertySingle<AccountControlFlags>(attributeName);
                             // 檢查是否有異動
                             if ((storedValue & accountControlFlagsMask) == accountControlFlags)
                             {
@@ -938,7 +938,7 @@ namespace ADService.Certification
                             // 轉換成控制旗標
                             AccountControlProtocols convertedProtocol = receivedValue?.ToObject<AccountControlProtocols>() ?? AccountControlProtocols.NONE;
                             // 取得目前持有的屬性
-                            long storedValue = destination.GetPropertyInterval(attributeName);
+                            long storedValue = permissions.Destination.GetPropertyInterval(attributeName);
                             // 取得本次是否包含使用者照號一棟
                             if (dictionaryAttributeNameWithDetail.TryGetValue(Properties.P_USERACCOUNTCONTROL, out JToken userAccountControlJToken))
                             {
@@ -948,7 +948,7 @@ namespace ADService.Certification
                             else
                             {
                                 // 取得目前持有的使用者帳號控制屬性
-                                AccountControlFlags userAccountControlValue = destination.GetPropertySingle<AccountControlFlags>(Properties.P_USERACCOUNTCONTROL);
+                                AccountControlFlags userAccountControlValue = permissions.Destination.GetPropertySingle<AccountControlFlags>(Properties.P_USERACCOUNTCONTROL);
                                 // 轉換成外部協議可是別的格式
                                 convertedProtocol |= AccountControlFromFlagsToProtocols(userAccountControlValue);
                             }
@@ -1010,7 +1010,7 @@ namespace ADService.Certification
                             encryptedType |= (convertedProtocol & AccountControlProtocols.ACCOUNT_KERBEROS_AES256) == AccountControlProtocols.ACCOUNT_KERBEROS_AES256 ? EncryptedType.AES256 : EncryptedType.NONE;
 
                             // 取得目前持有的屬性
-                            EncryptedType storedValue = destination.GetPropertySingle<EncryptedType>(attributeName);
+                            EncryptedType storedValue = permissions.Destination.GetPropertySingle<EncryptedType>(attributeName);
                             // 檢查修改後設是否與現在鄉相同
                             if ((storedValue & ENCRYPT_MASK) == encryptedType)
                             {

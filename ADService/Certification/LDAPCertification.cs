@@ -95,7 +95,7 @@ namespace ADService.Certification
                     }
 
                     // 取得結果
-                    (InvokeCondition condition, _) = analyticalRights.Invokable(Dispatcher, Invoker, Destination, permissions);
+                    (InvokeCondition condition, _) = analyticalRights.Invokable(Dispatcher, permissions);
                     // 無法啟動代表無法呼叫
                     if (condition == null)
                     {
@@ -153,7 +153,7 @@ namespace ADService.Certification
                 // 整合各 SID 權向狀態
                 LDAPPermissions permissions = new LDAPPermissions(ref Dispatcher, Invoker, Destination);
                 // 取得結果
-                (InvokeCondition condition, _) = analytical.Invokable(Dispatcher, Invoker, Destination, permissions);
+                (InvokeCondition condition, _) = analytical.Invokable(Dispatcher, permissions);
                 // 無法啟動代表無法呼叫
                 if (condition == null)
                 {
@@ -208,7 +208,7 @@ namespace ADService.Certification
                 LDAPPermissions permissions = new LDAPPermissions(ref Dispatcher, Invoker, Destination);
 
                 // 遍歷權限驗證協議是否可用
-                return analytical.Authenicate(ref certification, Invoker, Destination, protocol, permissions);
+                return analytical.Authenicate(ref certification, protocol, permissions);
             }
             // 發生時機: 使用者登入時發現例外錯誤
             catch (DirectoryServicesCOMException exception)
@@ -259,7 +259,7 @@ namespace ADService.Certification
                 LDAPPermissions permissions = new LDAPPermissions(ref Dispatcher, Invoker, Destination);
 
                 // 驗證是否可用
-                bool authenicateSuccess = analytical.Authenicate(ref certification, Invoker, Destination, protocol, permissions);
+                bool authenicateSuccess = analytical.Authenicate(ref certification, protocol, permissions);
                 // 檢查驗證是否成功
                 if (!authenicateSuccess)
                 {
@@ -268,7 +268,7 @@ namespace ADService.Certification
                 }
 
                 // 執行異動或呼叫
-                analytical.Invoke(ref certification, Invoker, Destination, protocol, permissions);
+                analytical.Invoke(ref certification, protocol, permissions);
 
                 // 對外提供所有影響的物件
                 Dictionary<string, LDAPObject> dictionaryDistinguishedNameWithLDAPObject = new Dictionary<string, LDAPObject>();

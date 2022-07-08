@@ -20,20 +20,20 @@ namespace ADService.Certification
         /// </summary>
         internal AnalyticalChangePassword() : base(Methods.M_CHANGEPWD) { }
 
-        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination, LDAPPermissions permissions)
+        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, LDAPPermissions permissions)
         {
             // 根目錄不應重新命名
-            if (destination.Type != CategoryTypes.PERSON)
+            if (permissions.Destination.Type != CategoryTypes.PERSON)
             {
                 // 對外提供失敗
-                return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 是不能重新命名");
+                return (null, $"類型:{permissions.Destination.Type} 的目標物件:{permissions.Destination.DistinguishedName} 是不能重新命名");
             }
 
             // 不存在 '重設密碼' 的額外權限
             if (!permissions.IsAllow(Properties.EX_CHANGEPASSWORD, ActiveDirectoryRights.ExtendedRight))
             {
                 // 對外提供失敗
-                return (null, $"類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 需具有存取規則:{Properties.EX_CHANGEPASSWORD} 的額外權限");
+                return (null, $"類型:{permissions.Destination.Type} 的目標物件:{permissions.Destination.DistinguishedName} 需具有存取規則:{Properties.EX_CHANGEPASSWORD} 的額外權限");
             }
 
             // 具有修改名稱權限
@@ -50,7 +50,7 @@ namespace ADService.Certification
             return (new InvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside), string.Empty);
         }
 
-        internal override bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions)
+        internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, LDAPPermissions permissions)
         {
             // 將協議轉換成改變密碼用格式
             ChangePWD changePWDProtocol = protocol?.ToObject<ChangePWD>();
@@ -71,7 +71,7 @@ namespace ADService.Certification
             return true;
         }
 
-        internal override void Invoke(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions)
+        internal override void Invoke(ref CertificationProperties certification, in JToken protocol, LDAPPermissions permissions)
         {
             // 將協議轉換成改變密碼用格式
             ChangePWD changePWDProtocol = protocol?.ToObject<ChangePWD>();
@@ -89,7 +89,7 @@ namespace ADService.Certification
             }
 
             // 取得修改目標的入口物件
-            RequiredCommitSet set = certification.GetEntry(destination.DistinguishedName);
+            RequiredCommitSet set = certification.GetEntry(permissions.Destination.DistinguishedName);
             // 應存在修改目標
             if (set == null)
             {
@@ -102,7 +102,7 @@ namespace ADService.Certification
             // 此時會鳩收到的回覆格式必定為字串
             if (Convert.ToUInt64(invokeResult) != 0)
             {
-                throw new LDAPExceptions($"類型:{destination.Type} 的物件:{destination.DistinguishedName} 於重置密碼時因錯誤代碼:{invokeResult} 而失敗", ErrorCodes.ACTION_FAILURE);
+                throw new LDAPExceptions($"類型:{permissions.Destination.Type} 的物件:{permissions.Destination.DistinguishedName} 於重置密碼時因錯誤代碼:{invokeResult} 而失敗", ErrorCodes.ACTION_FAILURE);
             }
 
             // 重設密碼會即刻產生影響, 因此只需要刷新即可

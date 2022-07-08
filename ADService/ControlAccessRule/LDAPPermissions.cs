@@ -91,7 +91,14 @@ namespace ADService.ControlAccessRule
         /// 是否可編輯目標物的安全性
         /// </summary>
         internal readonly bool IsSecurityEditable;
-
+        /// <summary>
+        /// 紀錄喚起此動作的喚醒物件
+        /// </summary>
+        internal readonly LDAPObject Invoker;
+        /// <summary>
+        /// 紀錄目標物件
+        /// </summary>
+        internal readonly LDAPObject Destination;
 
         /// <summary>
         /// 建構子: 取得指定影響類型的存取權限
@@ -101,11 +108,14 @@ namespace ADService.ControlAccessRule
         /// <param name="destination">目標物件</param>
         internal LDAPPermissions(ref LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination)
         {
+            Invoker = invoker;
+            Destination = destination;
+
             // 取得物件持有類別
-            string[] classNames = destination.GetPropertyMultiple<string>(Properties.C_OBJECTCLASS);
+            string[] classNames = Destination.GetPropertyMultiple<string>(Properties.C_OBJECTCLASS);
 
             // 支援的所有安全性群組 SID
-            string[] invokerSecuritySIDs = invoker is IRevealerSecuritySIDs revealerSecuritySIDs ? revealerSecuritySIDs.Values : Array.Empty<string>();
+            string[] invokerSecuritySIDs = Invoker is IRevealerSecuritySIDs revealerSecuritySIDs ? revealerSecuritySIDs.Values : Array.Empty<string>();
             // 轉成 HashSet 判斷喚起者是否為自身
             HashSet<string> invokerSecuritySIDHashSet = new HashSet<string>(invokerSecuritySIDs);
             /* 根據情況決定添加何種額外 SID
@@ -113,7 +123,7 @@ namespace ADService.ControlAccessRule
                  2. 喚起者與目標非相同物件: 視為所有人
                  3. 其他情況: 是為自己
             */
-            string extendedSID = destination is IRevealerSID revealerSID && invokerSecuritySIDHashSet.Contains(revealerSID.Value) ? SID_SELF : SID_EVERYONE;
+            string extendedSID = Destination is IRevealerSID revealerSID && invokerSecuritySIDHashSet.Contains(revealerSID.Value) ? SID_SELF : SID_EVERYONE;
             // 推入此參數
             invokerSecuritySIDHashSet.Add(extendedSID);
 
@@ -123,13 +133,14 @@ namespace ADService.ControlAccessRule
             IsSecurityEditable = IsSecurityPrincipals(invokerSecuritySIDHashSet);
 
             // 取得所有可用的存取規則: 包含不會生效的部分
-            AccessRuleConverted[] accessRuleConverteds = destination.GetAccessRuleConverteds(invokerSecuritySIDHashSet);
+            AccessRuleConverted[] accessRuleConverteds = Destination.GetAccessRuleConverteds(invokerSecuritySIDHashSet);
             // 設置非空 GUID 的存取權限
             SetControlAccessNoneEmpty(ref dispatcher, accessRuleConverteds);
             // 設置空 GUID 的存取權限
             SetControlAccessWasEmpty(ref dispatcher, accessRuleConverteds);
         }
 
+        #region 解析持有參數與安全性
         /// <summary>
         /// 設置非空 GUID 的存取權限
         /// </summary>
@@ -330,6 +341,7 @@ namespace ADService.ControlAccessRule
                 }
             }
         }
+        #endregion
 
         /// <summary>
         /// 取得指定屬性職是否存在指定權限
