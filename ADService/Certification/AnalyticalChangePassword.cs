@@ -20,7 +20,7 @@ namespace ADService.Certification
         /// </summary>
         internal AnalyticalChangePassword() : base(Methods.M_CHANGEPWD) { }
 
-        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, LDAPPermissions permissions)
+        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, LDAPPermissions permissions)
         {
             // 根目錄不應重新命名
             if (permissions.Destination.Type != CategoryTypes.PERSON)

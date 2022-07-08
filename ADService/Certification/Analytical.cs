@@ -34,10 +34,10 @@ namespace ADService.Certification
         /// <summary>
         /// 檢查持有權限能否觸發此方法
         /// </summary>
-        /// <param name="dispatcher">入口物件製作器</param>
+        /// <param name="certification">用來儲存屬性異動的證書</param>
         /// <param name="permissions">喚起者與目標能使用的權限</param>
         /// <returns>是否可使用</returns>
-        internal abstract (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, LDAPPermissions permissions);
+        internal abstract (InvokeCondition, string) Invokable(ref CertificationProperties certification, LDAPPermissions permissions);
         /// <summary>
         /// 驗證提供的協議內容是否可用
         /// </summary>

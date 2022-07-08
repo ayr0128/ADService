@@ -18,12 +18,12 @@ namespace ADService.Certification
         /// </summary>
         internal AnalyticalShowDetail() : base(Methods.M_SHOWDETAIL, true) { }
 
-        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, LDAPPermissions permissions)
+        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, LDAPPermissions permissions)
         {
             // 宣告異動細節分析氣
             AnalyticalModifyDetail analyticalModifyDetail = new AnalyticalModifyDetail();
             // 是否能展示須根據是否能異動決定
-            (InvokeCondition condition, string message) = analyticalModifyDetail.Invokable(dispatcher, permissions);
+            (InvokeCondition condition, string message) = analyticalModifyDetail.Invokable(ref certification, permissions);
             // 若不可呼叫
             if (condition == null)
             {

@@ -42,7 +42,7 @@ namespace ADService.Certification
         /// </summary>
         internal AnalyticalCreateUser() : base(Methods.M_CREATEUSER, false) { }
 
-        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, LDAPPermissions permissions)
+        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, LDAPPermissions permissions)
         {
             // 取得成員字串
             Dictionary<CategoryTypes, string> dictionaryCategoryTypeWithValue = LDAPCategory.GetAccessRulesByTypes(categoryType);

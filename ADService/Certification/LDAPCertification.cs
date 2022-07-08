@@ -77,11 +77,18 @@ namespace ADService.Certification
         /// <returns>可用方法與預期接收參數, 格式如右 Dictionary '功能, 協議描述' </returns>
         public Dictionary<string, InvokeCondition> ListAllMethods()
         {
+            // 宣告資料異動證書: 使用 Finally 進行釋放
+            IDisposable iRelease = null;
             // 過程若出現任何錯誤應被截取會並處理
             try
             {
+                // 推入並設置入口物件
+                CertificationProperties certification = new CertificationProperties(Dispatcher, Destination.DistinguishedName);
+                // 轉換成釋放用介面
+                iRelease = certification;
                 // 整合各 SID 權向狀態
                 LDAPPermissions permissions = new LDAPPermissions(ref Dispatcher, Invoker, Destination);
+
                 // 最多回傳的長度是所有的項目都支援
                 Dictionary<string, InvokeCondition> dictionaryAttributeNameWithProtocol = new Dictionary<string, InvokeCondition>(dictionaryMethodWithAnalytical.Count);
                 // 遍歷權限並檢查是否可以喚醒
@@ -95,7 +102,7 @@ namespace ADService.Certification
                     }
 
                     // 取得結果
-                    (InvokeCondition condition, _) = analyticalRights.Invokable(Dispatcher, permissions);
+                    (InvokeCondition condition, _) = analyticalRights.Invokable(ref certification, permissions);
                     // 無法啟動代表無法呼叫
                     if (condition == null)
                     {
@@ -121,6 +128,11 @@ namespace ADService.Certification
                 // 取得錯誤描述, 並提供例外
                 throw LDAPExceptions.OnServeException(exception.Message);
             }
+            finally
+            {
+                // 釋放異動證書
+                iRelease?.Dispose();
+            }
         }
 
         /// <summary>
@@ -140,6 +152,8 @@ namespace ADService.Certification
                 throw new LDAPExceptions($"類型:{Destination.Type} 的物件:{Destination.DistinguishedName} 於檢驗功能:{attributeName} 時發現尚未實作, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
             }
 
+            // 宣告資料異動證書: 使用 Finally 進行釋放
+            IDisposable iRelease = null;
             // 過程若出現任何錯誤應被截取會並處理
             try
             {
@@ -150,10 +164,14 @@ namespace ADService.Certification
                     throw new LDAPExceptions($"類型:{Destination.Type} 的物件:{Destination.DistinguishedName} 於檢驗功能:{attributeName} 時發現不能直接呼叫, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
                 }
 
+                // 推入並設置入口物件
+                CertificationProperties certification = new CertificationProperties(Dispatcher, Destination.DistinguishedName);
+                // 轉換成釋放用介面
+                iRelease = certification;
                 // 整合各 SID 權向狀態
                 LDAPPermissions permissions = new LDAPPermissions(ref Dispatcher, Invoker, Destination);
                 // 取得結果
-                (InvokeCondition condition, _) = analytical.Invokable(Dispatcher, permissions);
+                (InvokeCondition condition, _) = analytical.Invokable(ref certification, permissions);
                 // 無法啟動代表無法呼叫
                 if (condition == null)
                 {
@@ -175,6 +193,11 @@ namespace ADService.Certification
             {
                 // 取得錯誤描述, 並提供例外
                 throw LDAPExceptions.OnServeException(exception.Message);
+            }
+            finally
+            {
+                // 釋放異動證書
+                iRelease?.Dispose();
             }
         }
 
@@ -200,10 +223,8 @@ namespace ADService.Certification
             {
                 // 推入並設置入口物件
                 CertificationProperties certification = new CertificationProperties(Dispatcher, Destination.DistinguishedName);
-
                 // 轉換成釋放用介面
                 iRelease = certification;
-
                 // 整合各 SID 權向狀態
                 LDAPPermissions permissions = new LDAPPermissions(ref Dispatcher, Invoker, Destination);
 
@@ -251,10 +272,8 @@ namespace ADService.Certification
             {
                 // 推入並設置入口物件
                 CertificationProperties certification = new CertificationProperties(Dispatcher, Destination.DistinguishedName);
-
                 // 轉換成釋放用介面
                 iRelease = certification;
-
                 // 整合各 SID 權向狀態
                 LDAPPermissions permissions = new LDAPPermissions(ref Dispatcher, Invoker, Destination);
 

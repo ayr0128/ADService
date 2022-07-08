@@ -18,7 +18,7 @@ namespace ADService.Certification
         /// </summary>
         internal AnalyticalShowCreateable() : base(Methods.M_SHOWCRATEABLE, true) { }
 
-        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, LDAPPermissions permissions)
+        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, LDAPPermissions permissions)
         {
             // 所有可用的方法
             List<string> invokedAble = new List<string>(2);
@@ -26,7 +26,7 @@ namespace ADService.Certification
             // 宣告異動細節分析氣
             AnalyticalCreateUser analyticalCreateUser = new AnalyticalCreateUser();
             // 是否能展示須根據是否能異動決定
-            (InvokeCondition conditionUser, _) = analyticalCreateUser.Invokable(dispatcher, permissions);
+            (InvokeCondition conditionUser, _) = analyticalCreateUser.Invokable(ref certification, permissions);
             // 能夠取得條件時
             if (conditionUser != null)
             {
@@ -37,7 +37,7 @@ namespace ADService.Certification
             // 宣告異動細節分析氣
             AnalyticalCreateGroup analyticalCreateGroup = new AnalyticalCreateGroup();
             // 是否能展示須根據是否能異動決定
-            (InvokeCondition conditionGroup, _) = analyticalCreateGroup.Invokable(dispatcher, permissions);
+            (InvokeCondition conditionGroup, _) = analyticalCreateGroup.Invokable(ref certification, permissions);
             // 能夠取得條件時
             if (conditionGroup != null)
             {
@@ -48,7 +48,7 @@ namespace ADService.Certification
             // 宣告異動細節分析氣
             AnalyticalCreateOrganizationUnit analyticalCreateOrganizationUnit = new AnalyticalCreateOrganizationUnit();
             // 是否能展示須根據是否能異動決定
-            (InvokeCondition conditionOrganizationUnit, _) = analyticalCreateOrganizationUnit.Invokable(dispatcher, permissions);
+            (InvokeCondition conditionOrganizationUnit, _) = analyticalCreateOrganizationUnit.Invokable(ref certification, permissions);
             // 能夠取得條件時
             if (conditionOrganizationUnit != null)
             {

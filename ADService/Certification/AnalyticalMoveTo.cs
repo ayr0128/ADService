@@ -20,7 +20,7 @@ namespace ADService.Certification
         /// </summary>
         internal AnalyticalMoveTo() : base(Methods.M_MOVETO) { }
 
-        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, LDAPPermissions permissions)
+        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, LDAPPermissions permissions)
         {
             // 無法取得父層的組織單位時, 代表為跟目錄
             if (!permissions.Destination.GetOrganizationUnit(out string organizationUnitDN))
@@ -57,7 +57,7 @@ namespace ADService.Certification
             // 宣告重新命名分析氣
             AnalyticalReName analyticalReName = new AnalyticalReName();
             // 檢查是否可以喚醒重新命名: 只需要查看是否成功
-            (InvokeCondition condition, string message) = analyticalReName.Invokable(dispatcher, permissions);
+            (InvokeCondition condition, string message) = analyticalReName.Invokable(ref certification, permissions);
             // 若不可呼叫
             if (condition == null)
             {

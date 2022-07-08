@@ -77,6 +77,24 @@ namespace ADService.ControlAccessRule
             // 回傳結果
             return isSecurityPrincipals;
         }
+
+        internal static HashSet<string> GetMemberOfSID(in LDAPObject invoker, in LDAPObject destination)
+        {
+            // 支援的所有安全性群組 SID
+            string[] invokerSecuritySIDs = invoker is IRevealerSecuritySIDs revealerSecuritySIDs ? revealerSecuritySIDs.Values : Array.Empty<string>();
+            // 轉成 HashSet 判斷喚起者是否為自身
+            HashSet<string> invokerSecuritySIDHashSet = new HashSet<string>(invokerSecuritySIDs);
+            /* 根據情況決定添加何種額外 SID
+                 1. 目標不持有 SID 介面: 視為所有人
+                 2. 喚起者與目標非相同物件: 視為所有人
+                 3. 其他情況: 是為自己
+            */
+            string extendedSID = destination is IRevealerSID revealerSID && invokerSecuritySIDHashSet.Contains(revealerSID.Value) ? SID_SELF : SID_EVERYONE;
+            // 推入此參數
+            invokerSecuritySIDHashSet.Add(extendedSID);
+            // 對外提供組合結果
+            return invokerSecuritySIDHashSet;
+        }
         #endregion
 
         /// <summary>
@@ -87,10 +105,6 @@ namespace ADService.ControlAccessRule
         /// 目標物件的隸屬類別
         /// </summary>
         private readonly UnitSchemaClass[] destinationUnitSchemaClasses;
-        /// <summary>
-        /// 是否可編輯目標物的安全性
-        /// </summary>
-        internal readonly bool IsSecurityEditable;
         /// <summary>
         /// 紀錄喚起此動作的喚醒物件
         /// </summary>
@@ -113,27 +127,13 @@ namespace ADService.ControlAccessRule
 
             // 取得物件持有類別
             string[] classNames = Destination.GetPropertyMultiple<string>(Properties.C_OBJECTCLASS);
-
-            // 支援的所有安全性群組 SID
-            string[] invokerSecuritySIDs = Invoker is IRevealerSecuritySIDs revealerSecuritySIDs ? revealerSecuritySIDs.Values : Array.Empty<string>();
-            // 轉成 HashSet 判斷喚起者是否為自身
-            HashSet<string> invokerSecuritySIDHashSet = new HashSet<string>(invokerSecuritySIDs);
-            /* 根據情況決定添加何種額外 SID
-                 1. 目標不持有 SID 介面: 視為所有人
-                 2. 喚起者與目標非相同物件: 視為所有人
-                 3. 其他情況: 是為自己
-            */
-            string extendedSID = Destination is IRevealerSID revealerSID && invokerSecuritySIDHashSet.Contains(revealerSID.Value) ? SID_SELF : SID_EVERYONE;
-            // 推入此參數
-            invokerSecuritySIDHashSet.Add(extendedSID);
-
             // 透過物件持有類別取得所有可用屬性以及所有可用子類別
             destinationUnitSchemaClasses = dispatcher.GetClasses(classNames);
-            // 設定是否安全性主體
-            IsSecurityEditable = IsSecurityPrincipals(invokerSecuritySIDHashSet);
 
+            // 取得於此物件的可用 SID
+            HashSet<string> memberOfSIDs = GetMemberOfSID(Invoker, Destination);
             // 取得所有可用的存取規則: 包含不會生效的部分
-            AccessRuleConverted[] accessRuleConverteds = Destination.GetAccessRuleConverteds(invokerSecuritySIDHashSet);
+            AccessRuleConverted[] accessRuleConverteds = Destination.GetAccessRuleConverteds(memberOfSIDs);
             // 設置非空 GUID 的存取權限
             SetControlAccessNoneEmpty(ref dispatcher, accessRuleConverteds);
             // 設置空 GUID 的存取權限

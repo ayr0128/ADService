@@ -74,7 +74,7 @@ namespace ADService.Certification
         /// <param name="isShowed">是否展示在功能列表</param>
         internal AnalyticalModifyDetail(in string name, in bool isShowed) : base(name, isShowed) { }
 
-        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, LDAPPermissions permissions)
+        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, LDAPPermissions permissions)
         {
             // 要對外回傳的所有項目: 預設容器大小等於所有需要轉換的項目
             Dictionary<string, InvokeCondition> dictionaryAttributesNameWithCondition = new Dictionary<string, InvokeCondition>(AttributeNames.Count);
