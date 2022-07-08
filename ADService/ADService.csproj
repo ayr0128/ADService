@@ -81,7 +81,7 @@
     <Compile Include="Certification\AnalyticalShowDetail.cs" />
     <Compile Include="Certification\LDAPCertification.cs" />
     <Compile Include="Certification\CertificationProperties.cs" />
-    <Compile Include="Advanced\ControlAccessRights.cs" />
+    <Compile Include="Advanced\CombineAccessRights.cs" />
     <Compile Include="Advanced\LDAPPermissions.cs" />
     <Compile Include="Details\PropertyDetail.cs" />
     <Compile Include="Features\IRevealerSID.cs" />
