@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.DirectoryServices;
 
-namespace ADService.ControlAccessRule
+namespace ADService.Advanced
 {
     /// <summary>
     /// 紀錄的存取規則

@@ -1,15 +1,12 @@
 using ADService.Details;
-using ADService.Features;
 using ADService.Foundation;
 using ADService.Media;
 using ADService.Protocol;
-using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
 using System.Linq;
-using System.Security.Principal;
 
-namespace ADService.ControlAccessRule
+namespace ADService.Advanced
 {
     /// <summary>
     /// 存放針對執行者對於目標物件的相關存取規則
