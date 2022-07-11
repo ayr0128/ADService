@@ -53,7 +53,7 @@ namespace ADService.Details
                 case ActiveDirectorySecurityInheritance.All:             // 包含自己與所有子系物件
                     {
                         // 取得是否為限制子系物件
-                        bool isClassInherited = (rawActiveDirectoryAccessRule.InheritanceFlags & InheritanceFlags.ObjectInherit) == InheritanceFlags.ObjectInherit;
+                        bool isClassInherited = rawActiveDirectoryAccessRule.InheritanceFlags != InheritanceFlags.None;
                         // 限制的繼承類型是否為空
                         bool isInherbitedEmpty = rawActiveDirectoryAccessRule.InheritedObjectType.Equals(Guid.Empty);
                         // 限制鍵類型的 GUID
@@ -67,7 +67,7 @@ namespace ADService.Details
                 case ActiveDirectorySecurityInheritance.Descendents: // 包含所有子系物件
                     {
                         // 取得是否為限制子系物件
-                        bool isClassInherited = (rawActiveDirectoryAccessRule.InheritanceFlags & InheritanceFlags.ObjectInherit) == InheritanceFlags.ObjectInherit;
+                        bool isClassInherited = rawActiveDirectoryAccessRule.InheritanceFlags != InheritanceFlags.None;
                         // 限制的繼承類型是否為空
                         bool isInherbitedEmpty = rawActiveDirectoryAccessRule.InheritedObjectType.Equals(Guid.Empty);
                         // 限制鍵類型的 GUID
