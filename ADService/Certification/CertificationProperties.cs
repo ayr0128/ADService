@@ -114,7 +114,7 @@ namespace ADService.Certification
         /// <summary>
         /// 視為安全性撙的 SID
         /// </summary>
-        internal static WellKnownSidType[] SecuritySIDTypes = new WellKnownSidType[]
+        internal static WellKnownSidType[] SecuritySIDAdmins = new WellKnownSidType[]
         {
             WellKnownSidType.AccountAdministratorSid,    // 帳號管理群組
             WellKnownSidType.AccountDomainAdminsSid,     // 網域管理群組
@@ -126,14 +126,14 @@ namespace ADService.Certification
         /// <summary>
         /// 提供的隸屬群組中是否有安全性群組
         /// </summary>
-        /// <param name="groupSIDs">隸屬群組</param>
+        /// <param name="securitySIDs">隸屬群組</param>
         /// <returns>是否包含安全性主體</returns>
-        internal static bool IsSecurityPrincipals(in IEnumerable<string> groupSIDs)
+        internal static bool IsSecurityPrincipals(in IEnumerable<string> securitySIDs)
         {
             // 是否為安全性主體
             bool isSecurityPrincipals = false;
             // 遍歷群組 SID
-            foreach (string groupSID in groupSIDs)
+            foreach (string securitySID in securitySIDs)
             {
                 // 上一次檢查後確認為安全性主體
                 if (isSecurityPrincipals)
@@ -143,9 +143,9 @@ namespace ADService.Certification
                 }
 
                 // 解析成安瘸性識別字串
-                SecurityIdentifier securityIdentifier = new SecurityIdentifier(groupSID);
+                SecurityIdentifier securityIdentifier = new SecurityIdentifier(securitySID);
                 // 疊加彆疊加是否為安全性主體
-                Array.ForEach(SecuritySIDTypes, securitySIDType => isSecurityPrincipals |= securityIdentifier.IsWellKnown(securitySIDType));
+                Array.ForEach(SecuritySIDAdmins, SecuritySIDAdmin => isSecurityPrincipals |= securityIdentifier.IsWellKnown(SecuritySIDAdmin));
             }
             // 回傳結果
             return isSecurityPrincipals;
@@ -157,7 +157,7 @@ namespace ADService.Certification
         /// <param name="invoker">喚起者</param>
         /// <param name="destination">目標物建</param>
         /// <returns>相關群組 SID</returns>
-        internal static HashSet<string> GetMemberOfSID(in LDAPObject invoker, in LDAPObject destination)
+        internal static HashSet<string> GetSceuritySIDs(in LDAPObject invoker, in LDAPObject destination)
         {
             // 支援的所有安全性群組 SID
             string[] invokerSecuritySIDs = invoker is IRevealerSecuritySIDs revealerSecuritySIDs ? revealerSecuritySIDs.Values : Array.Empty<string>();
@@ -197,29 +197,51 @@ namespace ADService.Certification
         }
 
         /// <summary>
-        /// 創建存取規則
+        /// 創建呼叫者對於目標物建的可用存取規則
         /// </summary>
         /// <param name="destination">目標物建</param>
         /// <returns>可用權限集合</returns>
         internal LDAPPermissions CreatePermissions(in LDAPObject destination)
         {
             // 取得目標資訊
-            if (!dictionaryDistinguishedNameWitSet.TryGetValue(destination.DistinguishedName, out RequiredCommitSet requiredCommitSet))
+            if (!dictionaryDistinguishedNameWitSet.TryGetValue(destination.DistinguishedName, out _))
             {
                 // 取得入口物件
                 DirectoryEntry entry = Dispatcher.ByDistinguisedName(destination.DistinguishedName);
-                // 新建暫存紀錄
-                requiredCommitSet = new RequiredCommitSet(entry);
+                // 推入入口物件
+                dictionaryDistinguishedNameWitSet.Add(destination.DistinguishedName, new RequiredCommitSet(entry));
+            }
+
+            // 取得於此物件的可用 SID
+            HashSet<string> sceuritySID = GetSceuritySIDs(Invoker, destination);
+            // 提供指定目標的權限情況
+            return new LDAPPermissions(ref Dispatcher, destination, sceuritySID);
+        }
+
+
+        /// <summary>
+        /// 創建查看目標物件的持有存取規則
+        /// </summary>
+        /// <param name="destination">目標物建</param>
+        /// <returns>可用權限集合</returns>
+        internal LDAPAccessRules CreateAccessRuless(in LDAPObject destination)
+        {
+            // 取得目標資訊
+            if (!dictionaryDistinguishedNameWitSet.TryGetValue(destination.DistinguishedName, out _))
+            {
+                // 取得入口物件
+                DirectoryEntry entry = Dispatcher.ByDistinguisedName(destination.DistinguishedName);
+                // 存取可用入口物件的結構
+                RequiredCommitSet requiredCommitSet = new RequiredCommitSet(entry);
                 // 推入入口物件
                 dictionaryDistinguishedNameWitSet.Add(destination.DistinguishedName, requiredCommitSet);
             }
 
             // 取得於此物件的可用 SID
-            HashSet<string> memberOfSIDs = GetMemberOfSID(Invoker, destination);
-            // 提供指定目標的權限情況
-            return new LDAPPermissions(ref Dispatcher, destination, memberOfSIDs);
+            HashSet<string> sceuritySID = GetSceuritySIDs(Invoker, destination);
+            // 只有隸屬於安全性群組時才可以取得存取規則
+            return IsSecurityPrincipals(sceuritySID) ? new LDAPAccessRules(ref Dispatcher, destination) : null;
         }
-
         
 
         /// <summary>

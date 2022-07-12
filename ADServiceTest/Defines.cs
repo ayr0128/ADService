@@ -142,6 +142,7 @@ namespace ADServiceFrameworkTest
 
         // 用來測試的部門區分名稱與相關資料
         internal const string OriginOU1 = "OU=新北分部,DC=ayr,DC=test,DC=idv";
+        internal const string OriginOU1S = "OU=胡扯分局,OU=新北分部,DC=ayr,DC=test,DC=idv";
         internal const string OriginOU2 = "OU=台中分部,DC=ayr,DC=test,DC=idv";
         internal const string OriginOU3 = "OU=遷移,DC=ayr,DC=test,DC=idv";
 

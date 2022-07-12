@@ -1,9 +1,46 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.DirectoryServices;
 
 namespace ADService.Protocol
 {
+    /// <summary>
+    /// 指定物件的類錫
+    /// </summary>
+    public enum UnitType : byte
+    {
+        /// <summary>
+        /// 預設, 不可能出現
+        /// </summary>
+        NONE,
+        /// <summary>
+        /// 指定系統物件
+        /// </summary>
+        SYSTEM,
+        /// <summary>
+        /// 指定網域物件
+        /// </summary>
+        DOMAIN,
+    }
+
+    /// <summary>
+    /// 存取規則類型
+    /// </summary>
+    public enum ObjectType : byte
+    {
+        /// <summary>
+        /// 預設, 出現時代表所有權限皆被啟用
+        /// </summary>
+        NONE,
+        /// <summary>
+        /// 屬性值
+        /// </summary>
+        ATTRIBUTE,
+        /// <summary>
+        /// 控制存取權限
+        /// </summary>
+        CONROLACCESS,
+    }
+
     /// <summary>
     /// 錯誤編碼
     /// </summary>

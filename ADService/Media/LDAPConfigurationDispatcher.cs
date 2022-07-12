@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.DirectoryServices;
 using System.Runtime.InteropServices;
 
@@ -62,7 +61,7 @@ namespace ADService.Media
         /// </summary>
         /// <param name="unitSchemaClasses">取得指定類別持有的輔助物件</param>
         /// <returns>類別物件藍本</returns>
-        internal UnitSchemaClass[] GetDrivedClasses(params UnitSchemaClass[] unitSchemaClasses) => Configuration.GetDrivedClasses(this, unitSchemaClasses);
+        internal UnitSchemaClass[] GetAuxiliaryClasses(params UnitSchemaClass[] unitSchemaClasses) => Configuration.GetAuxiliaryClasses(this, unitSchemaClasses);
 
         /// <summary>
         /// 取得以類別藍本物件為父層的類別
