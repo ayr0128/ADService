@@ -148,20 +148,36 @@ namespace ADService.Foundation
                 return new Dictionary<string, LDAPRelationship>(0);
             }
 
-            // 取代用的新字典
-            Dictionary<string, LDAPRelationship> dictionaryDNWithGroup = new Dictionary<string, LDAPRelationship>(distinguishedNames.Length);
-            // 遍歷指定的區分名稱
-            foreach (string distinguishedName in distinguishedNames)
+            // 找尋指定區分名稱時需要從根目錄開始找尋
+            using (DirectoryEntry root = dispatcher.DomainRoot())
             {
-                // 指定區分名稱取得物件
-                using (DirectoryEntry entry = dispatcher.ByDistinguisedName(distinguishedName))
+                // [TODO] 應使用加密字串避免注入式攻擊
+                string encoderFiliter = LDAPConfiguration.GetORFiliter(Properties.C_DISTINGUISHEDNAME, distinguishedNames);
+                // 找尋指定目標
+                using (DirectorySearcher searcher = new DirectorySearcher(root, encoderFiliter, PropertiesToLoad, SearchScope.Subtree))
                 {
-                    // 推入字典
-                    dictionaryDNWithGroup.Add(distinguishedName, new LDAPRelationship(entry, false));
+                    // 將指定目標過濾出來
+                    using (SearchResultCollection all = searcher.FindAll())
+                    {
+                        // 取代用的新字典
+                        Dictionary<string, LDAPRelationship> dictionaryDNWithGroup = new Dictionary<string, LDAPRelationship>(all.Count);
+                        // 遍歷取得的結果
+                        foreach (SearchResult one in all)
+                        {
+                            // 將取得物件轉換為入口物件
+                            using (DirectoryEntry entry = one.GetDirectoryEntry())
+                            {
+                                // 區分名稱
+                                string distinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGUISHEDNAME, entry.Properties);
+                                // 推入字典
+                                dictionaryDNWithGroup.Add(distinguishedName, new LDAPRelationship(entry, false));
+                            }
+                        }
+                        // 返還
+                        return dictionaryDNWithGroup;
+                    }
                 }
             }
-            // 提供給外部
-            return dictionaryDNWithGroup;
         }
         #endregion
 
