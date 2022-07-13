@@ -4,27 +4,27 @@ using ADService.Protocol;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 
-namespace ADService.Certification
+namespace ADService.Analytical
 {
     /// <summary>
     /// 異動持有屬性
     /// </summary>
-    internal sealed class AnalyticalShowCreateable : Analytical
+    internal sealed class MethodShowCreateable : Method
     {
         /// <summary>
         /// 呼叫基底建構子
         /// </summary>
-        internal AnalyticalShowCreateable() : base(Methods.M_SHOWCRATEABLE, true) { }
+        internal MethodShowCreateable() : base(Methods.M_SHOWCRATEABLE, true) { }
 
-        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, LDAPPermissions permissions)
+        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 所有可用的方法
-            List<string> invokedAble = new List<string>(2);
+            List<string> invokedAble = new List<string>(3);
 
             // 宣告異動細節分析氣
-            AnalyticalCreateUser analyticalCreateUser = new AnalyticalCreateUser();
+            MethodCreateUser analyticalCreateUser = new MethodCreateUser();
             // 是否能展示須根據是否能異動決定
-            (InvokeCondition conditionUser, _) = analyticalCreateUser.Invokable(ref certification, permissions);
+            (InvokeCondition conditionUser, _) = analyticalCreateUser.Invokable(ref certification, protocol, permissions, accessRules);
             // 能夠取得條件時
             if (conditionUser != null)
             {
@@ -33,9 +33,9 @@ namespace ADService.Certification
             }
 
             // 宣告異動細節分析氣
-            AnalyticalCreateGroup analyticalCreateGroup = new AnalyticalCreateGroup();
+            MethodCreateGroup analyticalCreateGroup = new MethodCreateGroup();
             // 是否能展示須根據是否能異動決定
-            (InvokeCondition conditionGroup, _) = analyticalCreateGroup.Invokable(ref certification, permissions);
+            (InvokeCondition conditionGroup, _) = analyticalCreateGroup.Invokable(ref certification, protocol, permissions, accessRules);
             // 能夠取得條件時
             if (conditionGroup != null)
             {
@@ -44,9 +44,9 @@ namespace ADService.Certification
             }
 
             // 宣告異動細節分析氣
-            AnalyticalCreateOrganizationUnit analyticalCreateOrganizationUnit = new AnalyticalCreateOrganizationUnit();
+            MethodCreateOrganizationUnit analyticalCreateOrganizationUnit = new MethodCreateOrganizationUnit();
             // 是否能展示須根據是否能異動決定
-            (InvokeCondition conditionOrganizationUnit, _) = analyticalCreateOrganizationUnit.Invokable(ref certification, permissions);
+            (InvokeCondition conditionOrganizationUnit, _) = analyticalCreateOrganizationUnit.Invokable(ref certification, protocol, permissions, accessRules);
             // 能夠取得條件時
             if (conditionOrganizationUnit != null)
             {
@@ -66,18 +66,18 @@ namespace ADService.Certification
                  - 應提供物件類型的參數:
                  - 方法類型只要能夠呼叫就能夠編輯
             */
-            const ProtocolAttributeFlags commonFlags = ProtocolAttributeFlags.INVOKEMETHOD | ProtocolAttributeFlags.ISARRAY;
+            const ProtocolAttributeFlags commonFlags = ProtocolAttributeFlags.INVOKEMETHOD;
             // 需求內容: 採用封盒動作
             Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object> {
-                { InvokeCondition.METHODCONDITION, invokedAble.ToArray() }
+                { InvokeCondition.METHODS, invokedAble.ToArray() }
             };
 
             // 持有項目時就外部就能夠異動
             return (new InvokeCondition(commonFlags, dictionaryProtocolWithDetail), string.Empty);
         }
 
-        internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, LDAPPermissions permissions) => false;
+        internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules) => false;
 
-        internal override void Invoke(ref CertificationProperties certification, in JToken protocol, LDAPPermissions permissions) { }
+        internal override void Invoke(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules) { }
     }
 }

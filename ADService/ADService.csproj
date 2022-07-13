@@ -69,19 +69,21 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Advanced\LDAPAccessRules.cs" />
-    <Compile Include="Certification\Analytical.cs" />
-    <Compile Include="Certification\AnalyticalChangePassword.cs" />
-    <Compile Include="Certification\AnalyticalCreateOrganizationUnit.cs" />
-    <Compile Include="Certification\AnalyticalCreateGroup.cs" />
-    <Compile Include="Certification\AnalyticalModifyDetail.cs" />
-    <Compile Include="Certification\AnalyticalMoveTo.cs" />
-    <Compile Include="Certification\AnalyticalReName.cs" />
-    <Compile Include="Certification\AnalyticalResetPassword.cs" />
-    <Compile Include="Certification\AnalyticalCreateUser.cs" />
-    <Compile Include="Certification\AnalyticalShowCreateable.cs" />
-    <Compile Include="Certification\AnalyticalShowDetail.cs" />
+    <Compile Include="Analytical\Method.cs" />
+    <Compile Include="Analytical\MethodChangePassword.cs" />
+    <Compile Include="Analytical\MethodCreateOrganizationUnit.cs" />
+    <Compile Include="Analytical\MethodCreateGroup.cs" />
+    <Compile Include="Analytical\MethodModifyDetail.cs" />
+    <Compile Include="Analytical\MethodMoveTo.cs" />
+    <Compile Include="Analytical\MethodReName.cs" />
+    <Compile Include="Analytical\MethodResetPassword.cs" />
+    <Compile Include="Analytical\MethodCreateUser.cs" />
+    <Compile Include="Analytical\MethodShowCreateable.cs" />
+    <Compile Include="Analytical\MethodModifySecurity.cs" />
+    <Compile Include="Analytical\MethodShowSecurity.cs" />
+    <Compile Include="Analytical\MethodShowDetail.cs" />
     <Compile Include="Certification\LDAPCertification.cs" />
-    <Compile Include="Certification\CertificationProperties.cs" />
+    <Compile Include="Advanced\CertificationProperties.cs" />
     <Compile Include="Advanced\CombinePermissions.cs" />
     <Compile Include="Advanced\LDAPPermissions.cs" />
     <Compile Include="Details\AccessRuleSet.cs" />
@@ -123,6 +125,7 @@
     <Compile Include="Protocol\InvokeCondition.cs" />
     <Compile Include="Media\LDAPRelationship.cs" />
     <Compile Include="Details\LDAPProperties.cs" />
+    <Compile Include="Protocol\ValueDescription.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

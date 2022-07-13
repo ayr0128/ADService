@@ -7,12 +7,12 @@ using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.DirectoryServices;
 
-namespace ADService.Certification
+namespace ADService.Analytical
 {
     /// <summary>
     /// 異動持有屬性
     /// </summary>
-    internal sealed class AnalyticalCreateOrganizationUnit : Analytical
+    internal sealed class MethodCreateOrganizationUnit : Method
     {
         /// <summary>
         /// 可處理的類型
@@ -27,9 +27,9 @@ namespace ADService.Certification
         /// <summary>
         /// 呼叫基底建構子
         /// </summary>
-        internal AnalyticalCreateOrganizationUnit() : base(Methods.M_CREATEORGANIZATIONUNIT, false) { }
+        internal MethodCreateOrganizationUnit() : base(Methods.M_CREATEORGANIZATIONUNIT, false) { }
 
-        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, LDAPPermissions permissions)
+        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 取得成員字串
             Dictionary<CategoryTypes, string> dictionaryCategoryTypeWithValue = LDAPCategory.GetAccessRulesByTypes(categoryType);
@@ -63,7 +63,7 @@ namespace ADService.Certification
             return (new InvokeCondition(commonFlags, dictionaryProtocolWithDetail), string.Empty);
         }
 
-        internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, LDAPPermissions permissions)
+        internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 解析成創建成員所需參數
             CreateOrganizationUnit createGroup = protocol?.ToObject<CreateOrganizationUnit>();
@@ -112,7 +112,7 @@ namespace ADService.Certification
             }
         }
 
-        internal override void Invoke(ref CertificationProperties certification, in JToken protocol, LDAPPermissions permissions)
+        internal override void Invoke(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 解析成創建成員所需參數
             CreateGroup createGroup = protocol?.ToObject<CreateGroup>();
@@ -151,7 +151,7 @@ namespace ADService.Certification
             // 取得區分名稱
             string distinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGUISHEDNAME, newGroup.Properties);
             // 設定區分名稱與物件
-            RequiredCommitSet requiredCommitSet =  certification.SetEntry(newGroup, distinguishedName);
+            RequiredCommitSet requiredCommitSet = certification.SetEntry(newGroup, distinguishedName);
             // 舍弟需要寫入
             requiredCommitSet.ReflashRequired();
         }

@@ -9,12 +9,12 @@ using System.Collections.Generic;
 using System.DirectoryServices;
 using System.Text;
 
-namespace ADService.Certification
+namespace ADService.Analytical
 {
     /// <summary>
     /// 異動持有屬性
     /// </summary>
-    internal sealed class AnalyticalCreateUser : Analytical
+    internal sealed class MethodCreateUser : Method
     {
         /// <summary>
         /// 可處理的類型
@@ -40,9 +40,9 @@ namespace ADService.Certification
         /// <summary>
         /// 呼叫基底建構子
         /// </summary>
-        internal AnalyticalCreateUser() : base(Methods.M_CREATEUSER, false) { }
+        internal MethodCreateUser() : base(Methods.M_CREATEUSER, false) { }
 
-        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, LDAPPermissions permissions)
+        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 取得成員字串
             Dictionary<CategoryTypes, string> dictionaryCategoryTypeWithValue = LDAPCategory.GetAccessRulesByTypes(categoryType);
@@ -86,7 +86,7 @@ namespace ADService.Certification
             return (new InvokeCondition(commonFlags, dictionaryProtocolWithDetail), string.Empty);
         }
 
-        internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, LDAPPermissions permissions)
+        internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 解析成創建成員所需參數
             CreateUser createUser = protocol?.ToObject<CreateUser>();
@@ -144,7 +144,7 @@ namespace ADService.Certification
             return true;
         }
 
-        internal override void Invoke(ref CertificationProperties certification, in JToken protocol, LDAPPermissions permissions)
+        internal override void Invoke(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 解析成創建成員所需參數
             CreateUser createUser = protocol?.ToObject<CreateUser>();
@@ -209,7 +209,7 @@ namespace ADService.Certification
             // 取得區分名稱
             string distinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGUISHEDNAME, newPerson.Properties);
             // 設定區分名稱與物件
-            RequiredCommitSet requiredCommitSet =  certification.SetEntry(newPerson, distinguishedName);
+            RequiredCommitSet requiredCommitSet = certification.SetEntry(newPerson, distinguishedName);
             // 舍弟需要寫入
             requiredCommitSet.ReflashRequired();
         }

@@ -6,21 +6,21 @@ using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
 
-namespace ADService.Certification
+namespace ADService.Analytical
 {
     /// <summary>
     /// 強制設定密碼方法是可以呼叫, 可以參閱下述 <see href="https://docs.microsoft.com/en-us/windows/win32/api/iads/nf-iads-iadsuser-setpassword">文件</see>>
     /// </summary>
-    internal sealed class AnalyticalResetPassword : Analytical
+    internal sealed class MethodResetPassword : Method
     {
         const string ACCESS_ATTRIBUTE_NAME = Properties.EX_RESETPASSWORD;
 
         /// <summary>
         /// 呼叫基底建構子
         /// </summary>
-        internal AnalyticalResetPassword() : base(Methods.M_RESETPWD) { }
+        internal MethodResetPassword() : base(Methods.M_RESETPWD) { }
 
-        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, LDAPPermissions permissions)
+        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 根目錄不應重新命名
             if (permissions.Destination.Type != CategoryTypes.PERSON)
@@ -50,7 +50,7 @@ namespace ADService.Certification
             return (new InvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside), string.Empty);
         }
 
-        internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, LDAPPermissions permissions)
+        internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 不存在 '重製密碼' 的額外權限
             if (!permissions.IsAllow(ACCESS_ATTRIBUTE_NAME, ActiveDirectoryRights.ExtendedRight))
@@ -65,7 +65,7 @@ namespace ADService.Certification
             return !string.IsNullOrEmpty(setPWDProtocol);
         }
 
-        internal override void Invoke(ref CertificationProperties certification, in JToken protocol, LDAPPermissions permissions)
+        internal override void Invoke(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 將協議轉換成改變密碼用格式
             string setPWDProtocol = protocol?.ToObject<string>();

@@ -7,19 +7,19 @@ using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
 
-namespace ADService.Certification
+namespace ADService.Analytical
 {
     /// <summary>
     /// 重新命名方法是否能夠觸發
     /// </summary>
-    internal sealed class AnalyticalReName : Analytical
+    internal sealed class MethodReName : Method
     {
         /// <summary>
         /// 呼叫基底建構子
         /// </summary>
-        internal AnalyticalReName() : base(Methods.M_RENAME) { }
+        internal MethodReName() : base(Methods.M_RENAME) { }
 
-        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, LDAPPermissions permissions)
+        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 根目錄不應重新命名
             if (!permissions.Destination.GetOrganizationUnit(out _))
@@ -89,7 +89,7 @@ namespace ADService.Certification
             return (new InvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside), string.Empty);
         }
 
-        internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, LDAPPermissions permissions)
+        internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 將重新命名的新名字
             string name = protocol?.ToObject<string>() ?? string.Empty;
@@ -177,7 +177,7 @@ namespace ADService.Certification
             return !string.IsNullOrEmpty(nameInFormat);
         }
 
-        internal override void Invoke(ref CertificationProperties certification, in JToken protocol, LDAPPermissions permissions)
+        internal override void Invoke(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 將重新命名的新名字
             string name = protocol?.ToObject<string>() ?? string.Empty;

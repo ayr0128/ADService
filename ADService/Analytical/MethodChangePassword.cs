@@ -6,19 +6,19 @@ using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
 
-namespace ADService.Certification
+namespace ADService.Analytical
 {
     /// <summary>
     /// 重置密碼方法是可以呼叫, 可以參閱下述 <see href="https://docs.microsoft.com/en-us/windows/win32/api/iads/nf-iads-iadsuser-changepassword">文件</see>>
     /// </summary>
-    internal sealed class AnalyticalChangePassword : Analytical
+    internal sealed class MethodChangePassword : Method
     {
         /// <summary>
         /// 呼叫基底建構子
         /// </summary>
-        internal AnalyticalChangePassword() : base(Methods.M_CHANGEPWD) { }
+        internal MethodChangePassword() : base(Methods.M_CHANGEPWD) { }
 
-        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, LDAPPermissions permissions)
+        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 根目錄不應重新命名
             if (permissions.Destination.Type != CategoryTypes.PERSON)
@@ -48,7 +48,7 @@ namespace ADService.Certification
             return (new InvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside), string.Empty);
         }
 
-        internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, LDAPPermissions permissions)
+        internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 將協議轉換成改變密碼用格式
             ChangePWD changePWDProtocol = protocol?.ToObject<ChangePWD>();
@@ -69,7 +69,7 @@ namespace ADService.Certification
             return true;
         }
 
-        internal override void Invoke(ref CertificationProperties certification, in JToken protocol, LDAPPermissions permissions)
+        internal override void Invoke(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 將協議轉換成改變密碼用格式
             ChangePWD changePWDProtocol = protocol?.ToObject<ChangePWD>();

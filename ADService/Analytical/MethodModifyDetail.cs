@@ -10,12 +10,12 @@ using System.Collections.Generic;
 using System.DirectoryServices;
 using System.Linq;
 
-namespace ADService.Certification
+namespace ADService.Analytical
 {
     /// <summary>
     /// 異動持有屬性
     /// </summary>
-    internal sealed class AnalyticalModifyDetail : Analytical
+    internal sealed class MethodModifyDetail : Method
     {
         /// <summary>
         /// 存取權限與屬性鍵值對應表, 如果沒有屬性鍵值對照表, 鑿代表存取權限本身就是屬性鍵值 [TODO] 找到方法可以自動解析內容時就可以不需要註冊行為
@@ -65,16 +65,16 @@ namespace ADService.Certification
         /// <summary>
         /// 呼叫基底建構子
         /// </summary>
-        internal AnalyticalModifyDetail() : base(Methods.M_MODIFYDETAIL, false) { }
+        internal MethodModifyDetail() : base(Methods.M_MODIFYDETAIL, false) { }
 
         /// <summary>
         /// 提供給繼承使用的呼叫建構子
         /// </summary>
         /// <param name="name">方法或屬性名稱</param>
         /// <param name="isShowed">是否展示在功能列表</param>
-        internal AnalyticalModifyDetail(in string name, in bool isShowed) : base(name, isShowed) { }
+        internal MethodModifyDetail(in string name, in bool isShowed) : base(name, isShowed) { }
 
-        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, LDAPPermissions permissions)
+        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 要對外回傳的所有項目: 預設容器大小等於所有需要轉換的項目
             Dictionary<string, InvokeCondition> dictionaryAttributesNameWithCondition = new Dictionary<string, InvokeCondition>(AttributeNames.Count);
@@ -110,13 +110,14 @@ namespace ADService.Certification
                             // 嘗試轉換成目標介面並取得內容
                             LDAPRelationship[] values = revealerMember.Elements;
                             // 成員的預期項目: 必定持有自定項目
-                            ProtocolAttributeFlags protocolAttributeFlags = ProtocolAttributeFlags.HASVALUE | ProtocolAttributeFlags.ISARRAY;
+                            ProtocolAttributeFlags protocolAttributeFlags = ProtocolAttributeFlags.HASVALUE;
+                            // 資料描述
+                            ValueDescription description = new ValueDescription(typeof(LDAPRelationship).Name, values.Length, true);
                             // 宣告持有內容: 運行至此必定包含可讀取項目
                             Dictionary<string, object> dictionaryProtocolWithDetailInside = new Dictionary<string, object>
                             {
-                                { InvokeCondition.STOREDTYPE, typeof(LDAPRelationship).Name }, // 持有內容描述
-                                { InvokeCondition.VALUE, values },                             // 持有內容
-                                { InvokeCondition.COUNT, values.Length },                      // 陣列長度
+                                { InvokeCondition.STOREDTYPE, description }, // 持有內容描述
+                                { InvokeCondition.VALUE, values },           // 持有內容
                             };
 
                             // 異動能否包含自幾
@@ -157,13 +158,14 @@ namespace ADService.Certification
                             // 嘗試轉換成目標介面並取得內容
                             LDAPRelationship[] values = revealerMemberOf.Elements;
                             // 隸屬群組的預期項目: 必定持有自定項目, 由於隸屬群組僅會持有可讀權限, 所以可讀的狀況下就可寫
-                            ProtocolAttributeFlags protocolAttributeFlags = ProtocolAttributeFlags.HASVALUE | ProtocolAttributeFlags.ISARRAY;
+                            ProtocolAttributeFlags protocolAttributeFlags = ProtocolAttributeFlags.HASVALUE;
+                            // 資料描述
+                            ValueDescription description = new ValueDescription(typeof(LDAPRelationship).Name, values.Length, true);
                             // 宣告持有內容
                             Dictionary<string, object> dictionaryProtocolWithDetailInside = new Dictionary<string, object>
                             {
-                                { InvokeCondition.STOREDTYPE, typeof(LDAPRelationship).Name }, // 持有內容描述
-                                { InvokeCondition.VALUE, values },                             // 持有內容
-                                { InvokeCondition.COUNT, values.Length },                      // 陣列長度
+                                { InvokeCondition.STOREDTYPE, description }, // 持有內容描述
+                                { InvokeCondition.VALUE, values },           // 持有內容
                             };
 
                             // 增加可以編譯
@@ -197,10 +199,10 @@ namespace ADService.Certification
                             // 宣告持有內容: 由於宣告為字串類型, 所以儲存與修改時需求的都會是字串
                             Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object>()
                             {
-                                { InvokeCondition.STOREDTYPE, typeEnum.Name },                     // 持有內容描述
-                                { InvokeCondition.VALUE, accountControlProtocols },                // 持有內容
+                                { InvokeCondition.STOREDTYPE, new ValueDescription(typeEnum.Name) }, // 持有內容描述
+                                { InvokeCondition.VALUE, accountControlProtocols },            // 持有內容
                                 { InvokeCondition.COMBINETAG, Methods.CT_USERACCOUNTCONTROL }, // 與其他持有此整合旗標的物件視為同一區塊作處理
-                                { InvokeCondition.FLAGMASK, ACOUNTCONTROL_MASK },                  // 提供陳列用的遮罩
+                                { InvokeCondition.FLAGMASK, ACOUNTCONTROL_MASK },              // 提供陳列用的遮罩
                             };
 
                             // 若可以編譯
@@ -236,9 +238,9 @@ namespace ADService.Certification
                             // 宣告持有內容: 由於宣告為字串類型, 所以儲存與修改時需求的都會是字串
                             Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object>()
                             {
-                                { InvokeCondition.STOREDTYPE, typeEnum.Name },                              // 持有內容描述
-                                { InvokeCondition.VALUE, accountControlProtocols },                         // 持有內容
-                                { InvokeCondition.COMBINETAG, Methods.CT_USERACCOUNTCONTROL },          // 與其他持有此整合旗標的物件視為同一區塊作處理
+                                { InvokeCondition.STOREDTYPE, new ValueDescription(typeEnum.Name) }, // 持有內容描述
+                                { InvokeCondition.VALUE, accountControlProtocols },                   // 持有內容
+                                { InvokeCondition.COMBINETAG, Methods.CT_USERACCOUNTCONTROL },        // 與其他持有此整合旗標的物件視為同一區塊作處理
                                 { InvokeCondition.FLAGMASK, AccountControlProtocols.PWD_CHANGE_NEXTLOGON }, // 提供陳列用的遮罩
                             };
 
@@ -276,10 +278,10 @@ namespace ADService.Certification
                             // 宣告持有內容: 由於宣告為字串類型, 所以儲存與修改時需求的都會是字串
                             Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object>()
                             {
-                                { InvokeCondition.STOREDTYPE, typeEnum.Name },                     // 持有內容描述
-                                { InvokeCondition.VALUE, accountControlProtocols },                // 持有內容
+                                { InvokeCondition.STOREDTYPE, new ValueDescription(typeEnum.Name)  }, // 持有內容描述
+                                { InvokeCondition.VALUE, accountControlProtocols },            // 持有內容
                                 { InvokeCondition.COMBINETAG, Methods.CT_USERACCOUNTCONTROL }, // 與其他持有此整合旗標的物件視為同一區塊作處理
-                                { InvokeCondition.FLAGMASK, ENCRYPT_PROTOCOLMASK },                // 提供陳列用的遮罩
+                                { InvokeCondition.FLAGMASK, ENCRYPT_PROTOCOLMASK },            // 提供陳列用的遮罩
                             };
 
                             // 若可以編譯
@@ -310,8 +312,8 @@ namespace ADService.Certification
                             // 宣告持有內容: 由於宣告為字串類型, 所以儲存與修改時需求的都會是字串
                             Dictionary<string, object> dictionaryProtocolWithDetailInside = new Dictionary<string, object>()
                             {
-                                { InvokeCondition.STOREDTYPE, typeString.Name },        // 持有內容描述
-                                { InvokeCondition.VALUE, storedValue ?? string.Empty }, // 持有內容
+                                { InvokeCondition.STOREDTYPE, new ValueDescription(typeString.Name) }, // 持有內容描述
+                                { InvokeCondition.VALUE, storedValue ?? string.Empty },                 // 持有內容
                             };
 
                             // 必須根據能否寫入決定是否添加異動旗標
@@ -361,7 +363,7 @@ namespace ADService.Certification
             return (new InvokeCondition(commonFlags, dictionaryProtocolWithDetailOutside), string.Empty);
         }
 
-        internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, LDAPPermissions permissions)
+        internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 紀錄處理目標的區分名稱
             string distinguishedNameDestination = permissions.Destination.DistinguishedName;
@@ -618,7 +620,7 @@ namespace ADService.Certification
                                 // 是否可異動
                                 bool isProcessedEditable = permissionsProtocol.IsAllow(Properties.P_MEMBER, ActiveDirectoryRights.WriteProperty);
                                 // 異動能否包含自身
-                                bool isProcessedContainSelf = permissionsProtocol.IsAllow(Properties.P_MEMBER, ActiveDirectoryRights.Self); 
+                                bool isProcessedContainSelf = permissionsProtocol.IsAllow(Properties.P_MEMBER, ActiveDirectoryRights.Self);
                                 /* 根據異動目標判斷異動權限是否不可用
                                      1. 異動資料是自己, 不包含異動自己的權限
                                      2. 異動資料不是自己, 不包含異動的權限
@@ -757,7 +759,7 @@ namespace ADService.Certification
             return dictionaryFailureAttributeNameWithMessage.Count == 0;
         }
 
-        internal override void Invoke(ref CertificationProperties certification, in JToken protocol, LDAPPermissions permissions)
+        internal override void Invoke(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 紀錄目標的區分名稱
             string distinguishedNameDestination = permissions.Destination.DistinguishedName;

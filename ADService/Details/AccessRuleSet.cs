@@ -1,6 +1,8 @@
 ﻿using ADService.Media;
+using ADService.Protocol;
 using System;
 using System.DirectoryServices;
+using System.Security.AccessControl;
 using System.Security.Principal;
 
 namespace ADService.Details
@@ -10,19 +12,6 @@ namespace ADService.Details
     /// </summary>
     internal class AccessRuleSet
     {
-        /// <summary>
-        /// 提供 GUID 格式, 轉換成對應的小寫格式
-        /// </summary>
-        /// <param name="valueGUID">指定 GUID</param>
-        /// <returns>轉換成對照格事後的小寫 GUID</returns>
-        internal static string ConvertedGUID(in Guid valueGUID) => valueGUID.ToString("D").ToLower();
-        /// <summary>
-        /// 提供 GUID 格式確認是否為空的 GUID
-        /// </summary>
-        /// <param name="valueGUID">指定 GUID</param>
-        /// <returns> GUID 是否為空</returns>
-        internal static bool IsGUIDEmpty(in Guid valueGUID) => valueGUID.Equals(Guid.Empty);
-
         /// <summary>
         /// 持有此存取權限的物件區分名稱
         /// </summary>
@@ -43,9 +32,13 @@ namespace ADService.Details
         /// 原始存取權限
         /// </summary>
         internal readonly ActiveDirectoryAccessRule Raw;
+        /// <summary>
+        /// 是否是系統群組或系統人員
+        /// </summary>
+        internal bool IsSystem => UnitName != SecurityID;
 
         /// <summary>
-        /// 建構子
+        /// 建構子, 使用者只能異動不是透過繼承取得的部分
         /// </summary>
         /// <param name="distinguishedName">物件區分名稱</param>
         /// <param name="isInherited">是否透過繼承取得</param>
@@ -57,8 +50,8 @@ namespace ADService.Details
             Raw = raw;
 
             // 注意需要透過 NTAccount 取得
-            UnitName = raw.IdentityReference.ToString(); 
-            SecurityID = raw.IdentityReference.Translate(typeof(SecurityIdentifier)).ToString();
+            UnitName = Raw.IdentityReference.ToString(); 
+            SecurityID = Raw.IdentityReference.Translate(typeof(SecurityIdentifier)).ToString();
         }
 
         /// <summary>
@@ -73,6 +66,6 @@ namespace ADService.Details
         /// </summary>
         /// <param name="unitSchemaClass">目標類型</param>
         /// <returns>是否產生影響</returns>
-        internal bool Activable(in UnitSchemaClass unitSchemaClass) => IsGUIDEmpty(Raw.InheritedObjectType) || ConvertedGUID(Raw.InheritedObjectType) == unitSchemaClass.SchemaGUID.ToLower();
+        internal bool Activable(in UnitSchemaClass unitSchemaClass) => AccessRuleProtocol.IsGUIDEmpty(Raw.InheritedObjectType) || AccessRuleProtocol.ConvertedGUID(Raw.InheritedObjectType) == unitSchemaClass.SchemaGUID.ToLower();
     }
 }

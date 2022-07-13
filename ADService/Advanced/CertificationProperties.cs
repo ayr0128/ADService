@@ -1,14 +1,12 @@
-﻿using ADService.Advanced;
-using ADService.Features;
+﻿using ADService.Features;
 using ADService.Foundation;
 using ADService.Media;
-using ADService.Protocol;
 using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
 using System.Security.Principal;
 
-namespace ADService.Certification
+namespace ADService.Advanced
 {
     #region 記錄用類別
     /// <summary>
@@ -224,7 +222,7 @@ namespace ADService.Certification
         /// </summary>
         /// <param name="destination">目標物建</param>
         /// <returns>可用權限集合</returns>
-        internal LDAPAccessRules CreateAccessRuless(in LDAPObject destination)
+        internal LDAPAccessRules CreateAccessRules(in LDAPObject destination)
         {
             // 取得目標資訊
             if (!dictionaryDistinguishedNameWitSet.TryGetValue(destination.DistinguishedName, out _))

@@ -1,6 +1,8 @@
 using ADService.Details;
 using ADService.Foundation;
 using ADService.Media;
+using ADService.Protocol;
+using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
 using System.Linq;
@@ -27,13 +29,27 @@ namespace ADService.Advanced
         /// </summary>
         /// <param name="dispatcher">設定分配氣</param>
         /// <param name="destination">目標物件</param>
-        /// <param name="securitySIDs">關係群組</param>
-        internal LDAPPermissions(ref LDAPConfigurationDispatcher dispatcher, in LDAPObject destination, in HashSet<string> securitySIDs)
+        /// <param name="securityIDs">關係群組</param>
+        internal LDAPPermissions(ref LDAPConfigurationDispatcher dispatcher, in LDAPObject destination, in HashSet<string> securityIDs)
         {
             Destination = destination;
 
             // 總長度尚未確定
-            AccessRuleSet[] accessRuleSets = destination.GetAccessRuleSets(securitySIDs);
+            List<AccessRuleSet> accessRuleSets = new List<AccessRuleSet>();
+            // 遍歷目標物件持有的存取規則
+            foreach (AccessRuleSet accessRuleSet in Destination.accessRuleSets)
+            {
+                // 檢查是否為需求的 SID 之一
+                if (!securityIDs.Contains(accessRuleSet.SecurityID))
+                {
+                    // 不是就跳過
+                    continue;
+                }
+
+                // 將此項目加入成為可用資料
+                accessRuleSets.Add(accessRuleSet);
+            }
+
             // 設置非空 GUID 的存取權限
             SetControlAccessNoneEmpty(ref dispatcher, accessRuleSets);
             // 設置空 GUID 的存取權限
@@ -46,7 +62,7 @@ namespace ADService.Advanced
         /// </summary>
         /// <param name="dispatcher">共用的設定分配氣</param>
         /// <param name="accessRuleSets">目前的權限設置</param>
-        private void SetControlAccessNoneEmpty(ref LDAPConfigurationDispatcher dispatcher, params AccessRuleSet[] accessRuleSets)
+        private void SetControlAccessNoneEmpty(ref LDAPConfigurationDispatcher dispatcher, in IEnumerable<AccessRuleSet> accessRuleSets)
         {
             // 由於經過排序動作: 自身持有類別的最後一項必定是驅動類別
             UnitSchemaClass destinationUnitSchemaClass = Destination.driveUnitSchemaClasses.Last();
@@ -58,10 +74,15 @@ namespace ADService.Advanced
             // 使用查詢 SID 陣列取得所有存取權限 (包含沒有生效的)
             foreach (AccessRuleSet accessRuleSet in accessRuleSets)
             {
+                // 存取權限的設置
+                ActiveDirectoryRights activeDirectoryRights = accessRuleSet.Raw.ActiveDirectoryRights;
+                // 目標物件
+                Guid objectGUID = accessRuleSet.Raw.ObjectType;
+
                 // 取得對於此存取規則而言是否可用
                 bool isActivable = accessRuleSet.Activable(destinationUnitSchemaClass);
                 // 不產生影響的物件不須進行動作
-                if (!isActivable || AccessRuleSet.IsGUIDEmpty(accessRuleSet.Raw.ObjectType))
+                if (!isActivable || AccessRuleProtocol.IsGUIDEmpty(objectGUID))
                 {
                     // 跳過
                     continue;
@@ -70,9 +91,9 @@ namespace ADService.Advanced
                 // 是否是允許
                 bool isAllow = accessRuleSet.Raw.AccessControlType == AccessControlType.Allow;
                 // 將資料轉換成小寫
-                string obkectGUIDLower = AccessRuleSet.ConvertedGUID(accessRuleSet.Raw.ObjectType);
+                string objectGUIDLower = AccessRuleProtocol.ConvertedGUID(objectGUID);
                 // 先重存取控制的權限開始取得對應資料
-                if (dictionaryGUIDithUnitControlAccesses.TryGetValue(obkectGUIDLower, out UnitControlAccess unitControlAccess))
+                if (dictionaryGUIDithUnitControlAccesses.TryGetValue(objectGUIDLower, out UnitControlAccess unitControlAccess) && accessRuleSet.RightMasks(unitControlAccess.AccessRuleControl) != 0)
                 {
                     // 能從存取權限中取得時必定能從關聯取得對應狀態
                     UnitSchemaAttribute[] unitSchemaAttributes = dispatcher.GetUnitSchemaAttribute(unitControlAccess);
@@ -80,7 +101,7 @@ namespace ADService.Advanced
                     foreach (UnitSchemaAttribute unitSchemaAttribute in unitSchemaAttributes)
                     {
                         // 設置關聯屬性
-                        combinePermissions.Set(unitSchemaAttribute.Name, isAllow, accessRuleSet.Raw.ActiveDirectoryRights);
+                        combinePermissions.Set(unitSchemaAttribute.Name, isAllow, activeDirectoryRights);
                     }
 
                     // 是否為拓展權限
@@ -89,22 +110,22 @@ namespace ADService.Advanced
                     if (unitSchemaAttributes.Length == 0 && hasRights)
                     {
                         // 設置自身的權限
-                        combinePermissions.Set(unitControlAccess.Name, isAllow, accessRuleSet.Raw.ActiveDirectoryRights);
+                        combinePermissions.Set(unitControlAccess.Name, isAllow, activeDirectoryRights);
                     }
                 }
                 else
                 {
                     // 取得參數名稱
-                    UnitSchema unitSchema = dispatcher.GetUnitSchema(accessRuleSet.Raw.ObjectType);
+                    UnitSchema unitSchema = dispatcher.GetUnitSchema(objectGUID);
                     // 若此  GUID 無法取得屬性值, 這代表此 GUID 為非本物件能支援的存取權限
                     if (unitSchema == null)
                     {
                         // 非本物件支援的存取權限可以跳過
                         continue;
                     }
-                    
+
                     // 設置自身的權限
-                    combinePermissions.Set(unitSchema.Name, isAllow, accessRuleSet.Raw.ActiveDirectoryRights);
+                    combinePermissions.Set(unitSchema.Name, isAllow, activeDirectoryRights);
                 }
             }
         }
@@ -114,17 +135,19 @@ namespace ADService.Advanced
         /// </summary>
         /// <param name="dispatcher">共用的設定分配氣</param>
         /// <param name="accessRuleSets">目前的權限設置</param>
-        private void SetControlAccessWasEmpty(ref LDAPConfigurationDispatcher dispatcher, params AccessRuleSet[] accessRuleSets)
+        private void SetControlAccessWasEmpty(ref LDAPConfigurationDispatcher dispatcher, in IEnumerable<AccessRuleSet> accessRuleSets)
         {
             // 由於經過排序動作: 自身持有類別的最後一項必定是驅動類別
             UnitSchemaClass destinationUnitSchemaClass = Destination.driveUnitSchemaClasses.Last();
             // 使用查詢 SID 陣列取得所有存取權限 (包含沒有生效的)
             foreach (AccessRuleSet accessRuleSet in accessRuleSets)
             {
+                // 目標物件
+                Guid objectGUID = accessRuleSet.Raw.ObjectType;
                 // 取得對於此存取規則而言是否可用
                 bool isActivable = accessRuleSet.Activable(destinationUnitSchemaClass);
                 // 不產生影響的物件不須進行動作
-                if (!isActivable || !AccessRuleSet.IsGUIDEmpty(accessRuleSet.Raw.ObjectType))
+                if (!isActivable || !AccessRuleProtocol.IsGUIDEmpty(objectGUID))
                 {
                     // 跳過
                     continue;
@@ -172,7 +195,7 @@ namespace ADService.Advanced
                     foreach (UnitSchemaAttribute unitSchemaAttribute in dispatcher.GetUnitSchemaAttribute(Destination.AllowedAttributeNames))
                     {
                         // 取得是否為可用參數
-                        if(!unitSchemaAttribute.isEffecteive)
+                        if (!unitSchemaAttribute.isEffecteive)
                         {
                             // 不可用參數需跳過
                             continue;

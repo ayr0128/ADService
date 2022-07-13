@@ -33,10 +33,6 @@ namespace ADService.Protocol
         /// </summary>
         public const string FLAGMASK = "FlagMask";
         /// <summary>
-        /// 當儲存資料是陣列時描述其長度
-        /// </summary>
-        public const string COUNT = "Count";
-        /// <summary>
         /// 與其他持有同樣標籤的物件視為同一組物件
         /// </summary>
         public const string COMBINETAG = "CombineWith";
@@ -49,9 +45,9 @@ namespace ADService.Protocol
         /// </summary>
         public const string RECEIVEDTYPE = "ReceivedType";
         /// <summary>
-        /// 喚起方法條件
+        /// 支援方法列表
         /// </summary>
-        public const string METHODCONDITION = "MethodCondition";
+        public const string METHODS = "Methods";
 
         /// <summary>
         /// 協議旗標

@@ -8,19 +8,19 @@ using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
 
-namespace ADService.Certification
+namespace ADService.Analytical
 {
     /// <summary>
     /// 移動方法是否能夠觸發
     /// </summary>
-    internal sealed class AnalyticalMoveTo : Analytical
+    internal sealed class MethodMoveTo : Method
     {
         /// <summary>
         /// 呼叫基底建構子
         /// </summary>
-        internal AnalyticalMoveTo() : base(Methods.M_MOVETO) { }
+        internal MethodMoveTo() : base(Methods.M_MOVETO) { }
 
-        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, LDAPPermissions permissions)
+        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 無法取得父層的組織單位時, 代表為跟目錄
             if (!permissions.Destination.GetOrganizationUnit(out string organizationUnitDN))
@@ -55,9 +55,9 @@ namespace ADService.Certification
             }
 
             // 宣告重新命名分析氣
-            AnalyticalReName analyticalReName = new AnalyticalReName();
+            MethodReName analyticalReName = new MethodReName();
             // 檢查是否可以喚醒重新命名: 只需要查看是否成功
-            (InvokeCondition condition, string message) = analyticalReName.Invokable(ref certification, permissions);
+            (InvokeCondition condition, string message) = analyticalReName.Invokable(ref certification, protocol, permissions, accessRules);
             // 若不可呼叫
             if (condition == null)
             {
@@ -94,7 +94,7 @@ namespace ADService.Certification
             return (new InvokeCondition(commonFlags, dictionaryProtocolWithDetail), string.Empty);
         }
 
-        internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, LDAPPermissions permissions)
+        internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 取得區分名稱
             string distinguishedName = protocol?.ToObject<string>() ?? string.Empty;
@@ -190,7 +190,7 @@ namespace ADService.Certification
             }
         }
 
-        internal override void Invoke(ref CertificationProperties certification, in JToken protocol, LDAPPermissions permissions)
+        internal override void Invoke(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 將重新命名的新名字
             string distinguishedName = protocol?.ToObject<string>() ?? string.Empty;

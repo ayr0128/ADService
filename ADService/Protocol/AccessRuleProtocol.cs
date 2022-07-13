@@ -1,93 +1,178 @@
-﻿using System.DirectoryServices;
+﻿using System;
+using System.DirectoryServices;
+using System.Security.AccessControl;
 
 namespace ADService.Protocol
 {
     /// <summary>
     /// 提供給
     /// </summary>
-    public class AccessRuleProtocol
+    public struct AccessRuleProtocol
     {
         /// <summary>
-        /// 代表此權限將拒絕或允許那些權限
-        /// <list type="table">
-        ///     <item> 數值為真時, 代表允許 </item>
-        ///     <item> 數值為否時, 代表拒絕 </item>
-        /// </list>
+        /// 提供 GUID 格式, 轉換成對應的小寫格式
         /// </summary>
-        public bool AccessControl;
+        /// <param name="valueGUID">指定 GUID</param>
+        /// <returns>轉換成對照格事後的小寫 GUID</returns>
+        internal static string ConvertedGUID(in Guid valueGUID) => valueGUID.ToString("D").ToLower();
+        /// <summary>
+        /// 提供 GUID 格式確認是否為空的 GUID
+        /// </summary>
+        /// <param name="valueGUID">指定 GUID</param>
+        /// <returns> GUID 是否為空</returns>
+        internal static bool IsGUIDEmpty(in Guid valueGUID) => valueGUID.Equals(Guid.Empty);
 
         /// <summary>
-        /// 隸屬於哪個群組或者是哪個使用者時, 將會產生作用
+        /// 製作簽名
         /// </summary>
-        public string UnitName;
-        /// <summary>
-        /// 用來判斷指定單位的類型
-        /// </summary>
-        public UnitType TypeUnit;
+        /// <param name="unitName">隸屬群組或物件</param>
+        /// <param name="isSystemSecurityID">是否是系統群組或物件</param>
+        /// <param name="isInherited">是否從繼承而來</param>
+        /// <param name="distinguishedName">持有此權限的區分名稱</param>
+        /// <param name="objectName">針對屬性名稱</param>
+        /// <param name="inheritedName">針對類型</param>
+        /// <param name="activeDirectoryAccessRule">存取規則</param>
+        /// <returns>簽名字串</returns>
+        internal static string CreateSignature(in string unitName, in bool isSystemSecurityID, in bool isInherited, in string distinguishedName, in string objectName, in string inheritedName, in ActiveDirectoryAccessRule activeDirectoryAccessRule)
+        {
+            // 將權限轉換成數字
+            uint valueRights = Convert.ToUInt32(activeDirectoryAccessRule.ActiveDirectoryRights);
+            // 轉換是否允許
+            bool isAllow = activeDirectoryAccessRule.AccessControlType == AccessControlType.Allow;
+            // 繼承動作
+            byte valueInherited = Convert.ToByte(activeDirectoryAccessRule.InheritanceType);
+            // 存取權限持有者
+            string ownerDistinguishedName = isInherited ? distinguishedName : string.Empty;
+            // 此內容必定獨一無二
+            return CreateSignature(unitName, isSystemSecurityID, ownerDistinguishedName, objectName, inheritedName, valueRights, isAllow, valueInherited);
+        }
 
         /// <summary>
-        /// 針對屬性或控制存取權發生作用, 需使用 <see cref="TypeObject">控制權限類型</see> 決定如何動作
+        /// 內部呼叫的簽名製作功能
         /// </summary>
-        public string ObjectName;
-        /// <summary>
-        /// 控制存取類型, 根據下述描述對 <see cref="ObjectName">物件名稱</see> 慘生作用
-        /// <list type="table">
-        ///     <item> <term><see cref="ObjectType.NONE">預設</see></term> 此時<see cref="ObjectName">物件名稱</see>不重要, 因為會對權限影響到的項目進行動作  </item>
-        ///     <item> <term><see cref="ObjectType.CONROLACCESS">預設</see></term> 此時<see cref="ObjectName">物件名稱</see>將只影響到控制存取權限 </item>
-        ///     <item> <term><see cref="ObjectType.ATTRIBUTE">預設</see></term> 此時<see cref="ObjectName">物件名稱</see>將只影響到屬性 </item>
-        /// </list>
-        /// </summary>
-        public ObjectType TypeObject;
+        /// <param name="unitName">隸屬群組或物件</param>
+        /// <param name="isSystemSecurityID">是否是系統群組或物件</param>
+        /// <param name="distinguishedName">持有此權限的物件區分名稱: 空白時代表為自身持有的權限</param>
+        /// <param name="objectName">針對屬性名稱</param>
+        /// <param name="inheritedName">針對類型</param>
+        /// <param name="rightFlags">可用權限</param>
+        /// <param name="isAllow">是否允許</param>
+        /// <param name="inheritanceType">繼承方式</param>
+        /// <returns>簽名字串</returns>
+        private static string CreateSignature(in string unitName, in bool isSystemSecurityID, in string distinguishedName, in string objectName, in string inheritedName, in uint rightFlags, in bool isAllow, in byte inheritanceType)
+        {
+            // 此內容必定獨一無二
+            return $"{distinguishedName}:{unitName}:{isSystemSecurityID}:{objectName}:{inheritedName}:{rightFlags}:{isAllow}:{inheritanceType}";
+        }
 
         /// <summary>
-        /// 子物件為何種類型時, 此控制權限將發生繼承動作
+        /// 內部簽名格式: 簽名格式可以轉換成指定目標
         /// </summary>
-        public string InheritedName;
+        public readonly string Signature;
         /// <summary>
-        /// 繼承以及運作方式
+        /// 持有此權限的區分名稱: 如果為空就代表此權限是自身持有的, 可以移除或修改
         /// </summary>
-        public ActiveDirectorySecurityInheritance SecurityInheritance;
-
+        public readonly string DistinguishedName;
         /// <summary>
-        /// 此規則的權限
+        /// 持有此權限的群組或物件: 注意有可能是系統物件, 這類型的物件無法透過搜尋取得, 需使用特殊方式搜尋
         /// </summary>
-        public ActiveDirectoryRights ActiveDirectoryRight;
+        public readonly string UnitName;
         /// <summary>
-        /// 繼承來源
+        /// 持有此權限的群組或物件是否為系統物件
         /// </summary>
-        public string ParentDistinguishedName;
+        public readonly bool IsSystem;
+        /// <summary>
+        /// 權限針對的物件或屬性或控制存取群組
+        /// </summary>
+        public readonly string ObjectName;
+        /// <summary>
+        /// 當繼承發生時此權限能影響到的類型
+        /// </summary>
+        public readonly string InheritedName;
+        /// <summary>
+        /// 可用的權限
+        /// </summary>
+        public readonly ActiveDirectoryRights RightFlags;
+        /// <summary>
+        /// 允許或是拒絕設置的權限
+        /// </summary>
+        public readonly AccessControlType ControlType;
+        /// <summary>
+        /// 繼承方式
+        /// </summary>
+        public readonly ActiveDirectorySecurityInheritance InheritanceType;
 
         /// <summary>
         /// 建構子
         /// </summary>
-        /// <param name="accessControl">允許或拒絕</param>
-        /// <param name="unitName">對應此權限的群組或成員名稱</param>
-        /// <param name="typeUnit">群組或成員類型</param>
-        /// <param name="objectName">影響物件名稱</param>
-        /// <param name="typeAccessRule">影響物件是屬性還是控制存取權縣</param>
-        /// <param name="inheritedName">繼承的物件</param>
-        /// <param name="securityInheritance">如何繼承</param>
-        /// <param name="activeDirectoryRight">持有權限</param>
-        /// <param name="parentDistinguishedName">繼承來源</param>
-        public AccessRuleProtocol(in bool accessControl,
-            in string unitName, in UnitType typeUnit,
-            in string objectName, in ObjectType typeAccessRule,
-            in string inheritedName, in ActiveDirectorySecurityInheritance securityInheritance,
-            in ActiveDirectoryRights activeDirectoryRight, in string parentDistinguishedName)
+        /// <param name="signature">按照規定格式製作的簽名</param>
+        public AccessRuleProtocol(in string signature)
         {
-            AccessControl = accessControl;
+            Signature = signature;
 
+            // 切割簽名取得內部格式
+            string[] elements = Signature.Split(':');
+            // 區分名稱
+            DistinguishedName = elements[0];
+            // 持有此權限的群組或物件
+            UnitName = elements[1];
+            // 持有此權限的群組或物件是否為系統持有
+            IsSystem = Convert.ToBoolean(elements[2]);
+            // 權限針對的物件或屬性或控制存取群組
+            ObjectName = elements[3];
+            // 當繼承發生時此權限能影響到的類型
+            InheritedName = elements[4];
+
+            // 轉換權限
+            uint valueRights = Convert.ToUInt32(elements[5]);
+            // 轉換權限
+            RightFlags = (ActiveDirectoryRights)Enum.ToObject(typeof(ActiveDirectoryRights), valueRights);
+            // 允許或是拒絕設置的權限
+            ControlType = Convert.ToBoolean(elements[6]) ? AccessControlType.Allow : AccessControlType.Deny;
+
+            // 轉換繼承方式
+            uint valueInherited = Convert.ToUInt32(elements[7]);
+            // 轉換繼承方式
+            InheritanceType = (ActiveDirectorySecurityInheritance)Enum.ToObject(typeof(ActiveDirectorySecurityInheritance), valueInherited);
+        }
+
+        /// <summary>
+        /// 建構子
+        /// </summary>
+        /// <param name="unitName">隸屬群組或物件</param>
+        /// <param name="isSystem">是否是系統群組或物件</param>
+        /// <param name="objectName">針對屬性名稱</param>
+        /// <param name="inheritedName">針對類型</param>
+        /// <param name="rightFlags">可用權限</param>
+        /// <param name="isAllow">是否允許</param>
+        /// <param name="inheritanceType">繼承方式</param>
+        public AccessRuleProtocol(in string unitName, in bool isSystem, in string objectName, in string inheritedName, in ActiveDirectoryRights rightFlags, in bool isAllow, in ActiveDirectorySecurityInheritance inheritanceType)
+        {
+            // 區分名稱只能只掉目標自己
+            DistinguishedName = string.Empty;
+            // 持有此權限的群組或物件
             UnitName = unitName;
-            TypeUnit = typeUnit;
-
+            // 持有此權限的群組或物件是否為系統持有
+            IsSystem = isSystem;
+            // 權限針對的物件或屬性或控制存取群組
             ObjectName = objectName;
-            TypeObject = typeAccessRule;
-
+            // 當繼承發生時此權限能影響到的類型
             InheritedName = inheritedName;
-            SecurityInheritance = securityInheritance;
 
-            ActiveDirectoryRight = activeDirectoryRight;
-            ParentDistinguishedName = parentDistinguishedName;
+            // 轉換權限
+            RightFlags = rightFlags;
+            // 允許或是拒絕設置的權限
+            ControlType = isAllow ? AccessControlType.Allow : AccessControlType.Deny;
+
+            // 轉換繼承方式
+            InheritanceType = inheritanceType;
+
+            // 將權限轉換成數字
+            uint valueRights = Convert.ToUInt32(RightFlags);
+            // 繼承動作
+            byte valueInherited = Convert.ToByte(InheritanceType);
+            // 製作簽名
+            Signature = CreateSignature(UnitName, IsSystem, DistinguishedName, ObjectName, InheritedName, valueRights, isAllow, valueInherited);
         }
     }
 }

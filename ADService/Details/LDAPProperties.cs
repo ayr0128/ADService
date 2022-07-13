@@ -4,7 +4,6 @@ using ADService.Protocol;
 using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
-using System.Linq;
 using System.Reflection;
 using System.Security.AccessControl;
 using System.Security.Principal;
@@ -107,7 +106,7 @@ namespace ADService.Details
                     };
                 }
                 // 處理的項目不是自己, 但是直接父層物件
-                else if(processDistinguishedName == parentDistinguishedName)
+                else if (processDistinguishedName == parentDistinguishedName)
                 {
                     // 從直系父層繼承來來的項目部會包含自己
                     acceptedActiveDirectorySecurityInheritance = new HashSet<ActiveDirectorySecurityInheritance>()
@@ -270,32 +269,6 @@ namespace ADService.Details
 
             // 只有一個時需慘用特例處理
             return detail.SizeOf == 1 ? new T[] { (T)detail.PropertyValue } : Array.ConvertAll((object[])detail.PropertyValue, converted => (T)converted);
-        }
-
-        /// <summary>
-        /// 取得符合安全性SID 的所有存取權限
-        /// </summary>
-        /// <param name="securityIDs">安全性 SID</param>
-        /// <returns>所有可用項目</returns>
-        internal AccessRuleSet[] GetAccessRuleSets(in HashSet<string> securityIDs)
-        {
-            // 總長度尚未確定
-            List<AccessRuleSet> accessRuleSetsInSecurityID = new List<AccessRuleSet>();
-            // 遍歷目標物件持有的存取規則
-            foreach (AccessRuleSet accessRuleSet in accessRuleSets)
-            {
-                // 檢查是否為需求的 SID 之一
-                if (!securityIDs.Contains(accessRuleSet.SecurityID))
-                {
-                    // 不是就跳過
-                    continue;
-                }
-
-                // 將此項目加入成為可用資料
-                accessRuleSetsInSecurityID.Add(accessRuleSet);
-            }
-            // 對外提供所有可用項目
-            return accessRuleSetsInSecurityID.ToArray();
         }
     }
 }
