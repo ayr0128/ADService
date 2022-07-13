@@ -18,9 +18,10 @@ namespace ADService.Analytical
 
         internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
-            // 若不可呼叫
+            // 檢查是否持有展示安全性的權限
             if (accessRules == null)
             {
+                // 不存在時不可呼叫
                 return (null, $"使用者:{certification.Invoker} 並不隸屬於管理者群組中, 因此無法展示安全性葉面");
             }
 

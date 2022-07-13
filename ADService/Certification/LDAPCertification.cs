@@ -32,7 +32,7 @@ namespace ADService.Certification
             new MethodModifyDetail(), // 異動細節
 
             new MethodShowSecurity(),   // 展示安全性
-            new MethodModifySecurity(), // 修改安全性
+            new MethodModifySecurity(), // 修改安全性: 未完成
 
             new MethodShowCreateable(),         // 創毽子物件
             new MethodCreateUser(),             // 創建成員

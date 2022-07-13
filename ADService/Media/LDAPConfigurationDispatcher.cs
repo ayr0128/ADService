@@ -159,7 +159,7 @@ namespace ADService.Media
             }
 
             // 使用提供的使用者帳號密碼連線至根網域物件: 此時有可能丟出的例外: 伺服器無法連線
-            DirectoryEntry entryRoot = new DirectoryEntry($"LDAP://{Configuration.Domain}:{Configuration.Port}/{distinguisedName}", UserName, Password, AuthenticationTypes.Secure | AuthenticationTypes.ServerBind);
+            DirectoryEntry entryRoot = new DirectoryEntry($"LDAP://{Configuration.Domain}:{Configuration.Port}/{distinguisedName}", UserName, Password);
             /* 使用其中一個物件用以判斷是有正確取得資料, 此時有可能丟出的例外:
                  - 帳號密碼錯誤
                  - 帳號禁用
