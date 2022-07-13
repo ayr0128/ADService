@@ -22,6 +22,14 @@
         /// </summary>
         public const string M_SHOWDETAIL = "ShowDetail";
         /// <summary>
+        /// 展示安全性: 右鍵方法
+        /// </summary>
+        public const string M_SHOWSCEURITY = "ShowSecurity";
+        /// <summary>
+        /// 修改安全性
+        /// </summary>
+        public const string M_MODIFYSCEURITY = "ModifySecurity";
+        /// <summary>
         /// 顯示可創建的子物件: 右鍵方法
         /// </summary>
         public const string M_SHOWCRATEABLE = "ShowCreateable";

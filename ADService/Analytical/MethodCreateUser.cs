@@ -1,4 +1,4 @@
-﻿using ADService.ControlAccessRule;
+﻿using ADService.Advanced;
 using ADService.Environments;
 using ADService.Foundation;
 using ADService.Media;
@@ -9,12 +9,12 @@ using System.Collections.Generic;
 using System.DirectoryServices;
 using System.Text;
 
-namespace ADService.Certification
+namespace ADService.Analytical
 {
     /// <summary>
     /// 異動持有屬性
     /// </summary>
-    internal sealed class AnalyticalCreateUser : Analytical
+    internal sealed class MethodCreateUser : Method
     {
         /// <summary>
         /// 可處理的類型
@@ -40,9 +40,9 @@ namespace ADService.Certification
         /// <summary>
         /// 呼叫基底建構子
         /// </summary>
-        internal AnalyticalCreateUser() : base(Methods.M_CREATEUSER, false) { }
+        internal MethodCreateUser() : base(Methods.M_CREATEUSER, false) { }
 
-        internal override (InvokeCondition, string) Invokable(in LDAPConfigurationDispatcher dispatcher, in LDAPObject invoker, in LDAPObject destination, LDAPPermissions permissions)
+        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 取得成員字串
             Dictionary<CategoryTypes, string> dictionaryCategoryTypeWithValue = LDAPCategory.GetAccessRulesByTypes(categoryType);
@@ -57,7 +57,7 @@ namespace ADService.Certification
             // 檢查是否具備權限
             if (!isAllow)
             {
-                return (null, $"因物件類型:{destination.Type} 的目標物件:{destination.DistinguishedName} 不具有:{activeDirectoryRights} 權限因而無法提供創建功能");
+                return (null, $"因物件類型:{permissions.Destination.Type} 的目標物件:{permissions.Destination.DistinguishedName} 不具有:{activeDirectoryRights} 權限因而無法提供創建功能");
             }
 
             // 預期項目: 必定是字串
@@ -86,7 +86,7 @@ namespace ADService.Certification
             return (new InvokeCondition(commonFlags, dictionaryProtocolWithDetail), string.Empty);
         }
 
-        internal override bool Authenicate(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions)
+        internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 解析成創建成員所需參數
             CreateUser createUser = protocol?.ToObject<CreateUser>();
@@ -144,7 +144,7 @@ namespace ADService.Certification
             return true;
         }
 
-        internal override void Invoke(ref CertificationProperties certification, in LDAPObject invoker, in LDAPObject destination, in JToken protocol, LDAPPermissions permissions)
+        internal override void Invoke(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 解析成創建成員所需參數
             CreateUser createUser = protocol?.ToObject<CreateUser>();
@@ -165,7 +165,7 @@ namespace ADService.Certification
             }
 
             // 取得是否具有目標物件
-            RequiredCommitSet setProcessed = certification.GetEntry(destination.DistinguishedName);
+            RequiredCommitSet setProcessed = certification.GetEntry(permissions.Destination.DistinguishedName);
             // 若入口物件不存在
             if (setProcessed == null)
             {
@@ -209,7 +209,7 @@ namespace ADService.Certification
             // 取得區分名稱
             string distinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGUISHEDNAME, newPerson.Properties);
             // 設定區分名稱與物件
-            RequiredCommitSet requiredCommitSet =  certification.SetEntry(newPerson, distinguishedName);
+            RequiredCommitSet requiredCommitSet = certification.SetEntry(newPerson, distinguishedName);
             // 舍弟需要寫入
             requiredCommitSet.ReflashRequired();
         }

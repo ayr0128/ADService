@@ -1,4 +1,5 @@
-﻿using ADService.ControlAccessRule;
+﻿using ADService.Advanced;
+using ADService.Analytical;
 using ADService.Environments;
 using ADService.Foundation;
 using ADService.Media;
@@ -21,19 +22,22 @@ namespace ADService.Certification
         /// <summary>
         /// 右建功能對應的權限解析方法
         /// </summary>
-        internal static readonly Dictionary<string, Analytical> dictionaryMethodWithAnalytical = new List<Analytical>() {
-            new AnalyticalReName(),         // 重新命名
-            new AnalyticalMoveTo(),         // 移動
-            new AnalyticalChangePassword(), // 重置密碼
-            new AnalyticalResetPassword(),  // 強制重設密碼
+        internal static readonly Dictionary<string, Method> dictionaryMethodWithAnalytical = new List<Method>() {
+            new MethodReName(),         // 重新命名
+            new MethodMoveTo(),         // 移動
+            new MethodChangePassword(), // 重置密碼
+            new MethodResetPassword(),  // 強制重設密碼
 
-            new AnalyticalShowDetail(),   // 展示細節
-            new AnalyticalModifyDetail(), // 異動細節
+            new MethodShowDetail(),   // 展示細節
+            new MethodModifyDetail(), // 異動細節
 
-            new AnalyticalShowCreateable(),         // 創毽子物件
-            new AnalyticalCreateUser(),             // 創建成員
-            new AnalyticalCreateGroup(),            // 創建群組
-            new AnalyticalCreateOrganizationUnit(), // 創建組織單位
+            new MethodShowSecurity(),   // 展示安全性
+            new MethodModifySecurity(), // 修改安全性: 未完成
+
+            new MethodShowCreateable(),         // 創毽子物件
+            new MethodCreateUser(),             // 創建成員
+            new MethodCreateGroup(),            // 創建群組
+            new MethodCreateOrganizationUnit(), // 創建組織單位
         }.ToDictionary(analytical => analytical.Name);
         #endregion
 
@@ -77,15 +81,24 @@ namespace ADService.Certification
         /// <returns>可用方法與預期接收參數, 格式如右 Dictionary '功能, 協議描述' </returns>
         public Dictionary<string, InvokeCondition> ListAllMethods()
         {
+            // 宣告資料異動證書: 使用 Finally 進行釋放
+            IDisposable iRelease = null;
             // 過程若出現任何錯誤應被截取會並處理
             try
             {
-                // 整合各 SID 權向狀態
-                LDAPPermissions permissions = new LDAPPermissions(ref Dispatcher, Invoker, Destination);
+                // 推入並設置入口物件
+                CertificationProperties certification = new CertificationProperties(Dispatcher, Invoker);
+                // 轉換成釋放用介面
+                iRelease = certification;
+
+                // 整合各 SID 權限狀態
+                LDAPPermissions permissions = certification.CreatePermissions(Destination);
+                // 整合所有可用全縣權限狀態
+                LDAPAccessRules accessRules = certification.CreateAccessRules(Destination);
                 // 最多回傳的長度是所有的項目都支援
                 Dictionary<string, InvokeCondition> dictionaryAttributeNameWithProtocol = new Dictionary<string, InvokeCondition>(dictionaryMethodWithAnalytical.Count);
                 // 遍歷權限並檢查是否可以喚醒
-                foreach (Analytical analyticalRights in dictionaryMethodWithAnalytical.Values)
+                foreach (Method analyticalRights in dictionaryMethodWithAnalytical.Values)
                 {
                     // 不是功能列表展示的項目
                     if (!analyticalRights.IsShowed)
@@ -95,7 +108,7 @@ namespace ADService.Certification
                     }
 
                     // 取得結果
-                    (InvokeCondition condition, _) = analyticalRights.Invokable(Dispatcher, Invoker, Destination, permissions);
+                    (InvokeCondition condition, _) = analyticalRights.Invokable(ref certification, null, permissions, accessRules);
                     // 無法啟動代表無法呼叫
                     if (condition == null)
                     {
@@ -121,6 +134,11 @@ namespace ADService.Certification
                 // 取得錯誤描述, 並提供例外
                 throw LDAPExceptions.OnServeException(exception.Message);
             }
+            finally
+            {
+                // 釋放異動證書
+                iRelease?.Dispose();
+            }
         }
 
         /// <summary>
@@ -130,16 +148,19 @@ namespace ADService.Certification
         /// </list>
         /// </summary>
         /// <param name="attributeName">目標屬性</param>
+        /// <param name="protocol">喚醒時額外提供的協定資料, 預設為 null</param>
         /// <returns>預期接收協議描述</returns>
-        public InvokeCondition GetMethodCondition(in string attributeName)
+        public InvokeCondition GetMethodCondition(in string attributeName, in JToken protocol = null)
         {
             // 取得目標屬性分析
-            if (!dictionaryMethodWithAnalytical.TryGetValue(attributeName, out Analytical analytical))
+            if (!dictionaryMethodWithAnalytical.TryGetValue(attributeName, out Method analytical))
             {
                 // 丟出例外: 呼叫喚醒時必須是可以被找到的方法
                 throw new LDAPExceptions($"類型:{Destination.Type} 的物件:{Destination.DistinguishedName} 於檢驗功能:{attributeName} 時發現尚未實作, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
             }
 
+            // 宣告資料異動證書: 使用 Finally 進行釋放
+            IDisposable iRelease = null;
             // 過程若出現任何錯誤應被截取會並處理
             try
             {
@@ -150,10 +171,17 @@ namespace ADService.Certification
                     throw new LDAPExceptions($"類型:{Destination.Type} 的物件:{Destination.DistinguishedName} 於檢驗功能:{attributeName} 時發現不能直接呼叫, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
                 }
 
+                // 推入並設置入口物件
+                CertificationProperties certification = new CertificationProperties(Dispatcher, Invoker);
+                // 轉換成釋放用介面
+                iRelease = certification;
+
                 // 整合各 SID 權向狀態
-                LDAPPermissions permissions = new LDAPPermissions(ref Dispatcher, Invoker, Destination);
+                LDAPPermissions permissions = certification.CreatePermissions(Destination);
+                // 整理繼承關係完成的所有全縣
+                LDAPAccessRules accessRules = certification.CreateAccessRules(Destination);
                 // 取得結果
-                (InvokeCondition condition, _) = analytical.Invokable(Dispatcher, Invoker, Destination, permissions);
+                (InvokeCondition condition, _) = analytical.Invokable(ref certification, protocol, permissions, accessRules);
                 // 無法啟動代表無法呼叫
                 if (condition == null)
                 {
@@ -176,6 +204,11 @@ namespace ADService.Certification
                 // 取得錯誤描述, 並提供例外
                 throw LDAPExceptions.OnServeException(exception.Message);
             }
+            finally
+            {
+                // 釋放異動證書
+                iRelease?.Dispose();
+            }
         }
 
         /// <summary>
@@ -187,7 +220,7 @@ namespace ADService.Certification
         public bool AuthenicateMethod(in string attributeName, in JToken protocol)
         {
             // 取得目標屬性分析
-            if (!dictionaryMethodWithAnalytical.TryGetValue(attributeName, out Analytical analytical))
+            if (!dictionaryMethodWithAnalytical.TryGetValue(attributeName, out Method analytical))
             {
                 // 丟出例外: 呼叫喚醒時必須是可以被找到的方法
                 throw new LDAPExceptions($"類型:{Destination.Type} 的物件:{Destination.DistinguishedName} 於檢驗功能:{attributeName} 時發現尚未實作, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
@@ -199,16 +232,16 @@ namespace ADService.Certification
             try
             {
                 // 推入並設置入口物件
-                CertificationProperties certification = new CertificationProperties(Dispatcher, Destination.DistinguishedName);
-
+                CertificationProperties certification = new CertificationProperties(Dispatcher, Invoker);
                 // 轉換成釋放用介面
                 iRelease = certification;
 
                 // 整合各 SID 權向狀態
-                LDAPPermissions permissions = new LDAPPermissions(ref Dispatcher, Invoker, Destination);
-
+                LDAPPermissions permissions = certification.CreatePermissions(Destination);
+                // 整合所有可用全縣權限狀態
+                LDAPAccessRules accessRules = certification.CreateAccessRules(Destination);
                 // 遍歷權限驗證協議是否可用
-                return analytical.Authenicate(ref certification, Invoker, Destination, protocol, permissions);
+                return analytical.Authenicate(ref certification, protocol, permissions, accessRules);
             }
             // 發生時機: 使用者登入時發現例外錯誤
             catch (DirectoryServicesCOMException exception)
@@ -238,7 +271,7 @@ namespace ADService.Certification
         public Dictionary<string, LDAPObject> InvokeMethod(in string attributeName, in JToken protocol)
         {
             // 取得目標屬性分析
-            if (!dictionaryMethodWithAnalytical.TryGetValue(attributeName, out Analytical analytical))
+            if (!dictionaryMethodWithAnalytical.TryGetValue(attributeName, out Method analytical))
             {
                 // 丟出例外: 呼叫喚醒時必須是可以被找到的方法
                 throw new LDAPExceptions($"類型:{Destination.Type} 的物件:{Destination.DistinguishedName} 於喚醒功能:{attributeName} 時發現尚未實作, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
@@ -250,16 +283,16 @@ namespace ADService.Certification
             try
             {
                 // 推入並設置入口物件
-                CertificationProperties certification = new CertificationProperties(Dispatcher, Destination.DistinguishedName);
-
+                CertificationProperties certification = new CertificationProperties(Dispatcher, Invoker);
                 // 轉換成釋放用介面
                 iRelease = certification;
 
                 // 整合各 SID 權向狀態
-                LDAPPermissions permissions = new LDAPPermissions(ref Dispatcher, Invoker, Destination);
-
+                LDAPPermissions permissions = certification.CreatePermissions(Destination);
+                // 整合所有可用全縣權限狀態
+                LDAPAccessRules accessRules = certification.CreateAccessRules(Destination);
                 // 驗證是否可用
-                bool authenicateSuccess = analytical.Authenicate(ref certification, Invoker, Destination, protocol, permissions);
+                bool authenicateSuccess = analytical.Authenicate(ref certification, protocol, permissions, accessRules);
                 // 檢查驗證是否成功
                 if (!authenicateSuccess)
                 {
@@ -268,7 +301,7 @@ namespace ADService.Certification
                 }
 
                 // 執行異動或呼叫
-                analytical.Invoke(ref certification, Invoker, Destination, protocol, permissions);
+                analytical.Invoke(ref certification, protocol, permissions, accessRules);
 
                 // 對外提供所有影響的物件
                 Dictionary<string, LDAPObject> dictionaryDistinguishedNameWithLDAPObject = new Dictionary<string, LDAPObject>();

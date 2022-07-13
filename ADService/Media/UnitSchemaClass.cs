@@ -173,7 +173,7 @@ namespace ADService.Media
         /// </summary>
         /// <param name="unitSchemaClasses">找尋的物件類型</param>
         /// <returns>不重複的驅動類型物件名稱</returns>
-        internal static HashSet<string> DrivedClassNames(params UnitSchemaClass[] unitSchemaClasses)
+        internal static HashSet<string> AuxiliaryClassNames(params UnitSchemaClass[] unitSchemaClasses)
         {
             // 不重複的物件類型名稱
             HashSet<string> drivedClassNames = new HashSet<string>();

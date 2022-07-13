@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
 using System.Reflection;
+using System.Security.AccessControl;
 using System.Security.Principal;
 
 namespace ADService.Details
@@ -56,37 +57,111 @@ namespace ADService.Details
         /// <summary>
         /// 以 SID 記錄各條存取權限
         /// </summary>
-        internal Dictionary<string, List<AccessRuleConverted>> dictionarySIDWithAccessRuleConverteds = new Dictionary<string, List<AccessRuleConverted>>();
+        internal AccessRuleSet[] accessRuleSets;
 
         /// <summary>
         /// 整合權限轉換功能
         /// </summary>
-        /// <param name="securityAccessRule">入口物件持有的存取權限</param>
+        /// <param name="entry">入口物件</param>
         /// <returns>案群組持有的權限</returns>
-        private static Dictionary<string, List<AccessRuleConverted>> ParseSecurityAccessRule(in ActiveDirectorySecurity securityAccessRule)
+        private static AccessRuleSet[] ParseSecurityAccessRule(in DirectoryEntry entry)
         {
-            // 預計對外提供的項目
-            Dictionary<string, List<AccessRuleConverted>> dictionarySIDWithPermissions = new Dictionary<string, List<AccessRuleConverted>>();
-            // 遍歷持有的存取權限
-            foreach (ActiveDirectoryAccessRule accessRule in securityAccessRule.GetAccessRules(true, true, typeof(SecurityIdentifier)))
+            // 取得喚起物件區分名稱
+            string distinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGUISHEDNAME, entry.Properties);
+            // 取得喚起物件名稱
+            string name = LDAPConfiguration.ParseSingleValue<string>(Properties.P_NAME, entry.Properties);
+
+            // 找到名稱的位置: 必定能找到
+            int index = distinguishedName.IndexOf(name);
+            // 切割字串取得目標所在的組織單位
+            string parentDistinguishedName = distinguishedName.Substring(index + name.Length + 1);
+
+            // 宣告用來儲存組合完成的存取規則表
+            List<AccessRuleSet> accessRuleSets = new List<AccessRuleSet>();
+            // 當入口物件的安全性持有繼承安全性時: 注意沒有終止條件需要靠內部判斷做跳出
+            for (DirectoryEntry rootEntry = entry; ; rootEntry = rootEntry.Parent)
             {
-                // 識別字串就是 SID, 因為使用 SecurityIdentifier 的類型去取得資料
-                string SID = accessRule.IdentityReference.ToString();
-                // 此 SID 尚未推入過字典
-                if (!dictionarySIDWithPermissions.TryGetValue(SID, out List<AccessRuleConverted> storedList))
+                // 取得目前處理項目的安全性描述
+                ActiveDirectorySecurity activeDirectorySecurity = rootEntry.ObjectSecurity;
+                // 取得物件區分名稱
+                string processDistinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGUISHEDNAME, rootEntry.Properties);
+
+                // 由於根目錄 (DomainsDNS) 時不會跳轉道其父層所有必定是處理自己
+
+                // 可接受的處理項目
+                HashSet<ActiveDirectorySecurityInheritance> acceptedActiveDirectorySecurityInheritance;
+                // 處理的項目是否為自己
+                bool isSelf = processDistinguishedName == distinguishedName;
+                // 處理的目標是否是自己
+                if (isSelf)
                 {
-                    // 重新宣告用以儲存的列表
-                    storedList = new List<AccessRuleConverted>();
-                    // 推入字典儲存
-                    dictionarySIDWithPermissions.Add(SID, storedList);
+                    // 是自己時所有項目都可以列出
+                    acceptedActiveDirectorySecurityInheritance = new HashSet<ActiveDirectorySecurityInheritance>()
+                    {
+                        ActiveDirectorySecurityInheritance.None,            // 自己
+                        ActiveDirectorySecurityInheritance.All,             // 包含自己與所有子物件
+                        ActiveDirectorySecurityInheritance.Descendents,     // 包含所有子系物件
+                        ActiveDirectorySecurityInheritance.SelfAndChildren, // 包含自己與直接子系物件
+                        ActiveDirectorySecurityInheritance.Children,        // 包含直接子系物件
+                    };
+                }
+                // 處理的項目不是自己, 但是直接父層物件
+                else if (processDistinguishedName == parentDistinguishedName)
+                {
+                    // 從直系父層繼承來來的項目部會包含自己
+                    acceptedActiveDirectorySecurityInheritance = new HashSet<ActiveDirectorySecurityInheritance>()
+                    {
+                        ActiveDirectorySecurityInheritance.All,             // 包含自己與所有子物件
+                        ActiveDirectorySecurityInheritance.Descendents,     // 包含所有子系物件
+                        ActiveDirectorySecurityInheritance.SelfAndChildren, // 包含自己與直接子系物件
+                        ActiveDirectorySecurityInheritance.Children,        // 包含直接子系物件
+                    };
+                }
+                // 處理的項目不是自己亦不是直系父層物件, 那麼非直系父層物件
+                else
+                {
+                    // 從非直系父層繼承來來的項目不包含直接子系物件
+                    acceptedActiveDirectorySecurityInheritance = new HashSet<ActiveDirectorySecurityInheritance>()
+                    {
+                        ActiveDirectorySecurityInheritance.All,             // 包含自己與所有子物件
+                        ActiveDirectorySecurityInheritance.Descendents,     // 包含所有子系物件
+                    };
                 }
 
-                AccessRuleConverted accessRuleInformation = new AccessRuleConverted(accessRule);
-                // 推入此單位的存取權限
-                storedList.Add(accessRuleInformation);
+                // 取得不包含繼承的集合
+                AuthorizationRuleCollection authorizationRuleCollectionExceptInherited = activeDirectorySecurity.GetAccessRules(true, false, typeof(NTAccount));
+                // 取得不繼承的集合
+                foreach (ActiveDirectoryAccessRule activeDirectoryAccessRule in authorizationRuleCollectionExceptInherited)
+                {
+                    // 是否是可以處理的項目
+                    if (!acceptedActiveDirectorySecurityInheritance.Contains(activeDirectoryAccessRule.InheritanceType))
+                    {
+                        // 不是則跳過處理
+                        continue;
+                    }
+
+                    // 轉換成紀錄群組: 不是自己就是透過繼承取得
+                    AccessRuleSet accessRuleSet = new AccessRuleSet(processDistinguishedName, !isSelf, activeDirectoryAccessRule);
+                    // 推入陣列
+                    accessRuleSets.Add(accessRuleSet);
+                }
+
+                // 取得包含繼承的集合
+                AuthorizationRuleCollection authorizationRuleCollectionContainInherited = activeDirectorySecurity.GetAccessRules(true, true, typeof(NTAccount));
+                /* 由於根目錄 (DomainsDNS) 時必定不持有繼承項目, 因此必定會在此處跳處
+                   [TODO] 找到可以直接判斷是否啟用繼承的旗標
+                */
+                if (authorizationRuleCollectionContainInherited.Count == authorizationRuleCollectionExceptInherited.Count)
+                {
+                    // 由於不包含繼承與包含繼承的項目長度相同, 所以可以得知此入口務盡並沒有從父層而來的繼承項目
+                    break;
+                }
+
+                // 若是進行至此則必定有透過父層項目繼承而來的存取權限, 所以可以透過 For 的結束動作進行父層替換
             }
+
             // 轉換後對外提供項目
-            return dictionarySIDWithPermissions;
+            return accessRuleSets.ToArray();
         }
         #endregion
 
@@ -98,7 +173,7 @@ namespace ADService.Details
         internal LDAPProperties(in LDAPConfigurationDispatcher dispatcher, in DirectoryEntry entry)
         {
             dictionaryNameWithPropertyDetail = ParseProperties(dispatcher, entry.Properties);
-            dictionarySIDWithAccessRuleConverteds = ParseSecurityAccessRule(entry.ObjectSecurity);
+            accessRuleSets = ParseSecurityAccessRule(entry);
         }
 
         /// <summary>
@@ -194,32 +269,6 @@ namespace ADService.Details
 
             // 只有一個時需慘用特例處理
             return detail.SizeOf == 1 ? new T[] { (T)detail.PropertyValue } : Array.ConvertAll((object[])detail.PropertyValue, converted => (T)converted);
-        }
-
-        /// <summary>
-        /// 使用指定群組的 SID 取得所有支援的屬性
-        /// </summary>
-        /// <param name="securitySIDs">可套用的安全性群組 SID</param>
-        /// <returns>這些群組對應到的權限</returns>
-        internal AccessRuleConverted[] GetAccessRuleConverteds(in IEnumerable<string> securitySIDs)
-        {
-            // 總長度尚未確定
-            List<AccessRuleConverted> accessRuleConvertedsResult = new List<AccessRuleConverted>();
-            // 遍歷所有可使用的安全性群組 SID
-            foreach (string securitySID in securitySIDs)
-            {
-                // 取得安全性群組 SID 關聯的權限
-                if (!dictionarySIDWithAccessRuleConverteds.TryGetValue(securitySID, out List<AccessRuleConverted> accessRuleConverteds))
-                {
-                    // 無法找到則跳過
-                    continue;
-                }
-
-                // 加入特定 SID 所持有的存取權限 (包含沒有生效的)
-                accessRuleConvertedsResult.AddRange(accessRuleConverteds);
-            }
-            // 將找尋到的所有資料對外提供 (包含沒有生效的)
-            return accessRuleConvertedsResult.ToArray();
         }
     }
 }
