@@ -728,7 +728,7 @@ namespace ADService.Media
         /// <param name="dispatcher">提供 連線權限的分配氣</param>
         /// <param name="unitSchemaClasses">指定物件類型</param>
         /// <returns>轉換成基底藍本的物件類型</returns>
-        internal UnitSchemaClass[] GetDrivedClasses(in LDAPConfigurationDispatcher dispatcher, params UnitSchemaClass[] unitSchemaClasses)
+        internal UnitSchemaClass[] GetAuxiliaryClasses(in LDAPConfigurationDispatcher dispatcher, params UnitSchemaClass[] unitSchemaClasses)
         {
             // 最大長度必定為執行續安全字典的長度
             Dictionary<string, UnitSchemaClass> dictionaryLDAPDisplayNameWithUnitSchemaClass = new Dictionary<string, UnitSchemaClass>(dictionaryGUIDWithUnitSchema.Count);
@@ -748,16 +748,16 @@ namespace ADService.Media
             }
 
             // 找到所有應檢查的驅動類型
-            HashSet<string> drivedClassNames = UnitSchemaClass.DrivedClassNames(unitSchemaClasses);
+            HashSet<string> auxiliaryClassNames = UnitSchemaClass.AuxiliaryClassNames(unitSchemaClasses);
             // 避免重複用
             HashSet<string> researchedGUIDs = new HashSet<string>();
             // 避免重複用與找尋用
             HashSet<string> researchedLDAPDisplayNames = new HashSet<string>();
             // 查詢之前是否已持有並停時過濾檢查
-            foreach (string drivedClassName in drivedClassNames)
+            foreach (string auxiliaryClassName in auxiliaryClassNames)
             {
                 // 能找到指定名稱且尚未過期
-                if (dictionaryLDAPDisplayNameWithUnitSchemaClass.TryGetValue(drivedClassName, out UnitSchemaClass unitSchemaClass) && !unitSchemaClass.IsExpired(EXPIRES_DURATION))
+                if (dictionaryLDAPDisplayNameWithUnitSchemaClass.TryGetValue(auxiliaryClassName, out UnitSchemaClass unitSchemaClass) && !unitSchemaClass.IsExpired(EXPIRES_DURATION))
                 {
                     // 找尋用的 GUID 必須微小寫
                     string schemaGUIDLower = unitSchemaClass.SchemaGUID.ToLower();
@@ -773,7 +773,7 @@ namespace ADService.Media
                        2. 能找到但是物件藍本已過期
                      - 物件尚未被推入不重複重新搜尋陣列 
                 */
-                researchedLDAPDisplayNames.Add(drivedClassName);
+                researchedLDAPDisplayNames.Add(auxiliaryClassName);
             }
 
             // 存在需重新搜尋的不重複物件展示名稱
@@ -803,7 +803,7 @@ namespace ADService.Media
             }
 
             // 使用屬性 GUID 的長度作為容器大小
-            List<UnitSchemaClass> drivedUnitSchemaClasses = new List<UnitSchemaClass>(researchedGUIDs.Count);
+            List<UnitSchemaClass> auxiliaryUnitSchemaClasses = new List<UnitSchemaClass>(researchedGUIDs.Count);
             // 遍歷集成並將資料對外提供
             foreach (string unitSchemaGUID in researchedGUIDs)
             {
@@ -822,11 +822,11 @@ namespace ADService.Media
                 }
 
                 // 設置成對外提供項目
-                drivedUnitSchemaClasses.Add(unitSchemaClass);
+                auxiliaryUnitSchemaClasses.Add(unitSchemaClass);
             }
 
             // 轉換成陣列對外提供
-            return drivedUnitSchemaClasses.ToArray();
+            return auxiliaryUnitSchemaClasses.ToArray();
         }
 
         /// <summary>

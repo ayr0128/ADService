@@ -9,6 +9,11 @@ namespace ADService.Environments
     public static class LDAPCategory
     {
         /// <summary>
+        /// 網域跟目錄
+        /// </summary>
+        public const string CLASS_DOMAINDNS = "domainDns";
+
+        /// <summary>
         /// 使用物件類型列舉快速取得描述
         /// </summary>
         /// <param name="type">物件類型</param>
@@ -106,7 +111,7 @@ namespace ADService.Environments
         private static readonly Dictionary<CategoryTypes, string> dictionaryEnumWithValue = new Dictionary<CategoryTypes, string>
         {
             { CategoryTypes.CONTAINER, "container" },
-            { CategoryTypes.DOMAIN_DNS, "domainDns" },
+            { CategoryTypes.DOMAIN_DNS, CLASS_DOMAINDNS },
             { CategoryTypes.ORGANIZATION_UNIT, "organizationalUnit" },
             { CategoryTypes.ForeignSecurityPrincipals, "foreignSecurityPrincipals" },
             { CategoryTypes.GROUP, "group" },
@@ -119,7 +124,7 @@ namespace ADService.Environments
         private static readonly Dictionary<CategoryTypes, string> dictionaryEnumWithAccessRule = new Dictionary<CategoryTypes, string>
         {
             { CategoryTypes.CONTAINER, "container" },
-            { CategoryTypes.DOMAIN_DNS, "domainDns" },
+            { CategoryTypes.DOMAIN_DNS, CLASS_DOMAINDNS },
             { CategoryTypes.ORGANIZATION_UNIT, "organizationalUnit" },
             { CategoryTypes.ForeignSecurityPrincipals, "foreignSecurityPrincipals" },
             { CategoryTypes.GROUP, "group" },

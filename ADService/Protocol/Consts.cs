@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.DirectoryServices;
 
 namespace ADService.Protocol
 {
@@ -223,7 +222,7 @@ namespace ADService.Protocol
         /// 持有數值: 出現時必定包含下述欄位
         /// <list type="table|bullet">
         ///     <item><term> <see cref="InvokeCondition.VALUE">資料內容</see> </term> 須根據儲存格式變換 </item>
-        ///     <item><term> <see cref="InvokeCondition.STOREDTYPE">資料類型</see> </term> 儲存的資料類型 </item>
+        ///     <item><term> <see cref="InvokeCondition.STOREDTYPE">資料類型</see> </term> 儲存的<see cref="ValueDescription">資料類型與是否為陣列等詳細資料</see> </item>
         /// </list>
         /// </summary>
         HASVALUE = 0x00001000,
@@ -234,13 +233,6 @@ namespace ADService.Protocol
         /// </list>
         /// </summary>
         COMBINE = 0x00002000,
-        /// <summary>
-        /// 是否為陣列: 協議描述中會包含下述欄位, 額外元素中必定持有相關參數的資料描述
-        /// <list type="table|bullet">
-        ///     <item><term> <see cref="InvokeCondition.COUNT">陣列長度</see> </term> <see cref="int">整數</see> </item>
-        /// </list>
-        /// </summary>
-        ISARRAY = 0x00004000,
         /// <summary>
         /// 需求屬性: 協議描述中會包含下述欄位, 額外元素中必定持有相關參數的資料描述
         /// <list type="table|bullet">
@@ -277,7 +269,7 @@ namespace ADService.Protocol
         /// <summary>
         /// 可喚起其他方法: 出現時必定包含下述欄位
         /// <list type="table|bullet">
-        ///     <item><term> <see cref="InvokeCondition.METHODCONDITION">限制目標物件</see> </term> <see cref="CategoryTypes">類型</see> </item>
+        ///     <item><term> <see cref="InvokeCondition.METHODS">限制目標物件</see> </term> <see cref="CategoryTypes">類型</see> </item>
         /// </list>
         /// </summary>
         INVOKEMETHOD = 0x80000000,

@@ -192,20 +192,20 @@ namespace ADService.Foundation
         /// <summary>
         /// 此物件是否可被移動
         /// </summary>
-        public bool IsEnbleMove => (systemFlag & SystemFlags.MOVE_DISABLE) == SystemFlags.NONE;
+        public bool IsEnbleMove => (SystemFlag & SystemFlags.MOVE_DISABLE) == SystemFlags.NONE;
         /// <summary>
         /// 是否可重新命盟
         /// </summary>
-        public bool IsEnableReName => (systemFlag & SystemFlags.RENAME_DISABLE) == SystemFlags.NONE;
+        public bool IsEnableReName => (SystemFlag & SystemFlags.RENAME_DISABLE) == SystemFlags.NONE;
         /// <summary>
         /// 是否可移除
         /// </summary>
-        public bool IsEnableDelete => (systemFlag & SystemFlags.DELETE_DISABLE) == SystemFlags.NONE;
+        public bool IsEnableDelete => (SystemFlag & SystemFlags.DELETE_DISABLE) == SystemFlags.NONE;
 
         /// <summary>
         /// 此物件的名稱
         /// </summary>
-        internal SystemFlags systemFlag
+        internal SystemFlags SystemFlag
         {
             get
             {
@@ -243,12 +243,46 @@ namespace ADService.Foundation
         }
 
         /// <summary>
+        /// 目標物建物件類型: 驅動
+        /// </summary>
+        internal UnitSchemaClass[] driveUnitSchemaClasses;
+        /// <summary>
+        /// 目標物建物件類型: 輔助
+        /// </summary>
+        internal UnitSchemaClass[] auxiliaryUnitSchemaClasses;
+        /// <summary>
+        /// 取得可支援的屬性名稱
+        /// </summary>
+        internal string[] AllowedAttributeNames
+        {
+            get
+            {
+                // 宣告一個新的陣列來存放輔助類別與需求類別
+                List<UnitSchemaClass> unitSchemaClasses = new List<UnitSchemaClass>(driveUnitSchemaClasses.Length + auxiliaryUnitSchemaClasses.Length);
+                // 增加原始類別
+                unitSchemaClasses.AddRange(driveUnitSchemaClasses);
+                // 增加輔助類別
+                unitSchemaClasses.AddRange(auxiliaryUnitSchemaClasses);
+                // 取得所有允許的屬性
+                return UnitSchemaClass.UniqueAttributeNames(unitSchemaClasses);
+            }
+        }
+
+        /// <summary>
         /// 使用鍵值參數初始化
         /// </summary>
         /// <param name="entry">入口物件</param>
         /// <param name="dispatcher">入口物件創建器</param>
         /// <exception cref="LDAPExceptions">解析鍵值不符合規則時對外丟出</exception>
-        internal LDAPObject(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher) : base(dispatcher, entry) { }
+        internal LDAPObject(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher) : base(dispatcher, entry)
+        {
+            // 取得物件持有類別
+            string[] classNames = GetPropertyMultiple<string>(Properties.C_OBJECTCLASS);
+            // 透過物件持有類別取得所有可用屬性以及所有可用子類別
+            driveUnitSchemaClasses = dispatcher.GetClasses(classNames);
+            // 取得輔助類別
+            auxiliaryUnitSchemaClasses = dispatcher.GetAuxiliaryClasses(driveUnitSchemaClasses);
+        }
 
         /// <summary>
         /// 從提供的基礎物件中將特性鍵值轉換給呼叫者
@@ -269,8 +303,9 @@ namespace ADService.Foundation
             // 交換解析完成的目前持有屬性
             dictionaryNameWithPropertyDetail = newObject.dictionaryNameWithPropertyDetail;
             // 交換解析完成的目前持有存取規則
-            // 交換解析完成的目前持有存取規則
-            dictionarySIDWithAccessRuleConverteds = newObject.dictionarySIDWithAccessRuleConverteds;
+            accessRuleSets = newObject.accessRuleSets;
+            // 交換物件類別
+            driveUnitSchemaClasses = newObject.driveUnitSchemaClasses;
             // 通知外部替換成功
             return this;
         }
