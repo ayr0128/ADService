@@ -17,11 +17,6 @@ namespace ADService.Analytical
     internal sealed class MethodCreateUser : Method
     {
         /// <summary>
-        /// 可處理的類型
-        /// [TODO] 改為成從 LDAP 組成定義
-        /// </summary>
-        private const CategoryTypes categoryType = CategoryTypes.PERSON;
-        /// <summary>
         /// 用來檢查的必要渠縣
         /// </summary>
         private const ActiveDirectoryRights activeDirectoryRights = ActiveDirectoryRights.CreateChild;
@@ -44,16 +39,8 @@ namespace ADService.Analytical
 
         internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
-            // 取得成員字串
-            Dictionary<CategoryTypes, string> dictionaryCategoryTypeWithValue = LDAPCategory.GetAccessRulesByTypes(categoryType);
-            // 必須要能取得 [使用者] 的定內容
-            if (!dictionaryCategoryTypeWithValue.TryGetValue(categoryType, out string valuePerson))
-            {
-                return (null, $"類型:{categoryType} 無法取得自訂議內容");
-            }
-
             // 取得是否支援創建目標物件
-            bool isAllow = permissions.IsAllow(valuePerson, activeDirectoryRights);
+            bool isAllow = permissions.IsAllow(LDAPCategory.CLASS_PERSON, activeDirectoryRights);
             // 檢查是否具備權限
             if (!isAllow)
             {
@@ -97,16 +84,8 @@ namespace ADService.Analytical
                 return false;
             }
 
-            // 取得成員字串
-            Dictionary<CategoryTypes, string> dictionaryCategoryTypeWithValue = LDAPCategory.GetAccessRulesByTypes(categoryType);
-            // 必須要能取得 [使用者] 的定內容
-            if (!dictionaryCategoryTypeWithValue.TryGetValue(categoryType, out string valuePerson))
-            {
-                return false;
-            }
-
             // 取得是否支援創建目標物件
-            bool isAllow = permissions.IsAllow(valuePerson, activeDirectoryRights);
+            bool isAllow = permissions.IsAllow(LDAPCategory.CLASS_PERSON, activeDirectoryRights);
             // 檢查是否具備權限
             if (!isAllow)
             {
@@ -155,15 +134,6 @@ namespace ADService.Analytical
                 return;
             }
 
-
-            // 取得成員字串
-            Dictionary<CategoryTypes, string> dictionaryCategoryTypeWithValue = LDAPCategory.GetAccessRulesByTypes(categoryType);
-            // 必須要能取得 [使用者] 的定內容
-            if (!dictionaryCategoryTypeWithValue.TryGetValue(categoryType, out string valuePerson))
-            {
-                return;
-            }
-
             // 取得是否具有目標物件
             RequiredCommitSet setProcessed = certification.GetEntry(permissions.Destination.DistinguishedName);
             // 若入口物件不存在
@@ -185,7 +155,7 @@ namespace ADService.Analytical
             }
 
             // 創建新的子物件
-            DirectoryEntry newPerson = setProcessed.Entry.Children.Add($"{Properties.P_CN}={createUser.Name}", valuePerson);
+            DirectoryEntry newPerson = setProcessed.Entry.Children.Add($"{Properties.P_CN}={createUser.Name}", LDAPCategory.CLASS_PERSON);
             // 只將部分可設置的資料
             foreach (string attributeName in ENABLE_ATTRIBUTES)
             {

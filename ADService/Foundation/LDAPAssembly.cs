@@ -22,9 +22,9 @@ namespace ADService.Foundation
         internal static List<LDAPObject> WithChild(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher, in CategoryTypes extendFlags)
         {
             // 找到須限制的物件類型
-            Dictionary<CategoryTypes, string> dictionaryLimitedCategory = LDAPCategory.GetValuesByTypes(extendFlags);
+            string[] classNames = LDAPCategory.GetClassNames(extendFlags);
             // [TODO] 應使用加密字串避免注入式攻擊
-            string encoderFiliter = LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values);
+            string encoderFiliter = LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCLASS, classNames);
             // 沒有指定找尋組織單位底下物件類型
             if (string.IsNullOrEmpty(encoderFiliter))
             {
@@ -75,18 +75,9 @@ namespace ADService.Foundation
         /// 建構組織單位物件
         /// </summary>
         /// <param name="entry">入口物件</param>
-        /// <param name="limitedType">限制類型</param>
         /// <param name="dispatcher">入口物件創建器</param>
         /// <exception cref="LDAPExceptions">移除外部整理過屬於此組織單位的成員或組織單位後還有其他剩餘資料時丟出</exception>
-        internal LDAPAssembly(in DirectoryEntry entry, in CategoryTypes limitedType, in LDAPConfigurationDispatcher dispatcher) : base(entry, dispatcher)
-        {
-            // 不是允許類型的其中一種
-            if ((limitedType & Type & CategoryTypes.ALL_CONTAINERS) == CategoryTypes.NONE)
-            {
-                // 對外丟出類型不正確例外
-                throw new LDAPExceptions($"基礎物件類型:{Type} 不是期望的物件類型:{limitedType} 或支援的類型:{CategoryTypes.ALL_CONTAINERS}", ErrorCodes.LOGIC_ERROR);
-            }
-        }
+        internal LDAPAssembly(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher) : base(entry, dispatcher) { }
 
         /// <summary>
         /// 以傳入的陣列刷新此組織單位持有的組織單位或成員或群組
