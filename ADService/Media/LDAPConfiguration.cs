@@ -976,7 +976,7 @@ namespace ADService.Media
                         unitControlAccessGUIDLower,
                         newUnitControlAccess,
                         (GUID, oldUnitControlAccess) => oldUnitControlAccess.IsExpired(EXPIRES_DURATION) ? newUnitControlAccess : oldUnitControlAccess
-                    );;
+                    ); ;
                 }
 
                 // 更新資料

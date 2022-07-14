@@ -167,13 +167,11 @@ namespace ADServiceFrameworkTest
         {
             #region 伺服器端取得對於目標物件的可用方法
             // 取得目標物件
-            Dictionary<string, LDAPObject> dictionaryDNWithObject = Serve.GetObjects(user, CategoryTypes.NONE, distinguishedName);
-            // 防呆測試: 指定的使用者 (自己) 應該能被發現
-            dictionaryDNWithObject.TryGetValue(distinguishedName, out LDAPObject objectTarget);
+            LDAPObject targetObject = Serve.GetObjectByDistinguisedName(user, distinguishedName);
             // 此時應存在物件
-            Assert.IsNotNull(objectTarget, $"指定找尋使用者物件:{distinguishedName} 但無法找到指定物件");
+            Assert.IsNotNull(targetObject, $"指定找尋使用者物件:{distinguishedName} 但無法找到指定物件");
             // 使用登入者與目標物件取得功能證書
-            LDAPCertification certificate = Serve.GetCertificate(user, objectTarget);
+            LDAPCertification certificate = Serve.GetCertificate(user, targetObject);
             // 功能證書在喚起者與目標物件存在的情況下絕對不會為空
             Assert.IsNotNull(certificate, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時應能取得證書");
             // 取得支援的方法
@@ -217,13 +215,11 @@ namespace ADServiceFrameworkTest
         {
             #region 模擬客戶端指定自身作為操作物件並取得右鍵方法
             // 取得目標物件
-            Dictionary<string, LDAPObject> dictionaryDNWithObject = Serve.GetObjects(user, CategoryTypes.NONE, distinguishedName);
-            // 防呆測試: 指定的使用者 (自己) 應該能被發現
-            dictionaryDNWithObject.TryGetValue(distinguishedName, out LDAPObject objectTarget);
+            LDAPObject targetObject = Serve.GetObjectByDistinguisedName(user, distinguishedName);
             // 此時應存在物件
-            Assert.IsNotNull(objectTarget, $"指定找尋使用者物件:{distinguishedName} 但無法找到指定物件");
+            Assert.IsNotNull(targetObject, $"指定找尋使用者物件:{distinguishedName} 但無法找到指定物件");
             // 使用登入者與目標物件取得功能證書
-            LDAPCertification certificate = Serve.GetCertificate(user, objectTarget);
+            LDAPCertification certificate = Serve.GetCertificate(user, targetObject);
             // 功能證書在喚起者與目標物件存在的情況下絕對不會為空
             Assert.IsNotNull(certificate, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時應能取得證書");
             // 取得支援的方法
@@ -476,13 +472,11 @@ namespace ADServiceFrameworkTest
         {
             #region 模擬客戶端指定自身作為操作物件並取得右鍵方法
             // 取得目標物件
-            Dictionary<string, LDAPObject> dictionaryDNWithObject = Serve.GetObjects(user, CategoryTypes.NONE, distinguishedName);
-            // 防呆測試: 指定的使用者 (自己) 應該能被發現
-            dictionaryDNWithObject.TryGetValue(distinguishedName, out LDAPObject objectTarget);
+            LDAPObject targetObject = Serve.GetObjectByDistinguisedName(user, distinguishedName);
             // 此時應存在物件
-            Assert.IsNotNull(objectTarget, $"指定找尋使用者物件:{distinguishedName} 但無法找到指定物件");
+            Assert.IsNotNull(targetObject, $"指定找尋使用者物件:{distinguishedName} 但無法找到指定物件");
             // 使用登入者與目標物件取得功能證書
-            LDAPCertification certificate = Serve.GetCertificate(user, objectTarget);
+            LDAPCertification certificate = Serve.GetCertificate(user, targetObject);
             // 功能證書在喚起者與目標物件存在的情況下絕對不會為空
             Assert.IsNotNull(certificate, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時應能取得證書");
             // 取得支援的方法
@@ -532,18 +526,18 @@ namespace ADServiceFrameworkTest
             const string MODIFYSUBSTRING = "_";
 
             // 記錄崇興命名前的區分名稱
-            string oldDistinguishedName = objectTarget.DistinguishedName;
+            string oldDistinguishedName = targetObject.DistinguishedName;
             // 宣告還原用的名稱
-            JToken recoverJToken = JToken.FromObject(objectTarget.Name);
+            JToken recoverJToken = JToken.FromObject(targetObject.Name);
             // 宣告修改用的名稱
-            JToken modifiedJToken = JToken.FromObject(objectTarget.Name + MODIFYSUBSTRING);
+            JToken modifiedJToken = JToken.FromObject(targetObject.Name + MODIFYSUBSTRING);
             // 異動名稱
             Dictionary<string, LDAPObject> dictionaryDNWithModified = certificate.InvokeMethod(methodSupported, modifiedJToken);
             // 須包含目標物件
             Assert.IsTrue(dictionaryDNWithModified.ContainsKey(oldDistinguishedName), $"異動的影響結果應包含:{oldDistinguishedName} ");
 
             // 記錄崇興命名後的區分名稱: 物件是連棟的
-            string newDistinguishedName = objectTarget.DistinguishedName;
+            string newDistinguishedName = targetObject.DistinguishedName;
             // 還原名稱
             Dictionary<string, LDAPObject> dictionaryDNWithRecover = certificate.InvokeMethod(methodSupported, recoverJToken);
             // 須包含目標物件
@@ -561,13 +555,11 @@ namespace ADServiceFrameworkTest
         {
             #region 模擬客戶端指定自身作為操作物件並取得右鍵方法
             // 取得目標物件
-            Dictionary<string, LDAPObject> dictionaryDNWithObject = Serve.GetObjects(user, CategoryTypes.NONE, distinguishedNameMove);
-            // 防呆測試: 指定的使用者 (自己) 應該能被發現
-            dictionaryDNWithObject.TryGetValue(distinguishedNameMove, out LDAPObject objectTarget);
+            LDAPObject targetObject = Serve.GetObjectByDistinguisedName(user, distinguishedNameMove);
             // 此時應存在物件
-            Assert.IsNotNull(objectTarget, $"指定找尋使用者物件:{distinguishedNameMove} 但無法找到指定物件");
+            Assert.IsNotNull(targetObject, $"指定找尋使用者物件:{distinguishedNameMove} 但無法找到指定物件");
             // 使用登入者與目標物件取得功能證書
-            LDAPCertification certificate = Serve.GetCertificate(user, objectTarget);
+            LDAPCertification certificate = Serve.GetCertificate(user, targetObject);
             // 功能證書在喚起者與目標物件存在的情況下絕對不會為空
             Assert.IsNotNull(certificate, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedNameMove} 時應能取得證書");
             // 取得支援的方法
@@ -590,12 +582,12 @@ namespace ADServiceFrameworkTest
             #endregion
             #region 模擬客戶端至伺服器端驗證需求
             // 取得目標物件的父層
-            bool isParent = objectTarget.GetOrganizationUnit(out string distinguishedNameParent);
+            bool isParent = targetObject.GetOrganizationUnit(out string distinguishedNameParent);
             // 指定方法應支援
             Assert.IsTrue(isParent, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedNameMove} 時目標物件應能取得父層組織");
 
             // 記錄移動前的區分名稱
-            string oldDistinguishedName = objectTarget.DistinguishedName;
+            string oldDistinguishedName = targetObject.DistinguishedName;
             // 將移動目標位置轉換成 JToken
             JToken modifiedMoveTo = JToken.FromObject(distinguishedNameMoveTo);
             // 驗證目標位置是否持有權限
@@ -608,7 +600,7 @@ namespace ADServiceFrameworkTest
             Assert.IsTrue(dictionaryDNWithModified.ContainsKey(oldDistinguishedName), $"異動的影響結果應包含:{oldDistinguishedName} ");
 
             // 記錄崇興命名後的區分名稱: 物件是連棟的
-            string newDistinguishedName = objectTarget.DistinguishedName;
+            string newDistinguishedName = targetObject.DistinguishedName;
             // 將還原目標位置轉換成 JToken
             JToken recoverMoveTo = JToken.FromObject(distinguishedNameParent);
             // 驗證還原位置是否持有權限
@@ -633,13 +625,11 @@ namespace ADServiceFrameworkTest
         {
             #region 模擬客戶端指定自身作為操作物件並取得右鍵方法
             // 取得目標物件
-            Dictionary<string, LDAPObject> dictionaryDNWithObject = Serve.GetObjects(user, CategoryTypes.NONE, distinguishedNameMove);
-            // 防呆測試: 指定的使用者 (自己) 應該能被發現
-            dictionaryDNWithObject.TryGetValue(distinguishedNameMove, out LDAPObject objectTarget);
+            LDAPObject targetObject = Serve.GetObjectByDistinguisedName(user, distinguishedNameMove);
             // 此時應存在物件
-            Assert.IsNotNull(objectTarget, $"指定找尋使用者物件:{distinguishedNameMove} 但無法找到指定物件");
+            Assert.IsNotNull(targetObject, $"指定找尋使用者物件:{distinguishedNameMove} 但無法找到指定物件");
             // 使用登入者與目標物件取得功能證書
-            LDAPCertification certificate = Serve.GetCertificate(user, objectTarget);
+            LDAPCertification certificate = Serve.GetCertificate(user, targetObject);
             // 功能證書在喚起者與目標物件存在的情況下絕對不會為空
             Assert.IsNotNull(certificate, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedNameMove} 時應能取得證書");
             // 取得支援的方法
@@ -662,7 +652,7 @@ namespace ADServiceFrameworkTest
             #endregion
             #region 模擬客戶端至伺服器端驗證需求
             // 取得目標物件的父層
-            bool isParent = objectTarget.GetOrganizationUnit(out string distinguishedNameParent);
+            bool isParent = targetObject.GetOrganizationUnit(out string distinguishedNameParent);
             // 指定方法應支援
             Assert.IsTrue(isParent, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedNameMove} 時目標物件應能取得父層組織");
 
@@ -699,13 +689,11 @@ namespace ADServiceFrameworkTest
         {
             #region 模擬客戶端指定自身作為操作物件並取得右鍵方法
             // 取得目標物件
-            Dictionary<string, LDAPObject> dictionaryDNWithObject = Serve.GetObjects(user, CategoryTypes.NONE, distinguishedName);
-            // 防呆測試: 指定的使用者 (自己) 應該能被發現
-            dictionaryDNWithObject.TryGetValue(distinguishedName, out LDAPObject objectTarget);
+            LDAPObject targetObject = Serve.GetObjectByDistinguisedName(user, distinguishedName);
             // 此時應存在物件
-            Assert.IsNotNull(objectTarget, $"指定找尋使用者物件:{distinguishedName} 但無法找到指定物件");
+            Assert.IsNotNull(targetObject, $"指定找尋使用者物件:{distinguishedName} 但無法找到指定物件");
             // 使用登入者與目標物件取得功能證書
-            LDAPCertification certificate = Serve.GetCertificate(user, objectTarget);
+            LDAPCertification certificate = Serve.GetCertificate(user, targetObject);
             // 功能證書在喚起者與目標物件存在的情況下絕對不會為空
             Assert.IsNotNull(certificate, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時應能取得證書");
             // 取得支援的方法

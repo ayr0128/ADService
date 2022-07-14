@@ -1,5 +1,6 @@
 ﻿using ADService.Environments;
 using ADService.Protocol;
+using System;
 using System.DirectoryServices;
 
 namespace ADService.Media
@@ -24,7 +25,12 @@ namespace ADService.Media
         /// <summary>
         /// 容器類型
         /// </summary>
-        public CategoryTypes Type { get; private set; }
+        [Obsolete("即將棄用, 請改用 DriveClassName 判斷物件類型")]
+        public CategoryTypes Type => LDAPCategory.GetCategoryTypes(DriveClassName);
+        /// <summary>
+        /// 容器類型
+        /// </summary>
+        public string DriveClassName { get; private set; }
         /// <summary>
         /// 此物件的 SID 資料
         /// </summary>
@@ -39,8 +45,8 @@ namespace ADService.Media
         /// </summary>
         /// <param name="entry">入口物件</param>
         /// <param name="isPrimary">是否為主要關聯物件</param>
-        /// <param name="categoryTypes">此物件的類型</param>
-        public LDAPRelationship(in DirectoryEntry entry, in bool isPrimary, in CategoryTypes categoryTypes)
+        /// <param name="driveClassName">此物件的類型</param>
+        public LDAPRelationship(in DirectoryEntry entry, in bool isPrimary, in string driveClassName)
         {
             DistinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGUISHEDNAME, entry.Properties);
             Name = LDAPConfiguration.ParseSingleValue<string>(Properties.P_NAME, entry.Properties);
@@ -49,7 +55,7 @@ namespace ADService.Media
             GUID = LDAPConfiguration.ParseGUID(Properties.C_OBJECTGUID, entry.Properties);
 
             IsPrimary = isPrimary;
-            Type = categoryTypes;
+            DriveClassName = driveClassName;
         }
     }
 }

@@ -16,22 +16,12 @@ namespace ADService.Foundation
         /// </summary>
         /// <param name="entry">入口物件</param>
         /// <param name="dispatcher">入口物件創建器</param>
-        /// <param name="extendFlags">找尋 <see cref="CategoryTypes">旗標</see>, 必須指定至少一種物件類型</param>
+        /// <param name="classNames">意圖查詢的資料妹別</param>
         /// <returns>組織單位</returns>
-        /// <exception cref="LDAPExceptions">非支援物件類型或特性鍵值解析發生錯誤時對外丟出</exception>
-        internal static List<LDAPObject> WithChild(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher, in CategoryTypes extendFlags)
+        internal static List<LDAPObject> WithChild(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher, in IEnumerable<string> classNames)
         {
-            // 找到須限制的物件類型
-            string[] classNames = LDAPCategory.GetClassNames(extendFlags);
             // [TODO] 應使用加密字串避免注入式攻擊
             string encoderFiliter = LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCLASS, classNames);
-            // 沒有指定找尋組織單位底下物件類型
-            if (string.IsNullOrEmpty(encoderFiliter))
-            {
-                // 對外提供例外: 不可能進行搜尋動作但不找尋任何物件
-                throw new LDAPExceptions("沒有指定找尋任何物件類型, 此為邏輯錯誤", ErrorCodes.LOGIC_ERROR);
-            }
-
             //  使用 using 讓連線在跳出方法後即刻釋放: 找尋限定的組織單位
             using (DirectorySearcher searcherMixed = new DirectorySearcher(entry, encoderFiliter, PropertiesToLoad, SearchScope.OneLevel))
             {

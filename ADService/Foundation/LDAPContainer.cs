@@ -1,6 +1,5 @@
 ﻿using ADService.Environments;
 using ADService.Media;
-using ADService.Protocol;
 using System.DirectoryServices;
 
 namespace ADService.Foundation
