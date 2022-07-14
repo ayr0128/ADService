@@ -26,7 +26,7 @@ namespace ADService.Analytical
             if (!permissions.Destination.GetOrganizationUnit(out string organizationUnitDN))
             {
                 // 對外提供失敗
-                return (null, $"類型:{permissions.Destination.Type} 的目標物件:{permissions.Destination.DistinguishedName} 不能作為移動物件");
+                return (null, $"物件:{permissions.Destination.DistinguishedName} 不能作為移動物件");
             }
 
             // 目標物件的父層組織單位是否具有 '刪除子物件' 的寫入權限
@@ -35,14 +35,14 @@ namespace ADService.Analytical
             if (!isDeleteable)
             {
                 // 對外提供失敗
-                return (null, $"類型:{permissions.Destination.Type} 的目標物件:{permissions.Destination.DistinguishedName} 需具有目標:{permissions.Destination.DriveClassName} 的刪除權限且父層:{organizationUnitDN} 需具有子物件刪除權限");
+                return (null, $"物件:{permissions.Destination.DistinguishedName} 需具有目標:{permissions.Destination.DriveClassName} 的刪除權限且父層:{organizationUnitDN} 需具有子物件刪除權限");
             }
 
             // 物件本市是否被系統禁止移動
             if (!permissions.Destination.IsEnbleMove)
             {
                 // 對外提供失敗
-                return (null, $"類型:{permissions.Destination.Type} 的目標物件:{permissions.Destination.DistinguishedName} 需被系統禁止移動");
+                return (null, $"物件:{permissions.Destination.DistinguishedName} 需被系統禁止移動");
             }
 
             // 宣告重新命名分析氣
@@ -72,11 +72,10 @@ namespace ADService.Analytical
                  - 應提供物件類型的參數:
                  - 方法類型只要能夠呼叫就能夠編輯
             */
-            ProtocolAttributeFlags commonFlags = ProtocolAttributeFlags.CATEGORYLIMITED | ProtocolAttributeFlags.PROPERTIES;
+            ProtocolAttributeFlags commonFlags = ProtocolAttributeFlags.PROPERTIES;
             // 需求內容: 採用封盒動作
             Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object>
             {
-                { InvokeCondition.CATEGORYLIMITED, CategoryTypes.ORGANIZATION_UNIT },
                 { InvokeCondition.PROPERTIES, new string[]{ Properties.C_DISTINGUISHEDNAME } },
                 { Properties.C_DISTINGUISHEDNAME, new InvokeCondition(commonFlagsDistinguishedName, dictionaryProtocolWithDistinguishedName) },
             };
@@ -133,7 +132,7 @@ namespace ADService.Analytical
                     - 區分名稱與限制目標符合
                     [TODO] 應使用加密字串避免注入式攻擊
                 */
-                string encoderFiliter = LDAPConfiguration.GetORFiliter(Properties.C_DISTINGUISHEDNAME, distinguishedName);
+                string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCLASS, LDAPCategory.CLASS_ORGANIZATIONUNIT)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGUISHEDNAME, distinguishedName)})";
                 // 找尋符合條件的物件
                 using (DirectorySearcher searcher = new DirectorySearcher(entryRoot, encoderFiliter, LDAPObject.PropertiesToLoad))
                 {

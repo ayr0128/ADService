@@ -156,7 +156,7 @@ namespace ADService.Certification
             if (!dictionaryMethodWithAnalytical.TryGetValue(attributeName, out Method analytical))
             {
                 // 丟出例外: 呼叫喚醒時必須是可以被找到的方法
-                throw new LDAPExceptions($"類型:{Destination.Type} 的物件:{Destination.DistinguishedName} 於檢驗功能:{attributeName} 時發現尚未實作, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
+                throw new LDAPExceptions($"物件:{Destination.DistinguishedName} 於檢驗功能:{attributeName} 時發現尚未實作, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
             }
 
             // 宣告資料異動證書: 使用 Finally 進行釋放
@@ -168,7 +168,7 @@ namespace ADService.Certification
                 if (analytical.IsShowed)
                 {
                     // 丟出例外: 取得單一方法條件時必須是可以被隱藏在列表外的方法
-                    throw new LDAPExceptions($"類型:{Destination.Type} 的物件:{Destination.DistinguishedName} 於檢驗功能:{attributeName} 時發現不能直接呼叫, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
+                    throw new LDAPExceptions($"物件:{Destination.DistinguishedName} 於檢驗功能:{attributeName} 時發現不能直接呼叫, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
                 }
 
                 // 推入並設置入口物件
@@ -223,7 +223,7 @@ namespace ADService.Certification
             if (!dictionaryMethodWithAnalytical.TryGetValue(attributeName, out Method analytical))
             {
                 // 丟出例外: 呼叫喚醒時必須是可以被找到的方法
-                throw new LDAPExceptions($"類型:{Destination.Type} 的物件:{Destination.DistinguishedName} 於檢驗功能:{attributeName} 時發現尚未實作, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
+                throw new LDAPExceptions($"類型:{Destination.DriveClassName} 的物件:{Destination.DistinguishedName} 於檢驗功能:{attributeName} 時發現尚未實作, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
             }
 
             // 宣告資料異動證書: 使用 Finally 進行釋放
@@ -274,7 +274,7 @@ namespace ADService.Certification
             if (!dictionaryMethodWithAnalytical.TryGetValue(attributeName, out Method analytical))
             {
                 // 丟出例外: 呼叫喚醒時必須是可以被找到的方法
-                throw new LDAPExceptions($"類型:{Destination.Type} 的物件:{Destination.DistinguishedName} 於喚醒功能:{attributeName} 時發現尚未實作, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
+                throw new LDAPExceptions($"類型:{Destination.DriveClassName} 的物件:{Destination.DistinguishedName} 於喚醒功能:{attributeName} 時發現尚未實作, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
             }
 
             // 宣告資料異動證書: 使用 Finally 進行釋放

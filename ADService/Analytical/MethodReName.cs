@@ -25,30 +25,30 @@ namespace ADService.Analytical
             if (!permissions.Destination.GetOrganizationUnit(out _))
             {
                 // 對外提供失敗
-                return (null, $"類型:{permissions.Destination.Type} 的目標物件:{permissions.Destination.DistinguishedName} 是根目錄不應嘗試進行重新命名");
+                return (null, $"物件:{permissions.Destination.DistinguishedName} 是根目錄不應嘗試進行重新命名");
             }
 
             // 不存在 '名稱' 的寫入權限
             if (!permissions.IsAllow(Properties.P_NAME, ActiveDirectoryRights.WriteProperty))
             {
                 // 對外提供失敗
-                return (null, $"類型:{permissions.Destination.Type} 的目標物件:{permissions.Destination.DistinguishedName} 需具有存取規則:{Properties.P_NAME} 的寫入權限");
+                return (null, $"物件:{permissions.Destination.DistinguishedName} 需具有存取規則:{Properties.P_NAME} 的寫入權限");
             }
 
             // 物件本市是否被系統禁止移動
             if (!permissions.Destination.IsEnableReName)
             {
                 // 對外提供失敗
-                return (null, $"類型:{permissions.Destination.Type} 的目標物件:{permissions.Destination.DistinguishedName} 需被系統禁止重新命名");
+                return (null, $"物件:{permissions.Destination.DistinguishedName} 需被系統禁止重新命名");
             }
 
             // 此權限需要根據目標物件類型取得
-            switch (permissions.Destination.Type)
+            switch (permissions.Destination.DriveClassName)
             {
                 // 群組
-                case CategoryTypes.GROUP:
+                case LDAPCategory.CLASS_GROUP:
                 // 成員
-                case CategoryTypes.PERSON:
+                case LDAPCategory.CLASS_PERSON:
                     {
                         // 組織群組需另外需求以下的權限
                         const string attributeName = Properties.P_CN;
@@ -56,12 +56,12 @@ namespace ADService.Analytical
                         if (!permissions.IsAllow(attributeName, ActiveDirectoryRights.WriteProperty))
                         {
                             // 對外提供失敗
-                            return (null, $"類型:{permissions.Destination.Type} 的目標物件:{permissions.Destination.DistinguishedName} 需具有存取規則:{attributeName} 的寫入權限");
+                            return (null, $"物件:{permissions.Destination.DistinguishedName} 需具有存取規則:{attributeName} 的寫入權限");
                         }
                     }
                     break;
                 // 隸屬群組
-                case CategoryTypes.ORGANIZATION_UNIT:
+                case LDAPCategory.CLASS_ORGANIZATIONUNIT:
                     {
                         // 組織群組需另外需求以下的權限
                         const string attributeName = Properties.P_OU;
@@ -69,7 +69,7 @@ namespace ADService.Analytical
                         if (!permissions.IsAllow(attributeName, ActiveDirectoryRights.WriteProperty))
                         {
                             // 對外提供失敗
-                            return (null, $"類型:{permissions.Destination.Type} 的目標物件:{permissions.Destination.DistinguishedName} 需具有存取規則:{attributeName} 的寫入權限");
+                            return (null, $"件:{permissions.Destination.DistinguishedName} 需具有存取規則:{attributeName} 的寫入權限");
                         }
                     }
                     break;
@@ -118,10 +118,10 @@ namespace ADService.Analytical
             string nameInFormat;
             #region 重新命名動作實作
             // 根據類型決定如何處理
-            switch (permissions.Destination.Type)
+            switch (permissions.Destination.DriveClassName)
             {
                 // 組織單位
-                case CategoryTypes.ORGANIZATION_UNIT:
+                case LDAPCategory.CLASS_ORGANIZATIONUNIT:
                     {
                         // 重新命名用的結構
                         string receivedNameFormat = $"{Properties.P_OU}={name}";
@@ -141,9 +141,9 @@ namespace ADService.Analytical
                     }
                     break;
                 // 群組
-                case CategoryTypes.GROUP:
+                case LDAPCategory.CLASS_GROUP:
                 // 成員
-                case CategoryTypes.PERSON:
+                case LDAPCategory.CLASS_PERSON:
                     {
                         // 重新命名用的結構
                         string receivedNameFormat = $"{Properties.P_CN}={name}";
@@ -168,7 +168,7 @@ namespace ADService.Analytical
                              2. 電腦物件重新命名: 此問題單純為尚未實作, 須追加電腦類型物件
                              3. 權限處理有漏洞需檢查整體解析過程
                         */
-                        throw new LDAPExceptions($"類型:{permissions.Destination.Type} 的物件:{permissions.Destination.DistinguishedName} 於檢驗異動名稱時發現尚未實作, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
+                        throw new LDAPExceptions($"物件:{permissions.Destination.DistinguishedName} 於檢驗異動名稱時發現尚未實作, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
                     }
             }
             #endregion
@@ -201,19 +201,19 @@ namespace ADService.Analytical
             string nameInFormat;
             #region 重新命名動作實作
             // 根據類型決定如何處理
-            switch (permissions.Destination.Type)
+            switch (permissions.Destination.DriveClassName)
             {
                 // 組織單位
-                case CategoryTypes.ORGANIZATION_UNIT:
+                case LDAPCategory.CLASS_ORGANIZATIONUNIT:
                     {
                         // 重新命名用的結構
                         nameInFormat = $"{Properties.P_OU}={name}";
                     }
                     break;
                 // 群組
-                case CategoryTypes.GROUP:
+                case LDAPCategory.CLASS_GROUP:
                 // 成員
-                case CategoryTypes.PERSON:
+                case LDAPCategory.CLASS_PERSON:
                     {
                         // 重新命名用的結構
                         nameInFormat = $"{Properties.P_CN}={name}";
@@ -226,7 +226,7 @@ namespace ADService.Analytical
                              2. 電腦物件重新命名: 此問題單純為尚未實作, 須追加電腦類型物件
                              3. 權限處理有漏洞需檢查整體解析過程
                         */
-                        throw new LDAPExceptions($"類型:{permissions.Destination.Type} 的物件:{permissions.Destination.DistinguishedName} 於檢驗異動名稱時發現尚未實作, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
+                        throw new LDAPExceptions($"物件:{permissions.Destination.DistinguishedName} 於檢驗異動名稱時發現尚未實作, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
                     }
             }
             #endregion

@@ -145,7 +145,7 @@ namespace ADService.Protocol
     /// <summary>
     /// 物件類型, 可以旗標方式拓寬
     /// </summary>
-    [Flags]
+    [Flags, Obsolete("即將棄用")]
     public enum CategoryTypes : ushort
     {
         /// <summary>
@@ -177,9 +177,13 @@ namespace ADService.Protocol
         /// </summary>
         PERSON = 0x0020,
         /// <summary>
+        /// 應用程式或可用頁面
+        /// </summary>
+        APTREE = 0x0040,
+        /// <summary>
         /// 所有支援查詢的類型
         /// </summary>
-        ALL_TYPES = CONTAINER | DOMAIN_DNS | ORGANIZATION_UNIT | FOREIGN_SECURITYPRINCIPALS | GROUP | PERSON,
+        ALL_TYPES = CONTAINER | DOMAIN_DNS | ORGANIZATION_UNIT | FOREIGN_SECURITYPRINCIPALS | GROUP | PERSON | APTREE,
     }
 
     /// <summary>
@@ -243,13 +247,6 @@ namespace ADService.Protocol
         /// 不可為空: 出現時代表回傳的資料不可為空
         /// </summary>
         NULLDISABLE = 0x02000000,
-        /// <summary>
-        /// 限制目標類型: 協議描述中會包含下述欄位
-        /// <list type="table|bullet">
-        ///     <item><term> <see cref="InvokeCondition.CATEGORYLIMITED">限制目標物件</see> </term> <see cref="CategoryTypes">類型</see> </item>
-        /// </list>
-        /// </summary>
-        CATEGORYLIMITED = 0x04000000,
         /// <summary>
         /// 可否編輯
         /// </summary>

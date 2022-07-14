@@ -114,11 +114,9 @@ namespace ADService.Foundation
                                 UnitSchemaClass[] unitSchemaClasses = dispatcher.GetDriveClasses(driveClassNames);
                                 // 使用物件類型製作對應的物件
                                 UnitSchemaClass unitSchemaClass = unitSchemaClasses.Last();
-                                // 取得類型
-                                CategoryTypes categoryTypes = LDAPCategory.GetCategoryTypes(unitSchemaClass.Name);
 
                                 // 轉換成基礎物件
-                                LDAPRelationship relationship = new LDAPRelationship(entry, true, categoryTypes);
+                                LDAPRelationship relationship = new LDAPRelationship(entry, true, unitSchemaClass.Name);
                                 // 推入字典
                                 dictionaryDNWithObject.Add(relationship.DistinguishedName, relationship);
                             }
@@ -146,11 +144,9 @@ namespace ADService.Foundation
                 UnitSchemaClass[] unitSchemaClasses = dispatcher.GetDriveClasses(driveClassNames);
                 // 使用物件類型製作對應的物件
                 UnitSchemaClass unitSchemaClass = unitSchemaClasses.Last();
-                // 取得類型
-                CategoryTypes categoryTypes = LDAPCategory.GetCategoryTypes(unitSchemaClass.Name);
 
                 // 主要隸屬的物件一定是群組
-                return new LDAPRelationship(entry, true, categoryTypes);
+                return new LDAPRelationship(entry, true, unitSchemaClass.Name);
             }
         }
 
@@ -196,11 +192,9 @@ namespace ADService.Foundation
                                 UnitSchemaClass[] unitSchemaClasses = dispatcher.GetDriveClasses(driveClassNames);
                                 // 使用物件類型製作對應的物件
                                 UnitSchemaClass unitSchemaClass = unitSchemaClasses.Last();
-                                // 取得類型
-                                CategoryTypes categoryTypes = LDAPCategory.GetCategoryTypes(unitSchemaClass.Name);
 
                                 // 推入字典
-                                dictionaryDNWithGroup.Add(distinguishedName, new LDAPRelationship(entry, false, categoryTypes));
+                                dictionaryDNWithGroup.Add(distinguishedName, new LDAPRelationship(entry, false, unitSchemaClass.Name));
                             }
                         }
                         // 返還
@@ -221,7 +215,7 @@ namespace ADService.Foundation
             // 預設回傳空字串: 代表本身是根目錄
             OrganizationUnit = string.Empty;
             // 是否為網域跟目錄
-            if (Type == CategoryTypes.DOMAIN_DNS)
+            if (DriveClassName == LDAPCategory.CLASS_DOMAINDNS)
             {
                 // 網域跟目錄不持有父曾
                 return false;
@@ -277,6 +271,7 @@ namespace ADService.Foundation
         /// <summary>
         /// 容器類型
         /// </summary>
+        [Obsolete("即將棄用, 請改用新屬性: DriveClassName 判斷物件類型")]
         public CategoryTypes Type => LDAPCategory.GetCategoryTypes(DriveClassName);
         /// <summary>
         /// 驅動類型名稱

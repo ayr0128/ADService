@@ -64,13 +64,6 @@ namespace ADService.Foundation
         /// <param name="dispatcher">入口物件創建器</param>
         internal LDAPPerson(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher) : base(entry, dispatcher)
         {
-            // 不是允許類型: 成員
-            if ((Type & CategoryTypes.PERSON) == CategoryTypes.NONE)
-            {
-                // 對外丟出類型不正確例外
-                throw new LDAPExceptions($"基礎物件類型:{Type} 不是期望的成員類型:{CategoryTypes.PERSON}", ErrorCodes.LOGIC_ERROR);
-            }
-
             // 初始化主要隸屬群組
             LDAPRelationship primaryGroup = ToRelationshipBySID(dispatcher, PrimaryGroupSID);
             // 將主要隸屬群組加入隸屬群組

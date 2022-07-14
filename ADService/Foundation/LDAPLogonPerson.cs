@@ -26,8 +26,8 @@ namespace ADService.Foundation
         /// <exception cref="LDAPExceptions">解析鍵值不符合規則時對外丟出</exception>
         internal LDAPLogonPerson(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher) : base(entry, dispatcher)
         {
-            UserName  = dispatcher.UserName;
-            Password  = dispatcher.Password;
+            UserName = dispatcher.UserName;
+            Password = dispatcher.Password;
         }
     }
 }

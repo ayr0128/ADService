@@ -1,8 +1,6 @@
 ﻿using ADService.Media;
 using ADService.Protocol;
-using System;
 using System.DirectoryServices;
-using System.Security.AccessControl;
 using System.Security.Principal;
 
 namespace ADService.Details
@@ -50,7 +48,7 @@ namespace ADService.Details
             Raw = raw;
 
             // 注意需要透過 NTAccount 取得
-            UnitName = Raw.IdentityReference.ToString(); 
+            UnitName = Raw.IdentityReference.ToString();
             SecurityID = Raw.IdentityReference.Translate(typeof(SecurityIdentifier)).ToString();
         }
 
