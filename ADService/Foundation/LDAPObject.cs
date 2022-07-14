@@ -5,6 +5,7 @@ using ADService.Protocol;
 using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
+using System.Linq;
 
 namespace ADService.Foundation
 {
@@ -30,33 +31,37 @@ namespace ADService.Foundation
         /// <exception cref="LDAPExceptions">物件未實作工廠模式或實作過程中出現錯誤時丟出例外</exception>
         internal static LDAPObject ToObject(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher)
         {
-            // 解析物件類型
-            CategoryTypes type = LDAPConfiguration.ParseCategory(entry.Properties);
+            // 取得物件驅動類型名稱
+            string[] driveClassNames = LDAPConfiguration.ParseMutipleValue<string>(Properties.C_OBJECTCLASS, entry.Properties);
+            // 從類型分配氣中找到物件類別, 此驅動物件類型會經過排序, 最後一個就是目前物件的類別
+            UnitSchemaClass[] unitSchemaClasses = dispatcher.GetDriveClasses(driveClassNames);
             // 使用物件類型製作對應的物件
-            switch (type)
+            UnitSchemaClass unitSchemaClass = unitSchemaClasses.Last();
+            // 根據主要驅動物件類型名稱逕行動作
+            switch (unitSchemaClass.Name)
             {
-                case CategoryTypes.CONTAINER: // 容器
+                case LDAPCategory.CLASS_CONTAINER: // 容器
                     {
                         // 對外提供 '容器'
                         return new LDAPContainer(entry, dispatcher);
                     }
-                case CategoryTypes.DOMAIN_DNS: // 網域
+                case LDAPCategory.CLASS_DOMAINDNS: // 網域
                     {
                         // 對外提供 '網域' 結構
                         return new LDAPDomainDNS(entry, dispatcher);
                     }
-                case CategoryTypes.ORGANIZATION_UNIT: // 組織單位
+                case LDAPCategory.CLASS_ORGANIZATIONUNIT: // 組織單位
                     {
                         // 對外提供 '組織單位' 結構
                         return new LDAPOrganizationUnit(entry, dispatcher);
                     }
-                case CategoryTypes.ForeignSecurityPrincipals: // 內部安全性群組
-                case CategoryTypes.GROUP:                     // 群組
+                case LDAPCategory.CLASS_FOREIGNSECURITYPRINCIPALS: // 內部安全性群組
+                case LDAPCategory.CLASS_GROUP:                     // 群組
                     {
                         // 對外提供 '群組' 結構
                         return new LDAPGroup(entry, dispatcher);
                     }
-                case CategoryTypes.PERSON: // 成員
+                case LDAPCategory.CLASS_PERSON: // 成員
                     {
                         // 對外提供 '成員' 結構
                         return new LDAPPerson(entry, dispatcher);
@@ -64,7 +69,7 @@ namespace ADService.Foundation
                 default:
                     {
                         // 對外丟出例外: 未實作
-                        throw new LDAPExceptions($"目標物件類型:{type} 尚未實作工廠模式, 無法轉換", ErrorCodes.LOGIC_ERROR);
+                        throw new LDAPExceptions($"目標物件類型:{unitSchemaClass.Name} 尚未實作工廠模式, 無法轉換", ErrorCodes.LOGIC_ERROR);
                     }
             }
         }
@@ -76,13 +81,11 @@ namespace ADService.Foundation
         /// <param name="primaryGroupToken">主要隸屬群組的 Token</param>
         internal static Dictionary<string, LDAPRelationship> ToRelationshipByToken(in LDAPConfigurationDispatcher dispatcher, in int primaryGroupToken)
         {
-            // 找到須限制的物件類型
-            Dictionary<CategoryTypes, string> dictionaryLimitedCategory = LDAPCategory.GetValuesByTypes(CategoryTypes.PERSON);
             // 使用根目錄
             using (DirectoryEntry root = dispatcher.DomainRoot())
             {
                 // 加密避免 LDAP 注入式攻擊: 透過主要隸屬群組關聯的物件必定圍成員
-                string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}({Properties.C_PRIMARYGROUPID}={primaryGroupToken}))";
+                string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCLASS, LDAPCategory.CLASS_PERSON)}({Properties.C_PRIMARYGROUPID}={primaryGroupToken}))";
 
                 // 搜尋主要隸屬群組關聯的物件
                 using (DirectorySearcher searcher = new DirectorySearcher(root, encoderFiliter, PropertiesToLoad))
@@ -105,8 +108,17 @@ namespace ADService.Foundation
                             // 轉換為入口物件
                             using (DirectoryEntry entry = one.GetDirectoryEntry())
                             {
+                                // 取得物件驅動類型名稱
+                                string[] driveClassNames = LDAPConfiguration.ParseMutipleValue<string>(Properties.C_OBJECTCLASS, entry.Properties);
+                                // 從類型分配氣中找到物件類別, 此驅動物件類型會經過排序, 最後一個就是目前物件的類別
+                                UnitSchemaClass[] unitSchemaClasses = dispatcher.GetDriveClasses(driveClassNames);
+                                // 使用物件類型製作對應的物件
+                                UnitSchemaClass unitSchemaClass = unitSchemaClasses.Last();
+                                // 取得類型
+                                CategoryTypes categoryTypes = LDAPCategory.GetCategoryTypes(unitSchemaClass.Name);
+
                                 // 轉換成基礎物件
-                                LDAPRelationship relationship = new LDAPRelationship(entry, true);
+                                LDAPRelationship relationship = new LDAPRelationship(entry, true, categoryTypes);
                                 // 推入字典
                                 dictionaryDNWithObject.Add(relationship.DistinguishedName, relationship);
                             }
@@ -128,8 +140,17 @@ namespace ADService.Foundation
             // 使用 SID 取得指定物件
             using (DirectoryEntry entry = dispatcher.BySID(primaryGroupSID))
             {
+                // 取得物件驅動類型名稱
+                string[] driveClassNames = LDAPConfiguration.ParseMutipleValue<string>(Properties.C_OBJECTCLASS, entry.Properties);
+                // 從類型分配氣中找到物件類別, 此驅動物件類型會經過排序, 最後一個就是目前物件的類別
+                UnitSchemaClass[] unitSchemaClasses = dispatcher.GetDriveClasses(driveClassNames);
+                // 使用物件類型製作對應的物件
+                UnitSchemaClass unitSchemaClass = unitSchemaClasses.Last();
+                // 取得類型
+                CategoryTypes categoryTypes = LDAPCategory.GetCategoryTypes(unitSchemaClass.Name);
+
                 // 主要隸屬的物件一定是群組
-                return new LDAPRelationship(entry, true);
+                return new LDAPRelationship(entry, true, categoryTypes);
             }
         }
 
@@ -142,26 +163,51 @@ namespace ADService.Foundation
         internal static Dictionary<string, LDAPRelationship> ToRelationshipByDNs(in LDAPConfigurationDispatcher dispatcher, params string[] distinguishedNames)
         {
             // 沒有隸屬群組時
-            if (distinguishedNames == null)
+            if (distinguishedNames == null || distinguishedNames.Length == 0)
             {
                 // 對外提供空陣列
                 return new Dictionary<string, LDAPRelationship>(0);
             }
 
-            // 取代用的新字典
-            Dictionary<string, LDAPRelationship> dictionaryDNWithGroup = new Dictionary<string, LDAPRelationship>(distinguishedNames.Length);
-            // 遍歷指定的區分名稱
-            foreach (string distinguishedName in distinguishedNames)
+            // 找尋指定區分名稱時需要從根目錄開始找尋
+            using (DirectoryEntry root = dispatcher.DomainRoot())
             {
-                // 指定區分名稱取得物件
-                using (DirectoryEntry entry = dispatcher.ByDistinguisedName(distinguishedName))
+                // [TODO] 應使用加密字串避免注入式攻擊
+                string encoderFiliter = LDAPConfiguration.GetORFiliter(Properties.C_DISTINGUISHEDNAME, distinguishedNames);
+                // 找尋指定目標
+                using (DirectorySearcher searcher = new DirectorySearcher(root, encoderFiliter, PropertiesToLoad, SearchScope.Subtree))
                 {
-                    // 推入字典
-                    dictionaryDNWithGroup.Add(distinguishedName, new LDAPRelationship(entry, false));
+                    // 將指定目標過濾出來
+                    using (SearchResultCollection all = searcher.FindAll())
+                    {
+                        // 取代用的新字典
+                        Dictionary<string, LDAPRelationship> dictionaryDNWithGroup = new Dictionary<string, LDAPRelationship>(all.Count);
+                        // 遍歷取得的結果
+                        foreach (SearchResult one in all)
+                        {
+                            // 將取得物件轉換為入口物件
+                            using (DirectoryEntry entry = one.GetDirectoryEntry())
+                            {
+                                // 區分名稱
+                                string distinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGUISHEDNAME, entry.Properties);
+                                // 取得物件驅動類型名稱
+                                string[] driveClassNames = LDAPConfiguration.ParseMutipleValue<string>(Properties.C_OBJECTCLASS, entry.Properties);
+                                // 從類型分配氣中找到物件類別, 此驅動物件類型會經過排序, 最後一個就是目前物件的類別
+                                UnitSchemaClass[] unitSchemaClasses = dispatcher.GetDriveClasses(driveClassNames);
+                                // 使用物件類型製作對應的物件
+                                UnitSchemaClass unitSchemaClass = unitSchemaClasses.Last();
+                                // 取得類型
+                                CategoryTypes categoryTypes = LDAPCategory.GetCategoryTypes(unitSchemaClass.Name);
+
+                                // 推入字典
+                                dictionaryDNWithGroup.Add(distinguishedName, new LDAPRelationship(entry, false, categoryTypes));
+                            }
+                        }
+                        // 返還
+                        return dictionaryDNWithGroup;
+                    }
                 }
             }
-            // 提供給外部
-            return dictionaryDNWithGroup;
         }
         #endregion
 
@@ -231,14 +277,35 @@ namespace ADService.Foundation
         /// <summary>
         /// 容器類型
         /// </summary>
-        public CategoryTypes Type
+        public CategoryTypes Type => LDAPCategory.GetCategoryTypes(DriveClassName);
+        /// <summary>
+        /// 驅動類型名稱
+        /// </summary>
+        public string DriveClassName => driveUnitSchemaClasses.Last().Name;
+
+        /// <summary>
+        /// 目標物建物件類型: 驅動
+        /// </summary>
+        internal UnitSchemaClass[] driveUnitSchemaClasses;
+        /// <summary>
+        /// 目標物建物件類型: 輔助
+        /// </summary>
+        internal UnitSchemaClass[] auxiliaryUnitSchemaClasses;
+        /// <summary>
+        /// 取得可支援的屬性名稱
+        /// </summary>
+        internal string[] AllowedAttributeNames
         {
             get
             {
-                // 取得 類別 不存在應丟出例外
-                string storedValue = GetPropertySingle<string>(Properties.C_OBJECTCATEGORY);
-                // 轉換物件類型
-                return LDAPConfiguration.GetObjectType(storedValue);
+                // 宣告一個新的陣列來存放輔助類別與需求類別
+                List<UnitSchemaClass> unitSchemaClasses = new List<UnitSchemaClass>(driveUnitSchemaClasses.Length + auxiliaryUnitSchemaClasses.Length);
+                // 增加原始類別
+                unitSchemaClasses.AddRange(driveUnitSchemaClasses);
+                // 增加輔助類別
+                unitSchemaClasses.AddRange(auxiliaryUnitSchemaClasses);
+                // 取得所有允許的屬性
+                return UnitSchemaClass.UniqueAttributeNames(unitSchemaClasses);
             }
         }
 
@@ -279,7 +346,7 @@ namespace ADService.Foundation
             // 取得物件持有類別
             string[] classNames = GetPropertyMultiple<string>(Properties.C_OBJECTCLASS);
             // 透過物件持有類別取得所有可用屬性以及所有可用子類別
-            driveUnitSchemaClasses = dispatcher.GetClasses(classNames);
+            driveUnitSchemaClasses = dispatcher.GetDriveClasses(classNames);
             // 取得輔助類別
             auxiliaryUnitSchemaClasses = dispatcher.GetAuxiliaryClasses(driveUnitSchemaClasses);
         }

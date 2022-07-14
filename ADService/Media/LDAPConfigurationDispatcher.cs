@@ -54,7 +54,7 @@ namespace ADService.Media
         /// </summary>
         /// <param name="ldapDisplayNames">類別物件的展示名稱</param>
         /// <returns>類別物件藍本</returns>
-        internal UnitSchemaClass[] GetClasses(params string[] ldapDisplayNames) => Configuration.GetnClasses(this, ldapDisplayNames);
+        internal UnitSchemaClass[] GetDriveClasses(params string[] ldapDisplayNames) => Configuration.GetDriveClasses(this, ldapDisplayNames);
 
         /// <summary>
         /// 取得指定展示名稱的物件類別藍本

@@ -273,54 +273,6 @@ namespace ADService.Media
             // 對外提供轉換後型別
             return convertor.ToString("D");
         }
-
-        /// <summary>
-        /// 解析 <see cref="Properties.C_OBJECTCATEGORY">物件類型</see> 的鍵值容器
-        /// </summary>
-        /// <param name="properties">整包的鍵值儲存容器, 直接傳入不於外部解析是為了避免漏修改</param>
-        /// <returns>從容器中取得的 <see cref="Properties.C_OBJECTCATEGORY">物件類型</see> 鍵值內容</returns>
-        internal static CategoryTypes ParseCategory(in PropertyCollection properties)
-        {
-            // 取得 '物件類型' 特性鍵值內容
-            string categoryDistinguishedName = ParseSingleValue<string>(Properties.C_OBJECTCATEGORY, properties);
-            // 解析取得的區分名稱來得到物件類型
-            return GetObjectType(categoryDistinguishedName);
-        }
-        /// <summary>
-        /// 根據解析物件類型區分名稱來提供物件為何種類型
-        /// </summary>
-        /// <param name="categoryDistinguishedName">需解析區分名稱</param>
-        /// <returns></returns>
-        /// <exception cref="LDAPExceptions">區分名稱無法正常解析實對外丟出</exception>
-        internal static CategoryTypes GetObjectType(in string categoryDistinguishedName)
-        {
-            // 用來切割物件類型的字串
-            string[] splitElements = new string[] { $"{Properties.P_DC.ToUpper()}=", $"{Properties.P_OU.ToUpper()}=", $"{Properties.P_CN.ToUpper()}=" };
-            // 切割物件類型
-            string[] elements = categoryDistinguishedName.Split(splitElements, StringSplitOptions.RemoveEmptyEntries);
-
-            // 第一個參數為物件類型的描述: 但是需要物件類型的長度決定如何處理
-            string category = string.Empty;
-            // 物件類型長度不可能比 1 少, 但是為了防呆還是增加此邏輯判斷
-            if (elements.Length >= 1)
-            {
-                // 第一個元素必定是物件類型
-                string elementFirst = elements[0];
-                // 如果物件類型字串解析後長度比 1 大, 則第一個元素後面會多一個 ',' 會需要被移除
-                category = elements.Length > 1 ? elementFirst.Substring(0, elementFirst.Length - 1) : elementFirst;
-            }
-
-            // 透過描述取得物件類型描述
-            Dictionary<string, CategoryTypes> result = LDAPCategory.GetTypeByCategories(category);
-            // 物件類型不存在
-            if (!result.TryGetValue(category, out CategoryTypes type))
-            {
-                // 對外丟出例外: 未實做邏輯錯誤
-                throw new LDAPExceptions($"未實作解析資訊:{Properties.C_OBJECTCATEGORY} 儲存的內容:{categoryDistinguishedName}", ErrorCodes.LOGIC_ERROR);
-            }
-            // 存在時對外提供物件類型
-            return type;
-        }
         #endregion
 
         /// <summary>
@@ -544,11 +496,11 @@ namespace ADService.Media
                     return null;
                 }
 
+                // 對外提供的資料
+                UnitSchema newUnitSchema = null;
                 // 取得藍本物件入口
                 using (DirectoryEntry entry = one.GetDirectoryEntry())
                 {
-                    // 對外提供的資料
-                    UnitSchema newUnitSchema = null;
                     // 取得物件類型
                     string objectCategory = ParseSingleValue<string>(Properties.C_OBJECTCATEGORY, entry.Properties);
                     // 取得物件類型並取得展示名稱
@@ -584,9 +536,9 @@ namespace ADService.Media
                             (GUID, oldUnitSchema) => oldUnitSchema.IsExpired(EXPIRES_DURATION) ? newUnitSchema : oldUnitSchema
                         );
                     }
-                    // 提供給外部使用
-                    unitSchema = newUnitSchema;
                 }
+                // 提供給外部使用
+                unitSchema = newUnitSchema;
             }
 
             // 對外提供取得的資料
@@ -599,7 +551,7 @@ namespace ADService.Media
         /// <param name="dispatcher">提供 連線權限的分配氣</param>
         /// <param name="ldapDisplayNames">需要查詢的物件展示名稱</param>
         /// <returns>轉換成基底藍本的物件類型</returns>
-        internal UnitSchemaClass[] GetnClasses(in LDAPConfigurationDispatcher dispatcher, params string[] ldapDisplayNames)
+        internal UnitSchemaClass[] GetDriveClasses(in LDAPConfigurationDispatcher dispatcher, params string[] ldapDisplayNames)
         {
             // 最大長度必定為執行續安全字典的長度
             Dictionary<string, UnitSchemaClass> dictionaryLDAPDisplayNameWithUnitSchemaClass = new Dictionary<string, UnitSchemaClass>(dictionaryGUIDWithUnitSchema.Count);

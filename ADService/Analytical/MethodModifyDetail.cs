@@ -453,14 +453,12 @@ namespace ADService.Analytical
                                 // 取得根目錄
                                 using (DirectoryEntry entryRoot = certification.Dispatcher.DomainRoot())
                                 {
-                                    // 找到須限制的物件類型
-                                    Dictionary<CategoryTypes, string> dictionaryLimitedCategory = LDAPCategory.GetValuesByTypes(CategoryTypes.GROUP | CategoryTypes.PERSON);
                                     /*轉換成實際過濾字串: 取得符合下述所有條件的物件
                                         - 限制只找尋群組或成員
                                         - 限制只找尋特定區分名稱
                                         [TODO] 應使用加密字串避免注入式攻擊
                                     */
-                                    string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGUISHEDNAME, researchDNHashSet)})";
+                                    string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCLASS, LDAPCategory.CLASS_GROUP, LDAPCategory.CLASS_PERSON)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGUISHEDNAME, researchDNHashSet)})";
                                     // 應從根目錄進行搜尋
                                     using (DirectorySearcher seacher = new DirectorySearcher(entryRoot, encoderFiliter, LDAPObject.PropertiesToLoad))
                                     {
@@ -562,14 +560,12 @@ namespace ADService.Analytical
                                 // 取得根目錄
                                 using (DirectoryEntry entryRoot = certification.Dispatcher.DomainRoot())
                                 {
-                                    // 找到須限制的物件類型
-                                    Dictionary<CategoryTypes, string> dictionaryLimitedCategory = LDAPCategory.GetValuesByTypes(CategoryTypes.GROUP);
                                     /*轉換成實際過濾字串: 取得符合下述所有條件的物件
                                         - 限制只找尋群組
                                         - 限制只找尋特定區分名稱
                                         [TODO] 應使用加密字串避免注入式攻擊
                                     */
-                                    string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGUISHEDNAME, researchDNHashSet)})";
+                                    string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCLASS, LDAPCategory.CLASS_GROUP)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGUISHEDNAME, researchDNHashSet)})";
                                     // 應從根目錄進行搜尋
                                     using (DirectorySearcher seacher = new DirectorySearcher(entryRoot, encoderFiliter, LDAPObject.PropertiesToLoad))
                                     {

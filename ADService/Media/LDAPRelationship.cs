@@ -39,18 +39,17 @@ namespace ADService.Media
         /// </summary>
         /// <param name="entry">入口物件</param>
         /// <param name="isPrimary">是否為主要關聯物件</param>
-        /// <exception cref="LDAPExceptions">解析鍵值不符合規則時對外丟出</exception>
-        public LDAPRelationship(in DirectoryEntry entry, in bool isPrimary)
+        /// <param name="categoryTypes">此物件的類型</param>
+        public LDAPRelationship(in DirectoryEntry entry, in bool isPrimary, in CategoryTypes categoryTypes)
         {
             DistinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGUISHEDNAME, entry.Properties);
             Name = LDAPConfiguration.ParseSingleValue<string>(Properties.P_NAME, entry.Properties);
 
-            Type = LDAPConfiguration.ParseCategory(entry.Properties);
             SID = LDAPConfiguration.ParseSID(Properties.C_OBJECTSID, entry.Properties);
             GUID = LDAPConfiguration.ParseGUID(Properties.C_OBJECTGUID, entry.Properties);
 
-            // 紀錄是否從主要關聯物件而來
             IsPrimary = isPrimary;
+            Type = categoryTypes;
         }
     }
 }

@@ -232,7 +232,7 @@ namespace ADService.Advanced
                 // 過濾部分會因繼承關係產生轉換的屬性: 陳列子物件
                 bool isContainListChildren = (activeDirectoryRightsClass & ActiveDirectoryRights.ListChildren) == ActiveDirectoryRights.ListChildren;
                 // 在繼承的情況下: 陳列子物件應被轉匯為陳列
-                activeDirectoryRightsClassSelf |= isContainListChildren && accessRuleSet.IsInherited ? ActiveDirectoryRights.ListObject : 0;
+                activeDirectoryRightsClassSelf |= isContainListChildren ? ActiveDirectoryRights.ListObject : 0;
                 // 自身權限存在時含有屬性設置權限時
                 if (activeDirectoryRightsClassSelf != 0)
                 {

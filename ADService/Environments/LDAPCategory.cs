@@ -1,5 +1,6 @@
 ﻿using ADService.Protocol;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ADService.Environments
 {
@@ -11,137 +12,116 @@ namespace ADService.Environments
         /// <summary>
         /// 網域跟目錄
         /// </summary>
-        public const string CLASS_DOMAINDNS = "domainDns";
+        public const string CLASS_DOMAINDNS = "domainDNS";
+        /// <summary>
+        /// 容器
+        /// </summary>
+        public const string CLASS_CONTAINER = "container";
+        /// <summary>
+        /// 組織單位
+        /// </summary>
+        public const string CLASS_ORGANIZATIONUNIT = "organizationalUnit";
+        /// <summary>
+        /// 外部安全性主體
+        /// </summary>
+        public const string CLASS_FOREIGNSECURITYPRINCIPALS = "foreignSecurityPrincipals";
+        /// <summary>
+        /// 群組
+        /// </summary>
+        public const string CLASS_GROUP = "group";
+        /// <summary>
+        /// 使用者
+        /// </summary>
+        public const string CLASS_PERSON = "user";
 
         /// <summary>
-        /// 使用物件類型列舉快速取得描述
+        /// 使用指定物件類型名稱取得物件類型列舉旗標
         /// </summary>
-        /// <param name="type">物件類型</param>
-        /// <returns>對應描述</returns>
-        public static Dictionary<CategoryTypes, string> GetValuesByTypes(CategoryTypes type)
+        /// <param name="classNames">
+        ///     物件類別, 參閱下述列表
+        ///     <list type="table">
+        ///         <item> <term><see cref="CLASS_CONTAINER">物件類型名稱:容器</see></term> 對照 <see cref="CategoryTypes.CONTAINER">物件類型旗標:容器</see> </item>
+        ///         <item> <term><see cref="CLASS_ORGANIZATIONUNIT">物件類型名稱:組織單位</see></term> 對照 <see cref="CategoryTypes.ORGANIZATION_UNIT">物件類型旗標:組織單位</see> </item>
+        ///         <item> <term><see cref="CLASS_FOREIGNSECURITYPRINCIPALS">物件類型名稱:外部安全性主體</see></term> 對照 <see cref="CategoryTypes.FOREIGN_SECURITYPRINCIPALS">物件類型旗標:外部安全性主體</see> </item>
+        ///         <item> <term><see cref="CLASS_GROUP">物件類型名稱:群組</see></term> 對照 <see cref="CategoryTypes.GROUP">物件類型旗標:群組</see> </item>
+        ///         <item> <term><see cref="CLASS_PERSON">物件類型名稱:人員</see></term> 對照 <see cref="CategoryTypes.PERSON">物件類型旗標:人員</see> </item>
+        ///     </list>
+        /// </param>
+        /// <returns></returns>
+        public static CategoryTypes GetCategoryTypes(params string[] classNames)
         {
-            // 最後提供給外部的對應資料: 以要求的鍵值為主
-            Dictionary<CategoryTypes, string> resultDictionary = new Dictionary<CategoryTypes, string>();
-            // 遍歷支援的類型取得相關描述
-            foreach (KeyValuePair<CategoryTypes, string> pairEnumWithValue in dictionaryEnumWithValue)
+            // 沒有指定任何項目, 全部找尋
+            if (classNames.Length == 0)
             {
-                // 使用 & 運算換算出旗標
-                CategoryTypes flag = type & pairEnumWithValue.Key;
-                // 不是支援旗標
-                if (flag == CategoryTypes.NONE)
+                // 返回支援的所有類型
+                return CategoryTypes.ALL_TYPES;
+            }
+
+            // 需求的類型
+            CategoryTypes wantCategoryTypes = CategoryTypes.NONE;
+            // 遍立指定的物件類型名稱
+            foreach(string className in classNames)
+            {
+                // 從做好的連接表內取得類型
+                bool isExist = dictionaryClassNameWithCategoryType.TryGetValue(className, out CategoryTypes categoryTypes);
+                // 檢查是否支援
+                if (!isExist)
                 {
-                    // 跳過
+                    // 不支援則跳過
                     continue;
                 }
 
-                // 將支援旗標與相關描述對外提供
-                resultDictionary.Add(pairEnumWithValue.Key, pairEnumWithValue.Value);
+                // 蝶家齊標誌希望項目中: 此動作保證了指定項目依定能提供
+                wantCategoryTypes |= categoryTypes;
             }
-
-            // 對外提供描述
-            return resultDictionary;
+            // 最後對外提供的時候
+            return wantCategoryTypes;
         }
 
         /// <summary>
-        /// 使用物件類型列舉快速取得描述
+        /// 使用指定物件類型名稱取得物件類型列舉旗標
         /// </summary>
-        /// <param name="type">物件類型</param>
-        /// <returns>對應描述</returns>
-        public static Dictionary<CategoryTypes, string> GetAccessRulesByTypes(CategoryTypes type)
+        /// <param name="categoryTypes">物件類別, </param>
+        /// <returns></returns>
+        public static string[] GetClassNames(in CategoryTypes categoryTypes)
         {
-            // 最後提供給外部的對應資料: 以要求的鍵值為主
-            Dictionary<CategoryTypes, string> resultDictionary = new Dictionary<CategoryTypes, string>();
-            // 遍歷支援的類型取得相關描述
-            foreach (KeyValuePair<CategoryTypes, string> pairEnumWithValue in dictionaryEnumWithAccessRule)
+            // 沒有指定任何項目, 全部找尋
+            if (categoryTypes == CategoryTypes.NONE)
             {
-                // 使用 & 運算換算出旗標
-                CategoryTypes flag = type & pairEnumWithValue.Key;
-                // 不是支援旗標
-                if (flag == CategoryTypes.NONE)
-                {
-                    // 跳過
-                    continue;
-                }
-
-                // 將支援旗標與相關描述對外提供
-                resultDictionary.Add(pairEnumWithValue.Key, pairEnumWithValue.Value);
+                // 返回支援的所有類型
+                return dictionaryClassNameWithCategoryType.Keys.ToArray();
             }
 
-            // 對外提供描述
-            return resultDictionary;
-        }
-
-        /// <summary>
-        /// 使用描述快速取得物件類型列舉
-        /// </summary>
-        /// <param name="categories">物件描述</param>
-        /// <returns>對應列舉</returns>
-        public static Dictionary<string, CategoryTypes> GetTypeByCategories(params string[] categories)
-        {
-            // 最後提供給外部的對應資料: 以要求的描述為鍵值
-            Dictionary<string, CategoryTypes> resultDictionary = new Dictionary<string, CategoryTypes>();
-            // 遍歷需求並將資料做不重複處理
-            foreach (string category in categories)
+            // 串蒐集陣列
+            List<string> classNames = new List<string>();
+            // 遍立指定的物件類型名稱
+            foreach (KeyValuePair<string, CategoryTypes> pair in dictionaryClassNameWithCategoryType)
             {
-                // 相關類型的描述不存在對應的物件類型
-                if (!dictionaryCategoryWithEnum.TryGetValue(category, out CategoryTypes type))
+                // 檢查是否支援
+                if ((pair.Value & categoryTypes) == CategoryTypes.NONE)
                 {
-                    // 跳過
+                    // 不支援則跳過
                     continue;
                 }
 
-                // 若已經處理過此描述
-                if (resultDictionary.ContainsKey(category))
-                {
-                    // 跳過
-                    continue;
-                }
-
-                // 提供對應的型態
-                resultDictionary.Add(category, type);
+                // 蝶家齊標誌希望項目中: 此動作保證了指定項目依定能提供
+                classNames.Add(pair.Key);
             }
-
-            // 對外提供型態
-            return resultDictionary;
+            // 最後對外提供的時候: 此動作保證了未提供任何可用類別時會自動取用所有可用類別
+            return classNames.ToArray();
         }
 
         /// <summary>
         /// 列舉與物件類型描述的字典檔
         /// </summary>
-        private static readonly Dictionary<CategoryTypes, string> dictionaryEnumWithValue = new Dictionary<CategoryTypes, string>
+        private static readonly Dictionary<string, CategoryTypes> dictionaryClassNameWithCategoryType = new Dictionary<string, CategoryTypes>
         {
-            { CategoryTypes.CONTAINER, "container" },
-            { CategoryTypes.DOMAIN_DNS, CLASS_DOMAINDNS },
-            { CategoryTypes.ORGANIZATION_UNIT, "organizationalUnit" },
-            { CategoryTypes.ForeignSecurityPrincipals, "foreignSecurityPrincipals" },
-            { CategoryTypes.GROUP, "group" },
-            { CategoryTypes.PERSON, "person" },
-        };
-
-        /// <summary>
-        /// 列舉與物件類型描述的字典檔
-        /// </summary>
-        private static readonly Dictionary<CategoryTypes, string> dictionaryEnumWithAccessRule = new Dictionary<CategoryTypes, string>
-        {
-            { CategoryTypes.CONTAINER, "container" },
-            { CategoryTypes.DOMAIN_DNS, CLASS_DOMAINDNS },
-            { CategoryTypes.ORGANIZATION_UNIT, "organizationalUnit" },
-            { CategoryTypes.ForeignSecurityPrincipals, "foreignSecurityPrincipals" },
-            { CategoryTypes.GROUP, "group" },
-            { CategoryTypes.PERSON, "user" },
-        };
-
-        /// <summary>
-        /// 物件類型描述與列舉的字典檔
-        /// </summary>
-        private static readonly Dictionary<string, CategoryTypes> dictionaryCategoryWithEnum = new Dictionary<string, CategoryTypes>
-        {
-            { "Container", CategoryTypes.CONTAINER },
-            { "Domain-DNS", CategoryTypes.DOMAIN_DNS },
-            { "Organizational-Unit", CategoryTypes.ORGANIZATION_UNIT },
-            { "Foreign-Security-Principal", CategoryTypes.ForeignSecurityPrincipals },
-            { "Group", CategoryTypes.GROUP },
-            { "Person", CategoryTypes.PERSON },
+            { CLASS_DOMAINDNS, CategoryTypes.DOMAIN_DNS },
+            { CLASS_CONTAINER, CategoryTypes.CONTAINER },
+            { CLASS_ORGANIZATIONUNIT, CategoryTypes.ORGANIZATION_UNIT },
+            { CLASS_FOREIGNSECURITYPRINCIPALS, CategoryTypes.FOREIGN_SECURITYPRINCIPALS },
+            { CLASS_GROUP, CategoryTypes.GROUP },
+            { CLASS_PERSON, CategoryTypes.PERSON },
         };
     }
 }

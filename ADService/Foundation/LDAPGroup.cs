@@ -49,15 +49,6 @@ namespace ADService.Foundation
         /// <param name="dispatcher">入口物件創建器</param>
         internal LDAPGroup(in DirectoryEntry entry, in LDAPConfigurationDispatcher dispatcher) : base(entry, dispatcher)
         {
-            // 限制應為: 成員, 內部安全性群組
-            const CategoryTypes TypeLimited = CategoryTypes.GROUP | CategoryTypes.ForeignSecurityPrincipals;
-            // 不是允許類型
-            if ((Type & TypeLimited) == CategoryTypes.NONE)
-            {
-                // 對外丟出類型不正確例外
-                throw new LDAPExceptions($"基礎物件類型:{Type} 不是期望的群組類型:{TypeLimited}", ErrorCodes.LOGIC_ERROR);
-            }
-
             // 取得 member 不存在應丟出例外
             string[] member = GetPropertyMultiple<string>(Properties.P_MEMBER);
             // 初始化成員

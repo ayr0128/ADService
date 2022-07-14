@@ -167,7 +167,7 @@ namespace ADService.Protocol
         /// <summary>
         /// 安全權限群組: 內部預留
         /// </summary>
-        ForeignSecurityPrincipals = 0x0008,
+        FOREIGN_SECURITYPRINCIPALS = 0x0008,
         /// <summary>
         /// 權限群組
         /// </summary>
@@ -177,21 +177,9 @@ namespace ADService.Protocol
         /// </summary>
         PERSON = 0x0020,
         /// <summary>
-        /// 所有容器類型的物件
+        /// 所有支援查詢的類型
         /// </summary>
-        ALL_CONTAINERS = CONTAINER | DOMAIN_DNS | ORGANIZATION_UNIT,
-        /// <summary>
-        /// 所有可用單位
-        /// </summary>
-        ALL_UNITS = GROUP | PERSON,
-        /// <summary>
-        /// 可以觸發重新命名功能的單位
-        /// </summary>
-        ALL_RENAME = ORGANIZATION_UNIT | ALL_UNITS,
-        /// <summary>
-        /// 所有類型
-        /// </summary>
-        ALL = ALL_CONTAINERS | ALL_UNITS,
+        ALL_TYPES = CONTAINER | DOMAIN_DNS | ORGANIZATION_UNIT | FOREIGN_SECURITYPRINCIPALS | GROUP | PERSON,
     }
 
     /// <summary>

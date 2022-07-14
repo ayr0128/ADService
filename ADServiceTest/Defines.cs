@@ -188,6 +188,27 @@ namespace ADServiceFrameworkTest
         }
 
         /// <summary>
+        /// 從根部開始禪列登入者可以查看的物件
+        /// </summary>
+        /// <param name="user">登入者</param>
+        /// <param name="distinguishedName">玉樹可以查看的物件區分名稱</param>
+        internal static void Test_LDAP_Feature_ListWithPermissions(in LDAPLogonPerson user, in string distinguishedName)
+        {
+            // 取得目標物件: 可以指定一個物件作為微搜尋根部
+            Dictionary<string, LDAPObject> dictionaryDNWithObject1 = Serve.GetObjectByPermission(user, null);
+            // 此時可以查看此物件的下屬物件
+            Console.WriteLine($"登入者:{user.DistinguishedName} 可以查看跟目錄下的物件:{string.Join(",", dictionaryDNWithObject1.Keys)}");
+            // 假設可以查看某個組織單位
+            bool isExist = dictionaryDNWithObject1.TryGetValue(distinguishedName, out LDAPObject childObject);
+            // 預設應該能找尋的到
+            Assert.IsTrue(isExist, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 但沒有此下屬物件存在, 可能權限不足");
+            // 假設使用者想查看此物件是否還持有下層子物件: 要求必須是組織單位
+            Dictionary<string, LDAPObject> dictionaryDNWithObject2 = Serve.GetObjectByPermission(user, childObject, LDAPCategory.CLASS_ORGANIZATIONUNIT);
+            // 此時可以查看此物件的下屬物件
+            Console.WriteLine($"指定物件:{distinguishedName} 可以查看跟目錄下的物件:{string.Join(",", dictionaryDNWithObject2.Keys)}");
+        }
+
+        /// <summary>
         /// 測試功能中需額外取得資訊的方法
         /// </summary>
         /// <param name="user">執行此操作的登入者</param>
