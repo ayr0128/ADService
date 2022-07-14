@@ -29,22 +29,13 @@ namespace ADService.Analytical
                 return (null, $"類型:{permissions.Destination.Type} 的目標物件:{permissions.Destination.DistinguishedName} 不能作為移動物件");
             }
 
-            // 取得目標物件類型的名稱
-            Dictionary<CategoryTypes, string> dictionaryCategoryTypeWithValue = LDAPCategory.GetAccessRulesByTypes(permissions.Destination.Type);
-            // 取得物件類型的名稱
-            if (!dictionaryCategoryTypeWithValue.TryGetValue(permissions.Destination.Type, out string categoryValue))
-            {
-                // 對外提供失敗
-                return (null, $"類型:{permissions.Destination.Type} 的目標物件:{permissions.Destination.DistinguishedName} 不具有類型資料");
-            }
-
             // 目標物件的父層組織單位是否具有 '刪除子物件' 的寫入權限
-            bool isDeleteable = permissions.IsAllow(categoryValue, ActiveDirectoryRights.DeleteChild | ActiveDirectoryRights.Delete);
+            bool isDeleteable = permissions.IsAllow(permissions.Destination.DriveClassName, ActiveDirectoryRights.DeleteChild | ActiveDirectoryRights.Delete);
             // 兩種權限都不具備時
             if (!isDeleteable)
             {
                 // 對外提供失敗
-                return (null, $"類型:{permissions.Destination.Type} 的目標物件:{permissions.Destination.DistinguishedName} 需具有目標:{categoryValue} 的刪除權限且父層:{organizationUnitDN} 需具有子物件刪除權限");
+                return (null, $"類型:{permissions.Destination.Type} 的目標物件:{permissions.Destination.DistinguishedName} 需具有目標:{permissions.Destination.DriveClassName} 的刪除權限且父層:{organizationUnitDN} 需具有子物件刪除權限");
             }
 
             // 物件本市是否被系統禁止移動
@@ -125,17 +116,8 @@ namespace ADService.Analytical
                 return false;
             }
 
-            // 取得目標物件類型的名稱
-            Dictionary<CategoryTypes, string> dictionaryCategoryTypeWithValue = LDAPCategory.GetAccessRulesByTypes(permissions.Destination.Type);
-            // 取得物件類型的名稱
-            if (!dictionaryCategoryTypeWithValue.TryGetValue(permissions.Destination.Type, out string categoryValue))
-            {
-                // 對外提供失敗
-                return false;
-            }
-
             // 目標物件的父層組織單位是否具有 '刪除子物件' 的寫入權限
-            bool isDeleteable = permissions.IsAllow(categoryValue, ActiveDirectoryRights.DeleteChild | ActiveDirectoryRights.Delete);
+            bool isDeleteable = permissions.IsAllow(permissions.Destination.DriveClassName, ActiveDirectoryRights.DeleteChild | ActiveDirectoryRights.Delete);
             // 兩種權限都不具備時
             if (!isDeleteable)
             {
@@ -146,14 +128,12 @@ namespace ADService.Analytical
             // 取得根目錄物件: 
             using (DirectoryEntry entryRoot = certification.Dispatcher.DomainRoot())
             {
-                // 找到須限制的物件類型
-                Dictionary<CategoryTypes, string> dictionaryLimitedCategory = LDAPCategory.GetValuesByTypes(CategoryTypes.ORGANIZATION_UNIT | CategoryTypes.DOMAIN_DNS);
                 /*轉換成實際過濾字串: 取得符合下述所有條件的物件
                     - 物件類型是組織單位
                     - 區分名稱與限制目標符合
                     [TODO] 應使用加密字串避免注入式攻擊
                 */
-                string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCATEGORY, dictionaryLimitedCategory.Values)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGUISHEDNAME, distinguishedName)})";
+                string encoderFiliter = LDAPConfiguration.GetORFiliter(Properties.C_DISTINGUISHEDNAME, distinguishedName);
                 // 找尋符合條件的物件
                 using (DirectorySearcher searcher = new DirectorySearcher(entryRoot, encoderFiliter, LDAPObject.PropertiesToLoad))
                 {
@@ -173,19 +153,12 @@ namespace ADService.Analytical
                     RequiredCommitSet set = certification.GetEntry(distinguishedName);
                     // 取得入口物件: 稍後用來轉換可用權限
                     LDAPObject entryObject = LDAPObject.ToObject(set.Entry, certification.Dispatcher);
-                    // 入口物件必須是組織單位或根目錄
-                    if ((entryObject.Type & (CategoryTypes.ORGANIZATION_UNIT | CategoryTypes.DOMAIN_DNS)) == CategoryTypes.NONE)
-                    {
-                        // 對外提供失敗
-                        return false;
-                    }
-
                     // 整合各 SID 權向狀態
                     LDAPPermissions permissionsProtocol = certification.CreatePermissions(entryObject);
                     /* 下述認依條件成立, 驗證失敗
                          - 不具備 '子物件類型' 的創建權限
                     */
-                    return permissionsProtocol.IsAllow(categoryValue, ActiveDirectoryRights.CreateChild);
+                    return permissionsProtocol.IsAllow(entryObject.DriveClassName, ActiveDirectoryRights.CreateChild);
                 }
             }
         }

@@ -12,6 +12,12 @@ namespace ADServiceFrameworkTest
         /// 驗證點擊自身時的可用方法
         /// </summary>
         [TestMethod]
+        public void Test_LDAP_Feature_ListWithPermissions() => Defines.Test_LDAP_Feature_ListWithPermissions(Defines.User, Defines.OriginOU1);
+
+        /// <summary>
+        /// 驗證點擊自身時的可用方法
+        /// </summary>
+        [TestMethod]
         public void Test_LDAP_Supported_Features() => Defines.Test_LDAP_Supported_Features(Defines.User, Defines.OriginOU1);
 
         /// <summary>
