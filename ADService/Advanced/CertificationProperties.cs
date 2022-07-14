@@ -240,7 +240,7 @@ namespace ADService.Advanced
             // 只有隸屬於安全性群組時才可以取得存取規則
             return IsSecurityPrincipals(sceuritySID) ? new LDAPAccessRules(ref Dispatcher, destination) : null;
         }
-        
+
 
         /// <summary>
         /// 紀錄發生影響的相關入口物件

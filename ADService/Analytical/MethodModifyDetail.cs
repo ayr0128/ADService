@@ -132,11 +132,6 @@ namespace ADService.Analytical
                                 protocolAttributeFlags |= isEditable ? ProtocolAttributeFlags.EDITABLE : ProtocolAttributeFlags.NONE;
                                 // 添加異動項目處理類型
                                 dictionaryProtocolWithDetailInside.Add(InvokeCondition.RECEIVEDTYPE, typeof(string).Name);
-
-                                // 增加目標類型限制
-                                protocolAttributeFlags |= ProtocolAttributeFlags.CATEGORYLIMITED;
-                                // 限制應提供的類型: 群組或成員
-                                dictionaryProtocolWithDetailInside.Add(InvokeCondition.CATEGORYLIMITED, CategoryTypes.GROUP | CategoryTypes.PERSON);
                             }
 
                             // 新增屬性描述
@@ -172,11 +167,6 @@ namespace ADService.Analytical
                             protocolAttributeFlags |= ProtocolAttributeFlags.EDITABLE;
                             // 異動時應提供的資料類型
                             dictionaryProtocolWithDetailInside.Add(InvokeCondition.RECEIVEDTYPE, typeof(string).Name);
-
-                            // 增加目標類型限制
-                            protocolAttributeFlags |= ProtocolAttributeFlags.CATEGORYLIMITED;
-                            // 限制應提供的類型: 群組
-                            dictionaryProtocolWithDetailInside.Add(InvokeCondition.CATEGORYLIMITED, CategoryTypes.GROUP);
 
                             // 新增屬性描述: 
                             invokeCondition = new InvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside);
@@ -347,7 +337,7 @@ namespace ADService.Analytical
             // 沒有任何可以對外回傳的項目
             if (dictionaryAttributesNameWithCondition.Count == 0)
             {
-                return (null, $"類型:{permissions.Destination.Type} 的目標物件:{permissions.Destination.DistinguishedName} 不具有任何可以異動的屬性權限");
+                return (null, $"物件:{permissions.Destination.DistinguishedName} 不具有任何可以異動的屬性權限");
             }
 
             /* 一般需求參數限制如下所述:
@@ -374,7 +364,7 @@ namespace ADService.Analytical
             if (certification.GetEntry(distinguishedNameDestination) == null)
             {
                 // 若觸發此處例外必定為程式漏洞
-                throw new LDAPExceptions($"類型:{permissions.Destination.Type} 的物件:{distinguishedNameDestination} 於異動細節內容時發現不存在目標入口物件, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
+                throw new LDAPExceptions($"物件:{distinguishedNameDestination} 於異動細節內容時發現不存在目標入口物件, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
             }
 
             // 轉換異動項目
@@ -383,7 +373,7 @@ namespace ADService.Analytical
             if (dictionaryAttributeNameWithDetail == null || dictionaryAttributeNameWithDetail.Count == 0)
             {
                 // 若觸發此處例外: 則有可能遭受網路攻擊
-                throw new LDAPExceptions($"類型:{permissions.Destination.Type} 的物件:{distinguishedNameDestination} 於異動細節內容時發現傳輸的協議:{protocol} 不符合規則, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
+                throw new LDAPExceptions($"物件:{distinguishedNameDestination} 於異動細節內容時發現傳輸的協議:{protocol} 不符合規則, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
             }
 
             // 紀錄未處理的項目
@@ -410,7 +400,7 @@ namespace ADService.Analytical
                             if (!(permissions.Destination is IRevealerMember revealerMember))
                             {
                                 // 若觸發此處例外: 則有可能遭受網路攻擊
-                                throw new LDAPExceptions($"類型:{permissions.Destination.Type} 的物件:{distinguishedNameDestination} 於異動細節內容時發現傳輸的異動協議:{attributeName} 不能套用至目標物件, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
+                                throw new LDAPExceptions($"物件:{distinguishedNameDestination} 於異動細節內容時發現傳輸的異動協議:{attributeName} 不能套用至目標物件, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
                             }
 
                             // 透過目前持有項目與接收到的協議
@@ -424,7 +414,7 @@ namespace ADService.Analytical
                             if (unprocessedDNs.Length != 0)
                             {
                                 // 推入無法處理描述中
-                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"因項目:{string.Join(",", unprocessedDNs)} 不符合存取規則而無法進行類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 的參數:{attributeName} 異動細節");
+                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"因項目:{string.Join(",", unprocessedDNs)} 不符合存取規則而無法進行物件:{distinguishedNameDestination} 的參數:{attributeName} 異動細節");
                                 // 跳過下方的實際異動
                                 continue;
                             }
@@ -469,7 +459,7 @@ namespace ADService.Analytical
                                             if (all.Count != researchDNHashSet.Count)
                                             {
                                                 // 推入無法處理描述中
-                                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"因項目:{string.Join(",", researchDNHashSet)} 有部分非需求類型無法進行類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 的參數:{attributeName} 異動細節");
+                                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"因項目:{string.Join(",", researchDNHashSet)} 有部分非需求類型無法進行物件:{distinguishedNameDestination} 的參數:{attributeName} 異動細節");
                                                 // 跳過下方的實際異動
                                                 continue;
                                             }
@@ -505,7 +495,7 @@ namespace ADService.Analytical
                             if (unprocessedDNHashSet.Count != 0)
                             {
                                 // 推入無法處理描述中
-                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"因項目:{string.Join(",", unprocessedDNHashSet)} 不符合存取權限而無法進行類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 的參數:{attributeName} 異動細節");
+                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"因項目:{string.Join(",", unprocessedDNHashSet)} 不符合存取權限而無法進行物件:{distinguishedNameDestination} 的參數:{attributeName} 異動細節");
                                 // 跳過下方的實際異動
                                 continue;
                             }
@@ -519,7 +509,7 @@ namespace ADService.Analytical
                             if (!(permissions.Destination is IRevealerMemberOf revealerMemberOf))
                             {
                                 // 若觸發此處例外: 則有可能遭受網路攻擊
-                                throw new LDAPExceptions($"類型:{permissions.Destination.Type} 的物件:{distinguishedNameDestination} 於異動細節內容時發現傳輸的異動協議:{attributeName} 不能套用至目標物件, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
+                                throw new LDAPExceptions($"物件:{distinguishedNameDestination} 於異動細節內容時發現傳輸的異動協議:{attributeName} 不能套用至目標物件, 請聯絡程式維護人員", ErrorCodes.LOGIC_ERROR);
                             }
 
                             // 透過目前持有項目與接收到的協議
@@ -533,7 +523,7 @@ namespace ADService.Analytical
                             if (unprocessedDNs.Length != 0)
                             {
                                 // 推入無法處理描述中
-                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"因項目:{string.Join(",", unprocessedDNs)} 不符合項目而無法進行類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 的參數:{attributeName} 異動細節");
+                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"因項目:{string.Join(",", unprocessedDNs)} 不符合項目而無法進行物件:{distinguishedNameDestination} 的參數:{attributeName} 異動細節");
                                 // 跳過下方的實際異動
                                 continue;
                             }
@@ -576,7 +566,7 @@ namespace ADService.Analytical
                                             if (all.Count != researchDNHashSet.Count)
                                             {
                                                 // 推入無法處理描述中
-                                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"因項目:{string.Join(",", researchDNHashSet)} 有部分非需求類型無法進行類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 的參數:{attributeName} 異動細節");
+                                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"因項目:{string.Join(",", researchDNHashSet)} 有部分非需求類型無法進行物件:{distinguishedNameDestination} 的參數:{attributeName} 異動細節");
                                                 // 跳過下方的實際異動
                                                 continue;
                                             }
@@ -632,7 +622,7 @@ namespace ADService.Analytical
                             if (unprocessedDNHashSet.Count != 0)
                             {
                                 // 推入無法處理描述中
-                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"因項目:{string.Join(",", unprocessedDNHashSet)} 不符合存取權限而無法進行類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 的參數:{attributeName} 異動細節");
+                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"因項目:{string.Join(",", unprocessedDNHashSet)} 不符合存取權限而無法進行物件:{distinguishedNameDestination} 的參數:{attributeName} 異動細節");
                                 // 跳過下方的實際異動
                                 continue;
                             }
@@ -646,7 +636,7 @@ namespace ADService.Analytical
                             if (!isEditable)
                             {
                                 // 推入無法處理描述中
-                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因不具有異動權限而無法對類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 進行異動細節");
+                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因不具有異動權限而無法對物件:{distinguishedNameDestination} 進行異動細節");
                                 // 跳過下方的實際異動
                                 continue;
                             }
@@ -659,7 +649,7 @@ namespace ADService.Analytical
                             if (isExsitControl)
                             {
                                 // 推入無法處理描述中
-                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因異動內容含有非法異動而無法對類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 進行異動細節");
+                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因異動內容含有非法異動而無法對物件:{distinguishedNameDestination} 進行異動細節");
                                 // 跳過此處理
                                 continue;
                             }
@@ -687,7 +677,7 @@ namespace ADService.Analytical
                             if (!isEditable)
                             {
                                 // 推入無法處理描述中
-                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因不具有異動權限而無法對類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 進行異動細節");
+                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因不具有異動權限而無法對物件:{distinguishedNameDestination} 進行異動細節");
                                 // 跳過下方的實際異動
                                 continue;
                             }
@@ -700,7 +690,7 @@ namespace ADService.Analytical
                             if (isExsitControl)
                             {
                                 // 推入無法處理描述中
-                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因異動內容含有非法異動而無法對類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 進行異動細節");
+                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因異動內容含有非法異動而無法對物件:{distinguishedNameDestination} 進行異動細節");
                                 // 跳過此處理
                                 continue;
                             }
@@ -714,7 +704,7 @@ namespace ADService.Analytical
                             if (!isEditable)
                             {
                                 // 推入無法處理描述中
-                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因不具有異動權限而無法對類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 進行異動細節");
+                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因不具有異動權限而無法對物件:{distinguishedNameDestination} 進行異動細節");
                                 // 跳過下方的實際異動
                                 continue;
                             }
@@ -727,7 +717,7 @@ namespace ADService.Analytical
                             if (isExsitControl)
                             {
                                 // 推入無法處理描述中
-                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因異動內容含有非法異動而無法對類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 進行異動細節");
+                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因異動內容含有非法異動而無法對物件:{distinguishedNameDestination} 進行異動細節");
                                 // 跳過此處理
                                 continue;
                             }
@@ -741,7 +731,7 @@ namespace ADService.Analytical
                             if (!isEditable)
                             {
                                 // 推入無法處理描述中
-                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因不具有異動權限而無法對類型:{permissions.Destination.Type} 物件:{distinguishedNameDestination} 進行異動細節");
+                                dictionaryFailureAttributeNameWithMessage.Add(attributeName, $"參數:{attributeName} 因不具有異動權限而無法物件:{distinguishedNameDestination} 進行異動細節");
                                 // 跳過下方的實際異動
                                 continue;
                             }

@@ -44,7 +44,7 @@ namespace ADService.Analytical
             // 檢查是否具備權限
             if (!isAllow)
             {
-                return (null, $"因物件類型:{permissions.Destination.Type} 的目標物件:{permissions.Destination.DistinguishedName} 不具有:{activeDirectoryRights} 權限因而無法提供創建功能");
+                return (null, $"物件:{permissions.Destination.DistinguishedName} 不具有:{activeDirectoryRights} 權限因而無法提供創建功能");
             }
 
             // 預期項目: 必定是字串

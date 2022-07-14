@@ -123,7 +123,7 @@ namespace ADService
         /// 透過登入者權限找尋指定 GUID
         /// </summary>
         /// <param name="logon">登入者</param>
-        /// <param name="GUID"></param>
+        /// <param name="GUID">全域唯一編碼</param>
         /// <returns></returns>
         public LDAPObject GetObjectByGUID(in LDAPLogonPerson logon, in string GUID)
         {
@@ -137,10 +137,43 @@ namespace ADService
                 // 透過 GUID 找到指定物件, 注意如果找不到會有奇怪的錯誤
                 using (DirectoryEntry entry = dispatcher.ByGUID(GUID))
                 {
-                    // 取得區分名稱
-                    string distinguishedName = LDAPConfiguration.ParseSingleValue<string>(Properties.C_DISTINGUISHEDNAME, entry.Properties);
-                    // [TODO] 應使用加密字串避免注入式攻擊
-                    string encoderFiliter = LDAPConfiguration.GetORFiliter(Properties.C_DISTINGUISHEDNAME, distinguishedName);
+                    // 轉換成可用物件
+                    return LDAPObject.ToObject(entry, dispatcher);
+                }
+            }
+            // 發生時機: 使用者登入時發現例外錯誤
+            catch (DirectoryServicesCOMException exception)
+            {
+                // 解析例外字串, 並提供例外
+                throw LDAPExceptions.OnNormalException(exception.ExtendedErrorMessage);
+            }
+            // 發生時機: 與伺服器連線時發現錯誤
+            catch (COMException exception)
+            {
+                // 取得錯誤描述, 並提供例外
+                throw LDAPExceptions.OnServeException(exception.Message);
+            }
+            // 沒有 Finally 語句
+        }
+
+        /// <summary>
+        /// 透過登入者權限找尋指定 GUID
+        /// </summary>
+        /// <param name="logon">登入者</param>
+        /// <param name="distinguisedName">區分名稱</param>
+        /// <returns></returns>
+        public LDAPObject GetObjectByDistinguisedName(in LDAPLogonPerson logon, in string distinguisedName)
+        {
+            // 使用指定使用者帳號密碼製作一個入口物件製作器
+            LDAPConfigurationDispatcher dispatcher = Configuration.Dispatch(logon.UserName, logon.Password);
+            /* 此處處理出現問題會接收到例外:
+                 1. 若訪問伺服器發生問題: 會對外提供 LDAPExceptions
+            */
+            try
+            {
+                // 透過 GUID 找到指定物件, 注意如果找不到會有奇怪的錯誤
+                using (DirectoryEntry entry = dispatcher.ByDistinguisedName(distinguisedName))
+                {
                     // 轉換成可用物件
                     return LDAPObject.ToObject(entry, dispatcher);
                 }
@@ -173,6 +206,7 @@ namespace ADService
         ///         <item> <term><see cref="LDAPCategory.CLASS_FOREIGNSECURITYPRINCIPALS">物件類型名稱:外部安全性主體</see></term> 對照 <see cref="CategoryTypes.FOREIGN_SECURITYPRINCIPALS">物件類型旗標:外部安全性主體</see> </item>
         ///         <item> <term><see cref="LDAPCategory.CLASS_GROUP">物件類型名稱:群組</see></term> 對照 <see cref="CategoryTypes.GROUP">物件類型旗標:群組</see> </item>
         ///         <item> <term><see cref="LDAPCategory.CLASS_PERSON">物件類型名稱:人員</see></term> 對照 <see cref="CategoryTypes.PERSON">物件類型旗標:人員</see> </item>
+        ///         <item> <term><see cref="LDAPCategory.CLASS_APTREE">物件類型名稱:人員</see></term> 對照 <see cref="CategoryTypes.APTREE">物件類型旗標:人員</see> </item>
         ///     </list>
         /// </param>
         /// <returns>跟物件所持有的子物件</returns>
@@ -192,12 +226,14 @@ namespace ADService
                     // 取得入口物件的釋放介面
                     iDisposable = rootEntry;
 
-                    // 取得找尋目標目錄
-                    CategoryTypes categoryTypes = LDAPCategory.GetCategoryTypes(classNames);
+                    // 將資料轉換成 HashSet
+                    HashSet<string> requestClassNames = new HashSet<string>(classNames);
+                    // 取得支援目標目錄
+                    HashSet<string> supportedClassNames = LDAPCategory.GetSupportedClassNames(requestClassNames);
                     // 對外提供的資料表
                     Dictionary<string, LDAPObject> dictionaryDNWithObject = new Dictionary<string, LDAPObject>();
                     // 只有在找尋的目標包含根目錄元件, 且為提供根目錄的情況下
-                    if ((categoryTypes & CategoryTypes.DOMAIN_DNS) != CategoryTypes.NONE && root == null)
+                    if (supportedClassNames.Contains(LDAPCategory.CLASS_DOMAINDNS) && root == null)
                     {
                         // 此時入口物件必定是根目錄
                         LDAPObject rootObject = LDAPObject.ToObject(rootEntry, dispatcher);
@@ -205,13 +241,13 @@ namespace ADService
                         dictionaryDNWithObject.Add(rootObject.DistinguishedName, rootObject);
                     }
 
-                    // 去除根目錄
-                    CategoryTypes oneLevelCategoryTypes = categoryTypes & ~CategoryTypes.DOMAIN_DNS;
+                    // 移除根目錄
+                    supportedClassNames.Remove(LDAPCategory.CLASS_DOMAINDNS);
                     // 檢查去除後是否為空
-                    if (oneLevelCategoryTypes != CategoryTypes.NONE)
+                    if (supportedClassNames.Count != 0)
                     {
                         // 取得此入口物件類型下的目標類型物件
-                        List<LDAPObject> childrenObject = LDAPAssembly.WithChild(rootEntry, dispatcher, oneLevelCategoryTypes);
+                        List<LDAPObject> childrenObject = LDAPAssembly.WithChild(rootEntry, dispatcher, supportedClassNames);
                         // 根據權限決定能否查看內容
                         foreach (LDAPObject childObject in childrenObject)
                         {
@@ -261,17 +297,18 @@ namespace ADService
         /// <param name="categories">限制僅查詢某些類型, 預設為不限制</param>
         /// <param name="distinguishedNames">指定的區分名稱必須提供資料</param>
         /// <returns>使用提供條件找尋指定的區分名稱物件, 需自行檢查是否有發現目標, 格式如右: Dictionary '區分名稱, 基層物件類型'</returns>
+        [Obsolete("即將棄用, 請改用新方法: GetObjectByDistinguisedName 或 GetObjectByGUID")]
         public Dictionary<string, LDAPObject> GetObjects(in LDAPLogonPerson logon, in CategoryTypes categories = CategoryTypes.NONE, params string[] distinguishedNames)
         {
+            // 取得想要查詢的目標類別
+            HashSet<string> supportedClassNames = LDAPCategory.GetClassNames(categories);
             // 空字串: 沒有指定區分名稱
-            if (distinguishedNames.Length == 0)
+            if (distinguishedNames.Length == 0 || supportedClassNames.Count == 0)
             {
                 // 對外提供容器大小為 0 的字典, 因為沒有指定區分名稱
                 return new Dictionary<string, LDAPObject>(0);
             }
 
-            // 取得想要查詢的目標類別
-            string[] classNames = LDAPCategory.GetClassNames(categories); 
             /* 此處處理出現問題會接收到例外:
                  1. 若訪問伺服器發生問題: 會對外提供 LDAPExceptions
             */
@@ -283,7 +320,7 @@ namespace ADService
                 using (DirectoryEntry root = dispatcher.DomainRoot())
                 {
                     // [TODO] 應使用加密字串避免注入式攻擊
-                    string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCLASS, classNames)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGUISHEDNAME, distinguishedNames)})";
+                    string encoderFiliter = $"(&{LDAPConfiguration.GetORFiliter(Properties.C_OBJECTCLASS, supportedClassNames)}{LDAPConfiguration.GetORFiliter(Properties.C_DISTINGUISHEDNAME, distinguishedNames)})";
                     // 找尋指定目標
                     using (DirectorySearcher searcher = new DirectorySearcher(root, encoderFiliter, LDAPObject.PropertiesToLoad, SearchScope.Subtree))
                     {
@@ -335,10 +372,11 @@ namespace ADService
         /// <param name="objectLDAPs">任意的基礎物件, 只會取用容器類型的資料進行查詢</param>
         /// <returns>目標組織單位|網域入口的歸屬狀態, 沒有指定任何目標時必定能以 <see cref="LDAPAssembly.ROOT">根目錄</see>取得資料 </returns>
         /// <exception cref="LDAPExceptions">管理者帳號密碼不正確, 伺服器異常使用者等多種情況時對外丟出, 可參考例外儲存的 <see cref="ErrorCodes">ErrorCode</see> 參數判斷錯誤類型</exception>
+        [Obsolete("即將棄用, 請改用新方法: GetObjectByPermission")]
         public Dictionary<string, LDAPAssembly> GetOrganizationUnits(in LDAPLogonPerson logon, in CategoryTypes extendFlags = CategoryTypes.NONE, params LDAPObject[] objectLDAPs)
         {
-            // 此方法至少對外提供這幾個項目
-            const CategoryTypes categories = CategoryTypes.DOMAIN_DNS | CategoryTypes.ORGANIZATION_UNIT;
+            // 取得支援目標目錄
+            HashSet<string> supportedClassNames = LDAPCategory.GetClassNames(CategoryTypes.DOMAIN_DNS | CategoryTypes.ORGANIZATION_UNIT | CategoryTypes.APTREE | extendFlags);
             /* 此處處理出現問題會接收到例外:
                  1. 若訪問伺服器發生問題: 會對外提供 LDAPExceptions
             */
@@ -355,7 +393,7 @@ namespace ADService
                     foreach (LDAPObject mixedObject in objectLDAPs)
                     {
                         // 非容器類型時
-                        if ((mixedObject.Type & (categories | CategoryTypes.CONTAINER)) == CategoryTypes.NONE)
+                        if ((mixedObject.Type & (CategoryTypes.DOMAIN_DNS | CategoryTypes.ORGANIZATION_UNIT | CategoryTypes.APTREE | CategoryTypes.CONTAINER)) == CategoryTypes.NONE)
                         {
                             // 跳過處理不推入物件
                             continue;
@@ -367,7 +405,7 @@ namespace ADService
                             // 是容器類型是必定能被轉換成容器
                             LDAPAssembly assembly = (LDAPAssembly)mixedObject;
                             // 取得此入口物件類型下的目標類型物件
-                            List<LDAPObject> children = LDAPAssembly.WithChild(entryObject, dispatcher, categories | extendFlags);
+                            List<LDAPObject> children = LDAPAssembly.WithChild(entryObject, dispatcher, supportedClassNames);
                             // 將找尋的下層子物件提供給集成類型物件並刷新
                             assembly.Reflash(children);
                             // 對外提供轉換完成的結果
@@ -388,7 +426,7 @@ namespace ADService
                         // 製作根目錄物件: 此時絕對是集成類型的物件
                         LDAPAssembly assembly = (LDAPAssembly)LDAPObject.ToObject(root, dispatcher);
                         // 取得此入口物件類型下的目標類型物件
-                        List<LDAPObject> children = LDAPAssembly.WithChild(root, dispatcher, categories | extendFlags);
+                        List<LDAPObject> children = LDAPAssembly.WithChild(root, dispatcher, supportedClassNames);
                         // 將找尋的下層子物件提供給集成類型物件並刷新
                         assembly.Reflash(children);
                         // 由於外部沒有指定查詢的區分名稱, 因此使用固定字串讓外部可以取得找尋到的網域
