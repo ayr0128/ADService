@@ -113,6 +113,7 @@ namespace ADService.Analytical
 
             // 創建新的子物件
             DirectoryEntry newGroup = setProcessed.Entry.Children.Add($"{Properties.P_CN}={createGroup.Name}", LDAPCategory.CLASS_GROUP);
+
             // 直接推入
             newGroup.CommitChanges();
             // 更新

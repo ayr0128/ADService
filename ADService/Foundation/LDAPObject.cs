@@ -310,6 +310,32 @@ namespace ADService.Foundation
         }
 
         /// <summary>
+        /// 目標物建物件類型: 驅動
+        /// </summary>
+        internal UnitSchemaClass[] driveUnitSchemaClasses;
+        /// <summary>
+        /// 目標物建物件類型: 輔助
+        /// </summary>
+        internal UnitSchemaClass[] auxiliaryUnitSchemaClasses;
+        /// <summary>
+        /// 取得可支援的屬性名稱
+        /// </summary>
+        internal string[] AllowedAttributeNames
+        {
+            get
+            {
+                // 宣告一個新的陣列來存放輔助類別與需求類別
+                List<UnitSchemaClass> unitSchemaClasses = new List<UnitSchemaClass>(driveUnitSchemaClasses.Length + auxiliaryUnitSchemaClasses.Length);
+                // 增加原始類別
+                unitSchemaClasses.AddRange(driveUnitSchemaClasses);
+                // 增加輔助類別
+                unitSchemaClasses.AddRange(auxiliaryUnitSchemaClasses);
+                // 取得所有允許的屬性
+                return UnitSchemaClass.UniqueAttributeNames(unitSchemaClasses);
+            }
+        }
+
+        /// <summary>
         /// 使用鍵值參數初始化
         /// </summary>
         /// <param name="entry">入口物件</param>
