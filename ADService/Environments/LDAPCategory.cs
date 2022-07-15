@@ -1,6 +1,5 @@
 ﻿using ADService.Protocol;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace ADService.Environments
 {
@@ -9,6 +8,24 @@ namespace ADService.Environments
     /// </summary>
     public static class LDAPCategory
     {
+        /// <summary>
+        /// 檢查是否為容器類的物件
+        /// </summary>
+        /// <param name="className">物件類型</param>
+        /// <returns>是否為容器</returns>
+        public static bool IsContainer(in string className) => containerHashSet.Contains(className);
+
+        /// <summary>
+        /// 將容器類型集合成一組檢查表
+        /// </summary>
+        private static HashSet<string> containerHashSet = new HashSet<string>()
+        {
+            CLASS_DOMAINDNS,
+            CLASS_CONTAINER,
+            CLASS_ORGANIZATIONUNIT,
+            CLASS_APTREE,
+        };
+
         /// <summary>
         /// 網域跟目錄
         /// </summary>
@@ -98,10 +115,10 @@ namespace ADService.Environments
         ///     </list>
         /// </param>
         /// <returns>有註冊且可用的物件類型</returns>
-        public static HashSet<string> GetSupportedClassNames(in HashSet<string> classNames)
+        public static HashSet<string> GetSupportedClassNames(in HashSet<string> classNames = null)
         {
             // 沒有指定任何項目, 全部找尋
-            if (classNames.Count == 0)
+            if (classNames == null || classNames.Count == 0)
             {
                 // 返回支援的所有類型
                 return new HashSet<string>(dictionaryClassNameWithCategoryType.Keys);

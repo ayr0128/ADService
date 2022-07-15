@@ -114,8 +114,7 @@ namespace ADService.Analytical
                             // 資料描述
                             ValueDescription description = new ValueDescription(typeof(LDAPRelationship).Name, values.Length, true);
                             // 宣告持有內容: 運行至此必定包含可讀取項目
-                            Dictionary<string, object> dictionaryProtocolWithDetailInside = new Dictionary<string, object>
-                            {
+                            Dictionary<string, object> dictionaryProtocolWithDetailInside = new Dictionary<string, object> {
                                 { InvokeCondition.STOREDTYPE, description }, // 持有內容描述
                                 { InvokeCondition.VALUE, values },           // 持有內容
                             };
@@ -157,8 +156,7 @@ namespace ADService.Analytical
                             // 資料描述
                             ValueDescription description = new ValueDescription(typeof(LDAPRelationship).Name, values.Length, true);
                             // 宣告持有內容
-                            Dictionary<string, object> dictionaryProtocolWithDetailInside = new Dictionary<string, object>
-                            {
+                            Dictionary<string, object> dictionaryProtocolWithDetailInside = new Dictionary<string, object> {
                                 { InvokeCondition.STOREDTYPE, description }, // 持有內容描述
                                 { InvokeCondition.VALUE, values },           // 持有內容
                             };
@@ -187,8 +185,7 @@ namespace ADService.Analytical
                             // 至此必定可察看數值列舉, 需要額外描述
                             ProtocolAttributeFlags protocolAttributeFlags = ProtocolAttributeFlags.HASVALUE | ProtocolAttributeFlags.ISFLAGS | ProtocolAttributeFlags.COMBINE;
                             // 宣告持有內容: 由於宣告為字串類型, 所以儲存與修改時需求的都會是字串
-                            Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object>()
-                            {
+                            Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object>() {
                                 { InvokeCondition.STOREDTYPE, new ValueDescription(typeEnum.Name) }, // 持有內容描述
                                 { InvokeCondition.VALUE, accountControlProtocols },            // 持有內容
                                 { InvokeCondition.COMBINETAG, Methods.CT_USERACCOUNTCONTROL }, // 與其他持有此整合旗標的物件視為同一區塊作處理
@@ -226,8 +223,7 @@ namespace ADService.Analytical
                             // 至此必定可察看數值列舉, 需要額外描述
                             ProtocolAttributeFlags protocolAttributeFlags = ProtocolAttributeFlags.HASVALUE | ProtocolAttributeFlags.ISFLAGS | ProtocolAttributeFlags.COMBINE;
                             // 宣告持有內容: 由於宣告為字串類型, 所以儲存與修改時需求的都會是字串
-                            Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object>()
-                            {
+                            Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object>() {
                                 { InvokeCondition.STOREDTYPE, new ValueDescription(typeEnum.Name) }, // 持有內容描述
                                 { InvokeCondition.VALUE, accountControlProtocols },                   // 持有內容
                                 { InvokeCondition.COMBINETAG, Methods.CT_USERACCOUNTCONTROL },        // 與其他持有此整合旗標的物件視為同一區塊作處理
@@ -266,8 +262,7 @@ namespace ADService.Analytical
                             // 至此必定可察看數值列舉, 需要額外描述
                             ProtocolAttributeFlags protocolAttributeFlags = ProtocolAttributeFlags.HASVALUE | ProtocolAttributeFlags.ISFLAGS | ProtocolAttributeFlags.COMBINE;
                             // 宣告持有內容: 由於宣告為字串類型, 所以儲存與修改時需求的都會是字串
-                            Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object>()
-                            {
+                            Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object>() {
                                 { InvokeCondition.STOREDTYPE, new ValueDescription(typeEnum.Name)  }, // 持有內容描述
                                 { InvokeCondition.VALUE, accountControlProtocols },            // 持有內容
                                 { InvokeCondition.COMBINETAG, Methods.CT_USERACCOUNTCONTROL }, // 與其他持有此整合旗標的物件視為同一區塊作處理
@@ -300,8 +295,7 @@ namespace ADService.Analytical
                             // 至此必定可察看數值
                             ProtocolAttributeFlags protocolAttributeFlags = ProtocolAttributeFlags.HASVALUE;
                             // 宣告持有內容: 由於宣告為字串類型, 所以儲存與修改時需求的都會是字串
-                            Dictionary<string, object> dictionaryProtocolWithDetailInside = new Dictionary<string, object>()
-                            {
+                            Dictionary<string, object> dictionaryProtocolWithDetailInside = new Dictionary<string, object>() {
                                 { InvokeCondition.STOREDTYPE, new ValueDescription(typeString.Name) }, // 持有內容描述
                                 { InvokeCondition.VALUE, storedValue ?? string.Empty },                 // 持有內容
                             };
@@ -343,7 +337,7 @@ namespace ADService.Analytical
             /* 一般需求參數限制如下所述:
                  - 設置持有元素資料
             */
-            const ProtocolAttributeFlags commonFlags = ProtocolAttributeFlags.ELEMENTS;
+            const ProtocolAttributeFlags commonFlags = ProtocolAttributeFlags.HASVALUE;
             // 需求內容: 採用封盒動作
             Dictionary<string, object> dictionaryProtocolWithDetailOutside = new Dictionary<string, object> {
                 { InvokeCondition.ELEMENTS, dictionaryAttributesNameWithCondition }
