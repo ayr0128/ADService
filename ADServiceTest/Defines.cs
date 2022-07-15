@@ -154,7 +154,7 @@ namespace ADServiceFrameworkTest
         internal const string OriginGROUP2Name = "w2";
 
         // 登入伺服器位置
-        internal static readonly LDAPServe Serve = new LDAPUnsecurity("192.168.175.3");
+        internal static readonly LDAPServe Serve = new LDAPUnsecurity("172.18.133.27");
         // 透過登入伺服器取得登入者
         internal static readonly LDAPLogonPerson User = Serve.AuthenticationUser(AccountUser, Password);
 

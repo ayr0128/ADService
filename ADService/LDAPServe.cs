@@ -15,8 +15,17 @@ namespace ADService
     /// <summary>
     /// 基礎架構, 須被繼承後才能使用
     /// </summary>
-    public abstract class LDAPServe
+    public class LDAPServe
     {
+        /// <summary>
+        /// 安全性連線用埠, 使用 <see href="https://docs.microsoft.com/en-us/troubleshoot/windows-server/networking/service-overview-and-network-port-requirements#active-directory-local-security-authority">Port:636 or 3269</see>
+        /// </summary>
+        public const ushort SECURITY_PORT = 636;
+        /// <summary>
+        /// 非安全性連線用埠, 使用 <see href="https://docs.microsoft.com/en-us/troubleshoot/windows-server/networking/service-overview-and-network-port-requirements#active-directory-local-security-authority">Port:389 or 3268</see>
+        /// </summary>
+        public const ushort UNSECURITY_PORT = 389;
+
         /// <summary>
         /// 此網域伺服器目前被讀取做為暫存參數的所有設定: 有效時間為讀取後五分鐘
         /// </summary>
@@ -232,19 +241,19 @@ namespace ADService
                     HashSet<string> supportedClassNames = LDAPCategory.GetSupportedClassNames(requestClassNames);
                     // 對外提供的資料表
                     Dictionary<string, LDAPObject> dictionaryDNWithObject = new Dictionary<string, LDAPObject>();
+
+                    // 移除根目錄
+                    bool isRemovedDNS = supportedClassNames.Remove(LDAPCategory.CLASS_DOMAINDNS);
                     // 只有在找尋的目標包含根目錄元件, 且為提供根目錄的情況下
-                    if (supportedClassNames.Contains(LDAPCategory.CLASS_DOMAINDNS) && root == null)
+                    if (isRemovedDNS && root == null)
                     {
                         // 此時入口物件必定是根目錄
                         LDAPObject rootObject = LDAPObject.ToObject(rootEntry, dispatcher);
                         // 允許則可以跳加入對外提供健
                         dictionaryDNWithObject.Add(rootObject.DistinguishedName, rootObject);
                     }
-
-                    // 移除根目錄
-                    supportedClassNames.Remove(LDAPCategory.CLASS_DOMAINDNS);
-                    // 檢查去除後是否為空
-                    if (supportedClassNames.Count != 0)
+                    // 指定跟物件非空且移除根目錄物件後有希望目標
+                    else if (supportedClassNames.Count != 0)
                     {
                         // 取得此入口物件類型下的目標類型物件
                         List<LDAPObject> childrenObject = LDAPAssembly.WithChild(rootEntry, dispatcher, supportedClassNames);

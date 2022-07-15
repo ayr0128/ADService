@@ -315,14 +315,27 @@ namespace ADService.Certification
                     {
                         // 推入更新完成的物件
                         dictionaryDistinguishedNameWithLDAPObject.Add(pair.Key, null);
+                        // 跳過
+                        continue;
                     }
-                    else
+
+                    // 是否為呼叫者
+                    bool isInvoker = Invoker.GUID == reflashObject.GUID;
+                    // 將資料更新至目標物件
+                    LDAPObject storedObject = isInvoker ? Invoker.SwapFrom(reflashObject) : Destination.SwapFrom(reflashObject);
+                    // 取得權限
+                    LDAPPermissions storedPermissions = certification.CreatePermissions(storedObject);
+                    // 是否可以陳列
+                    bool isListObject = storedPermissions.IsAllow(storedObject.DriveClassName, ActiveDirectoryRights.ListObject);
+                    // 異動自身或者可以陳列時
+                    if (!isInvoker && !isListObject)
                     {
-                        // 將資料更新至目標物件
-                        LDAPObject storedObject = Invoker.GUID == reflashObject.GUID ? Invoker.SwapFrom(reflashObject) : Destination.SwapFrom(reflashObject);
-                        // 推入更新完成的物件
-                        dictionaryDistinguishedNameWithLDAPObject.Add(pair.Key, storedObject);
+                        // 跳過
+                        continue;
                     }
+
+                    // 推入更新完成的物件
+                    dictionaryDistinguishedNameWithLDAPObject.Add(pair.Key, storedObject);
                 }
                 // 對外提供修改並同步完成的物件字典
                 return dictionaryDistinguishedNameWithLDAPObject;

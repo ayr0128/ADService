@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 
 namespace ADService.Protocol
@@ -54,11 +55,57 @@ namespace ADService.Protocol
         /// </summary>
         public ProtocolAttributeFlags Flags { get; private set; }
         /// <summary>
+        /// 使用遮罩方式取得是否去有指定旗標值
+        /// </summary>
+        /// <param name="flags"></param>
+        /// <returns></returns>
+        public ProtocolAttributeFlags MaskFlags(in ProtocolAttributeFlags flags) => Flags & flags;
+
+        /// <summary>
         /// 協議內容: 根據旗標可得知如何解析
         /// </summary>
-
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public Dictionary<string, object> Details { get; private set; }
+        /// <summary>
+        /// 使用指定格式轉換目標資料
+        /// </summary>
+        /// <typeparam name="T">樣板, 如果經過 JSON 轉換時作應改為 JSON 解析</typeparam>
+        /// <param name="key">鍵值</param>
+        /// <returns>是否包含此數值</returns>
+        public T CastSingleValue<T>(in string key)
+        {
+            // 先取得是否存在
+            bool isExist = Details.TryGetValue(key, out object storedValue);
+            // 檢查是否存在
+            if (!isExist)
+            {
+                // 對外提供預設值
+                return default;
+            }
+
+            // 存在時進行強制轉換並回傳
+            return (T)storedValue;
+        }
+        /// <summary>
+        /// 使用指定格式轉換目標資料
+        /// </summary>
+        /// <typeparam name="T">樣板, 如果經過 JSON 轉換時作應改為 JSON 解析</typeparam>
+        /// <param name="key">鍵值</param>
+        /// <returns>是否包含此數值</returns>
+        public T[] CastMutipleValue<T>(in string key)
+        {
+            // 先取得是否存在
+            bool isExist = Details.TryGetValue(key, out object storedValue);
+            // 檢查是否存在
+            if (!isExist)
+            {
+                // 對外提供預設值
+                return default;
+            }
+
+            // 存在時進行強制轉換並回傳
+            return Array.ConvertAll((object[])storedValue, converttedObject => (T)converttedObject); ;
+        }
 
         /// <summary>
         /// 建構子
