@@ -34,8 +34,7 @@ namespace ADService.Analytical
             // 預期項目: 必定是改變密碼用的格式
             Type typeSetPWD = typeof(string);
             // 宣告持有內容: 修改時需求的類型是改變密碼
-            Dictionary<string, object> dictionaryProtocolWithDetailInside = new Dictionary<string, object>()
-            {
+            Dictionary<string, object> dictionaryProtocolWithDetailInside = new Dictionary<string, object>() {
                 { InvokeCondition.RECEIVEDTYPE, typeSetPWD.Name }, // 預期內容描述
             };
 

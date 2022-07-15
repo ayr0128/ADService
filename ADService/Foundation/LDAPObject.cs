@@ -261,6 +261,10 @@ namespace ADService.Foundation
         /// </summary>
         public string Name => GetPropertySingle<string>(Properties.P_NAME);
         /// <summary>
+        /// 此物件的展示名稱
+        /// </summary>
+        public string DisplayName => GetPropertySingle<string>(Properties.P_DISPLAYNAME);
+        /// <summary>
         /// 此物件的區分名稱
         /// </summary>
         public string DistinguishedName => GetPropertySingle<string>(Properties.C_DISTINGUISHEDNAME);

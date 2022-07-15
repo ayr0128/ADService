@@ -125,6 +125,7 @@
     <Compile Include="Protocol\InvokeCondition.cs" />
     <Compile Include="Media\LDAPRelationship.cs" />
     <Compile Include="Details\LDAPProperties.cs" />
+    <Compile Include="Protocol\PropertyDescription.cs" />
     <Compile Include="Protocol\ValueDescription.cs" />
   </ItemGroup>
   <ItemGroup>

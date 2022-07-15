@@ -49,8 +49,16 @@ namespace ADService.Analytical
 
             // 預期項目: 必定是字串
             Type typeString = typeof(string);
-            // 需求內容: 採用封盒動作
-            Dictionary<string, object> dictionaryProtocolWithValue = new Dictionary<string, object> { { InvokeCondition.RECEIVEDTYPE, typeString.Name } };
+            // 製作可用屬性
+            List<PropertyDescription> propertyDescriptions = new List<PropertyDescription>(ENABLE_ATTRIBUTES.Length);
+            // 片荔枝園項目
+            foreach (string attributeName in ENABLE_ATTRIBUTES)
+            {
+                // 目前必定僅有字串, 應改為自動解析
+                PropertyDescription propertyDescription = new PropertyDescription(attributeName, typeString.Name);
+                // 加入作為可用項目
+                propertyDescriptions.Add(propertyDescription);
+            }
 
             /* 一般需求參數限制如下所述:
                  - 回傳協定內資料不可為空 (包含預設類型)
@@ -62,11 +70,7 @@ namespace ADService.Analytical
             // 需求內容: 採用封盒動作
             Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object> {
                 { InvokeCondition.RECEIVEDTYPE, typeof(CreateUser).Name },
-                { InvokeCondition.PROPERTIES, ENABLE_ATTRIBUTES },
-                { Properties.P_INITIALS, new InvokeCondition(ProtocolAttributeFlags.EDITABLE, dictionaryProtocolWithValue) },
-                { Properties.P_SN, new InvokeCondition(ProtocolAttributeFlags.EDITABLE, dictionaryProtocolWithValue) },
-                { Properties.P_GIVENNAME, new InvokeCondition(ProtocolAttributeFlags.EDITABLE, dictionaryProtocolWithValue) },
-                { Properties.P_DISPLAYNAME, new InvokeCondition(ProtocolAttributeFlags.EDITABLE, dictionaryProtocolWithValue) },
+                { InvokeCondition.PROPERTIES, propertyDescriptions.ToArray() },
             };
 
             // 持有項目時就外部就能夠異動

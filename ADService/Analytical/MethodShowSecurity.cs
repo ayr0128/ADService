@@ -31,7 +31,7 @@ namespace ADService.Analytical
                  - 應提供物件類型的參數:
                  - 方法類型只要能夠呼叫就能夠編輯
             */
-            const ProtocolAttributeFlags commonFlags = ProtocolAttributeFlags.INVOKEMETHOD;
+            const ProtocolAttributeFlags commonFlags = ProtocolAttributeFlags.HASVALUE | ProtocolAttributeFlags.INVOKEMETHOD;
             // 資料描述
             ValueDescription description = new ValueDescription(typeof(AccessRuleProtocol).Name, accessRules.AccessRuleProtocols.Length, true);
             // 需求內容: 採用封盒動作

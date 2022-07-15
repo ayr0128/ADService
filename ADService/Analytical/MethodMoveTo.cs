@@ -59,25 +59,10 @@ namespace ADService.Analytical
             // 預期項目: 必定是字串
             Type typeString = typeof(string);
             // 製作區分名稱相關的限制條件
-            ProtocolAttributeFlags commonFlagsDistinguishedName = ProtocolAttributeFlags.NULLDISABLE | ProtocolAttributeFlags.EDITABLE;
+            ProtocolAttributeFlags commonFlags = ProtocolAttributeFlags.NULLDISABLE | ProtocolAttributeFlags.EDITABLE;
             // 需求內容: 採用封盒動作
-            Dictionary<string, object> dictionaryProtocolWithDistinguishedName = new Dictionary<string, object>
-            {
+            Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object> {
                 { InvokeCondition.RECEIVEDTYPE, typeString.Name },
-            };
-
-            /* 一般需求參數限制如下所述:
-                 - 回傳協定內資料不可為空 (包含預設類型)
-                 - 應限制目標物件類型
-                 - 應提供物件類型的參數:
-                 - 方法類型只要能夠呼叫就能夠編輯
-            */
-            ProtocolAttributeFlags commonFlags = ProtocolAttributeFlags.PROPERTIES;
-            // 需求內容: 採用封盒動作
-            Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object>
-            {
-                { InvokeCondition.PROPERTIES, new string[]{ Properties.C_DISTINGUISHEDNAME } },
-                { Properties.C_DISTINGUISHEDNAME, new InvokeCondition(commonFlagsDistinguishedName, dictionaryProtocolWithDistinguishedName) },
             };
 
             // 對外提供成功必須是組織單位的區分名稱
