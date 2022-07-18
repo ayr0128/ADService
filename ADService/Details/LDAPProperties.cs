@@ -183,7 +183,8 @@ namespace ADService.Details
         /// <param name="propertyName">特性參數</param>
         /// <returns> 資料是否存在 </returns>
         /// <exception cref="LDAPExceptions">當內部儲存資料為多筆時將拋出例外</exception>
-        internal T GetPropertySingle<T>(in string propertyName)
+        [Obsolete("先使用此版本取得對應資料, 會再提供更合適的版本")]
+        public T GetPropertySingle<T>(in string propertyName)
         {
             // 取得資料: 此處僅能取得已存在資料的欄位
             dictionaryNameWithPropertyDetail.TryGetValue(propertyName, out PropertyDetail detail);
@@ -197,7 +198,8 @@ namespace ADService.Details
         /// <param name="propertyName">特性參數</param>
         /// <returns> 資料是否存在 </returns>
         /// <exception cref="LDAPExceptions">當內部儲存資料為多筆時將拋出例外</exception>
-        internal long GetPropertyInterval(in string propertyName)
+        [Obsolete("先使用此版本取得對應資料, 會再提供更合適的版本")]
+        public long GetPropertyInterval(in string propertyName)
         {
             // 取得資料: 此處僅能取得已存在資料的欄位
             dictionaryNameWithPropertyDetail.TryGetValue(propertyName, out PropertyDetail detail);
@@ -224,7 +226,8 @@ namespace ADService.Details
         /// <param name="propertyName">特性參數</param>
         /// <returns> 資料是否存在 </returns>
         /// <exception cref="LDAPExceptions">當內部儲存資料為多筆時將拋出例外</exception>
-        internal string GetPropertySID(in string propertyName)
+        [Obsolete("先使用此版本取得對應資料, 會再提供更合適的版本")]
+        public string GetPropertySID(in string propertyName)
         {
             // 取得資料: 此處僅能取得已存在資料的欄位
             dictionaryNameWithPropertyDetail.TryGetValue(propertyName, out PropertyDetail detail);
@@ -240,7 +243,8 @@ namespace ADService.Details
         /// <param name="propertyName">特性參數</param>
         /// <returns> 資料是否存在 </returns>
         /// <exception cref="LDAPExceptions">當內部儲存資料為多筆時將拋出例外</exception>
-        internal string GetPropertyGUID(in string propertyName)
+        [Obsolete("先使用此版本取得對應資料, 會再提供更合適的版本")]
+        public string GetPropertyGUID(in string propertyName)
         {
             // 取得資料: 此處僅能取得已存在資料的欄位
             dictionaryNameWithPropertyDetail.TryGetValue(propertyName, out PropertyDetail detail);
@@ -257,7 +261,8 @@ namespace ADService.Details
         /// <param name="propertyName">特性參數</param>
         /// <returns> 資料是否存在 </returns>
         /// <exception cref="LDAPExceptions">當內部儲存資料為多筆時將拋出例外</exception>
-        internal T[] GetPropertyMultiple<T>(in string propertyName)
+        [Obsolete("先使用此版本取得對應資料, 會再提供更合適的版本")]
+        public T[] GetPropertyMultiple<T>(in string propertyName)
         {
             // 取得資料: 此處僅能取得已存在資料的欄位
             dictionaryNameWithPropertyDetail.TryGetValue(propertyName, out PropertyDetail detail);
