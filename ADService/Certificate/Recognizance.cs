@@ -47,6 +47,11 @@ namespace ADService.Certificate
         internal string PrincipalSID => DriveRelation.SID;
 
         /// <summary>
+        /// 取得持有這些權限的單元 SID
+        /// </summary>
+        internal Guid PrincipalGUID => DriveRelation.GUID;
+
+        /// <summary>
         /// 遍歷關係網取得 SID
         /// </summary>
         internal string[] RelationPrincipalSIDs => Array.ConvertAll(RelationShipADs, relationShipAD => relationShipAD.RelationDriveAD.SID);

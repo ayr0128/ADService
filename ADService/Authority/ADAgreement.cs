@@ -3,6 +3,7 @@ using ADService.Certificate;
 using ADService.DynamicParse;
 using ADService.Environments;
 using ADService.Protocol;
+using ADService.RootDSE;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -35,12 +36,12 @@ namespace ADService.Authority
             using (DirectoryEntry entry = userAuthorization.GetEntryByDN(customUnit.DistinguishedName))
             {
                 // 目標的客製關係結構
-                CustomSIDUnit customSIDUnit = userAuthorization.ConvertToCustom<CustomSIDUnit>(entry);
+                CustomGUIDUnit customGUIDUnit = userAuthorization.ConvertToCustom<CustomGUIDUnit>(entry);
 
                 // 先從指定入口物件處理
                 DirectoryEntry rootEntry = entry;
                 // 設定目標物件
-                CustomSIDUnit rootCustomSIDUnit = customSIDUnit;
+                CustomGUIDUnit rootCustomGUIDUnit = customGUIDUnit;
                 // 處理目標的父層區分名稱
                 string parentDistinguishedName = customUnit.OrganizationBelong;
 
@@ -54,7 +55,7 @@ namespace ADService.Authority
                     // 根據處理目標與處理單元本身的關係決定那些權限的旗標能被處理
                     HashSet<ActiveDirectorySecurityInheritance> processInheritedHashSet;
                     // 處理的項目是否為自己
-                    bool isSelf = customUnit.DistinguishedName == rootCustomSIDUnit.DistinguishedName;
+                    bool isSelf = customUnit.DistinguishedName == rootCustomGUIDUnit.DistinguishedName;
                     // 檢查現在處理的目標單元是否是處理目標自身
                     if (isSelf)
                     {
@@ -104,7 +105,7 @@ namespace ADService.Authority
                         }
 
                         // 宣告並轉換成儲存結構
-                        AccessRuleRelationPermission accessRuleRelationPermission = new AccessRuleRelationPermission(rootCustomSIDUnit, !isSelf, activeDirectoryAccessRule);
+                        AccessRuleRelationPermission accessRuleRelationPermission = new AccessRuleRelationPermission(rootCustomGUIDUnit, !isSelf, activeDirectoryAccessRule);
                         // 推入陣列
                         accessRuleRelationPermissions.Add(accessRuleRelationPermission);
                     }
@@ -121,16 +122,16 @@ namespace ADService.Authority
                     */
                     if (continueProcess)
                     {
+                        // 下一次處理的目標資料應透過父層轉換並取得
+                        rootCustomGUIDUnit = userAuthorization.ConvertToCustom<CustomGUIDUnit>(rootEntry.Parent);
                         // 下一次處理的應為本次處理的父層
                         rootEntry = rootEntry.Parent;
-                        // 下一次處理的目標資料應透過父層轉換並取得
-                        rootCustomSIDUnit = userAuthorization.ConvertToCustom<CustomSIDUnit>(rootEntry.Parent);
                     }
                 }
                 while (continueProcess);
 
                 // 製作權利書
-                Permissions permissions = new Permissions(customSIDUnit, accessRuleRelationPermissions);
+                Permissions permissions = new Permissions(customGUIDUnit, accessRuleRelationPermissions);
                 // 對外提供權利書
                 return new ADAgreement(recognizance, permissions);
             }
@@ -142,6 +143,36 @@ namespace ADService.Authority
         {
 
         };
+
+        /// <summary>
+        /// 使用保證書陳列的關係透過權限狀獲得英被諄手的權限
+        /// </summary>
+        /// <param name="recognizance">保證書</param>
+        /// <param name="permissions">權限狀</param>
+        private static ExecutionDetails CreateExecutionDetails(in Recognizance recognizance, in Permissions permissions)
+        {
+            // 獲取授權介面
+            IUserAuthorization iUserAuthorization = recognizance.UserAuthorization;
+            // 轉成可查詢的 GUID
+            string GUID = Configurate.GetGUID(permissions.PrincipalGUID);
+            // 找尋操作目標的入口物件
+            DirectoryEntry entryPermissions = iUserAuthorization.GetEntryByGUID(GUID);
+            // 必須能發現指定目標
+            if (entryPermissions == null)
+            {
+                // 對外扔出例外
+                throw new LDAPExceptions($"目標單元:{permissions.PrincipalDN} 於陳列可用條文時無法透過安全序列識別號:{GUID} 取得, 物件已被移除", ErrorCodes.OBJECT_NOTFOUND);
+            }
+
+            // 取得可用權限
+            List<AccessRuleRelationPermission> accessRuleRelationPermissions = PrincipalAccessRuleRelationPermissions(recognizance, permissions);
+            // 推入並設置入口物件
+            ExecutionDetails executionDetails = new ExecutionDetails(accessRuleRelationPermissions);
+            // 目標項目必定是預期做的項目之一
+            executionDetails.SetEntry(permissions.PrincipalDN, entryPermissions);
+            // 對外提供可用項的執行細則
+            return executionDetails;
+        }
         #endregion
 
         #region 安全性主體解析
@@ -164,7 +195,9 @@ namespace ADService.Authority
             // 此協議書的保護條文
             List<AccessRuleRelationPermission> storedAccessRuleRelationPermissions = new List<AccessRuleRelationPermission>();
             // 根據操作目標關係 SID 決定需添加的額外操作權限
-            string principalExtraSID = recognizance.PrincipalSID == permissions.PrincipalSID ? SID_SELF : SID_EVERYONE;
+            string principalExtraSID = recognizance.PrincipalGUID == permissions.PrincipalGUID ? SID_SELF : SID_EVERYONE;
+            // 轉成可查詢的 GUID
+            string GUID = Configurate.GetGUID(permissions.PrincipalGUID);
             // 取得喚起物件的關係 SID
             HashSet<string> principalSIDs = new HashSet<string>(recognizance.RelationPrincipalSIDs) { principalExtraSID, recognizance.PrincipalSID };
             // 使用上述關係查詢並過濾出可用的權限
@@ -212,23 +245,8 @@ namespace ADService.Authority
             // 過程若出現任何錯誤應被截取會並處理
             try
             {
-                // 獲取授權介面
-                IUserAuthorization iUserAuthorization = Recognizance.UserAuthorization;
-                // 找尋操作目標的入口物件
-                DirectoryEntry entryPermissions = iUserAuthorization.GetEntryBySID(Permissions.PrincipalSID);
-                // 必須能發現指定目標
-                if (entryPermissions == null)
-                {
-                    // 對外扔出例外
-                    throw new LDAPExceptions($"目標單元:{Permissions.PrincipalDN} 於陳列可用條文時無法透過安全序列識別號:{Permissions.PrincipalSID} 取得, 物件已被移除", ErrorCodes.OBJECT_NOTFOUND);
-                }
-
-                // 取得可用權限
-                List<AccessRuleRelationPermission> accessRuleRelationPermissions = PrincipalAccessRuleRelationPermissions(Recognizance, Permissions);
-                // 推入並設置入口物件
-                ExecutionDetails executionDetails = new ExecutionDetails(accessRuleRelationPermissions);
-                // 目標項目必定是預期做的項目之一
-                executionDetails.SetEntry(Permissions.PrincipalDN, entryPermissions);
+                // 製作執行細則
+                ExecutionDetails executionDetails = CreateExecutionDetails(Recognizance, Permissions);
                 // 轉換成釋放用介面
                 iRelease = executionDetails;
 
@@ -284,6 +302,7 @@ namespace ADService.Authority
 
         /// <summary>
         /// 透過指定的證書與可用方法取得對應協定描述, 如何使用需解析 <see cref="ADInvokeCondition">協議描述</see>, 目前支援下述項目
+        /// </summary>
         /// <param name="articleName">目標屬性</param>
         /// <param name="protocolJToken">喚醒時額外提供的協定資料, 預設為 null</param>
         /// <returns>預期接收協議描述</returns>
@@ -301,23 +320,8 @@ namespace ADService.Authority
             // 過程若出現任何錯誤應被截取會並處理
             try
             {
-                // 獲取授權介面
-                IUserAuthorization iUserAuthorization = Recognizance.UserAuthorization;
-                // 找尋操作目標的入口物件
-                DirectoryEntry entryPermissions = iUserAuthorization.GetEntryBySID(Permissions.PrincipalSID);
-                // 必須能發現指定目標
-                if (entryPermissions == null)
-                {
-                    // 對外扔出例外
-                    throw new LDAPExceptions($"目標單元:{Permissions.PrincipalDN} 於檢驗功能:{articleName} 時無法透過安全序列識別號:{Permissions.PrincipalSID} 取得, 物件已被移除", ErrorCodes.OBJECT_NOTFOUND);
-                }
-
-                // 取得可用權限
-                List<AccessRuleRelationPermission> accessRuleRelationPermissions = PrincipalAccessRuleRelationPermissions(Recognizance, Permissions);
-                // 推入並設置入口物件
-                ExecutionDetails executionDetails = new ExecutionDetails(accessRuleRelationPermissions);
-                // 目標項目必定是預期做的項目之一
-                executionDetails.SetEntry(Permissions.PrincipalDN, entryPermissions);
+                // 製作執行細則
+                ExecutionDetails executionDetails = CreateExecutionDetails(Recognizance, Permissions);
                 // 轉換成釋放用介面
                 iRelease = executionDetails;
 
@@ -372,23 +376,8 @@ namespace ADService.Authority
             // 過程若出現任何錯誤應被截取會並處理
             try
             {
-                // 獲取授權介面
-                IUserAuthorization iUserAuthorization = Recognizance.UserAuthorization;
-                // 找尋操作目標的入口物件
-                DirectoryEntry entryPermissions = iUserAuthorization.GetEntryBySID(Permissions.PrincipalSID);
-                // 必須能發現指定目標
-                if (entryPermissions == null)
-                {
-                    // 對外扔出例外
-                    throw new LDAPExceptions($"目標單元:{Permissions.PrincipalDN} 檢驗功能:{articleName} 時無法透過安全序列識別號:{Permissions.PrincipalSID} 取得, 物件已被移除", ErrorCodes.OBJECT_NOTFOUND);
-                }
-
-                // 取得可用權限
-                List<AccessRuleRelationPermission> accessRuleRelationPermissions = PrincipalAccessRuleRelationPermissions(Recognizance, Permissions);
-                // 推入並設置入口物件
-                ExecutionDetails executionDetails = new ExecutionDetails(accessRuleRelationPermissions);
-                // 目標項目必定是預期做的項目之一
-                executionDetails.SetEntry(Permissions.PrincipalDN, entryPermissions);
+                // 製作執行細則
+                ExecutionDetails executionDetails = CreateExecutionDetails(Recognizance, Permissions);
                 // 轉換成釋放用介面
                 iRelease = executionDetails;
                 // 遍歷權限驗證協議是否可用
@@ -419,7 +408,7 @@ namespace ADService.Authority
         /// <param name="articleName">指定喚醒的參數</param>
         /// <param name="protocolJToken">需求協議</param>
         /// <returns>此異動影響的物件, 格式如右 Dictionary '區分名稱, 新物件' </returns>
-        public Dictionary<string, ADCustomUnit> InvokeMethod(in string articleName, in JToken protocolJToken)
+        public Dictionary<string, ADCustomUnit> InvokeArticle(in string articleName, in JToken protocolJToken)
         {
             // 取得目標屬性分析
             if (!DictionaryArticleNameWithInstance.TryGetValue(articleName, out Article article))
@@ -433,23 +422,8 @@ namespace ADService.Authority
             // 過程若出現任何錯誤應被截取會並處理
             try
             {
-                // 獲取授權介面
-                IUserAuthorization iUserAuthorization = Recognizance.UserAuthorization;
-                // 找尋操作目標的入口物件
-                DirectoryEntry entryPermissions = iUserAuthorization.GetEntryBySID(Permissions.PrincipalSID);
-                // 必須能發現指定目標
-                if (entryPermissions == null)
-                {
-                    // 對外扔出例外
-                    throw new LDAPExceptions($"目標單元:{Permissions.PrincipalDN} 檢驗功能:{articleName} 時無法透過安全序列識別號:{Permissions.PrincipalSID} 取得, 物件已被移除", ErrorCodes.OBJECT_NOTFOUND);
-                }
-
-                // 取得可用權限
-                List<AccessRuleRelationPermission> accessRuleRelationPermissions = PrincipalAccessRuleRelationPermissions(Recognizance, Permissions);
-                // 推入並設置入口物件
-                ExecutionDetails executionDetails = new ExecutionDetails(accessRuleRelationPermissions);
-                // 目標項目必定是預期做的項目之一
-                executionDetails.SetEntry(Permissions.PrincipalDN, entryPermissions);
+                // 製作執行細則
+                ExecutionDetails executionDetails = CreateExecutionDetails(Recognizance, Permissions);
                 // 轉換成釋放用介面
                 iRelease = executionDetails;
 
@@ -465,6 +439,8 @@ namespace ADService.Authority
                 // 執行異動或呼叫
                 article.Invoke(ref executionDetails, Recognizance, Permissions, protocolJToken);
 
+                // 強型別宣告方便閱讀: 授權介面
+                IUserAuthorization iUserAuthorization = Recognizance.UserAuthorization;
                 // 對外提供所有影響的物件
                 Dictionary<string, ADCustomUnit> dictionaryDNWithCustomUnit = new Dictionary<string, ADCustomUnit>();
                 // 遍歷修改內容

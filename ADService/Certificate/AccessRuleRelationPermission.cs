@@ -17,7 +17,7 @@ namespace ADService.Certificate
         /// <summary>
         /// 持有此存取權限的物件區分名稱
         /// </summary>
-        internal readonly CustomSIDUnit CustomSIDUnit;
+        internal readonly CustomGUIDUnit CustomGUIDUnit;
         /// <summary>
         /// 是否透過繼承取得
         /// </summary>
@@ -43,12 +43,12 @@ namespace ADService.Certificate
         /// <summary>
         /// 建構子, 使用者只能異動不是透過繼承取得的部分
         /// </summary>
-        /// <param name="customSIDUnit">持有此權限的物件</param>
+        /// <param name="customGUIDUnit">持有此權限的物件</param>
         /// <param name="isInherited">是否透過繼承取得</param>
         /// <param name="raw">原始存取權限</param>
-        internal AccessRuleRelationPermission(in CustomSIDUnit customSIDUnit, in bool isInherited, ActiveDirectoryAccessRule raw)
+        internal AccessRuleRelationPermission(in CustomGUIDUnit customGUIDUnit, in bool isInherited, ActiveDirectoryAccessRule raw)
         {
-            CustomSIDUnit = customSIDUnit;
+            CustomGUIDUnit = customGUIDUnit;
             IsInherited = isInherited;
             Raw = raw;
         }

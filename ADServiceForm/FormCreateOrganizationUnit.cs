@@ -1,4 +1,6 @@
-﻿using ADService.Certification;
+﻿using ADService.Authority;
+using ADService.Certification;
+using ADService.DynamicParse;
 using ADService.Environments;
 using ADService.Foundation;
 using ADService.Protocol;
@@ -17,7 +19,7 @@ namespace ADServiceForm
         /// <summary>
         /// 按下確定後透過此功能呼叫修改
         /// </summary>
-        private readonly LDAPCertification Certification;
+        private readonly ADAgreement Agreement;
         /// <summary>
         /// 用來創建的結構: 客戶端應使用自行觸鍵的結構
         /// </summary>
@@ -26,16 +28,16 @@ namespace ADServiceForm
         /// <summary>
         /// 建構子
         /// </summary>
-        /// <param name="certification">必須提供的動作證書</param>
+        /// <param name="agreement">協議書/param>
         /// <param name="invokeCondition">建構用條件</param>
-        public FormCreateOrganizationUnit(in LDAPCertification certification, ADInvokeCondition invokeCondition)
+        public FormCreateOrganizationUnit(in ADAgreement agreement, ADInvokeCondition invokeCondition)
         {
             InitializeComponent();
 
             // 物不使用此順序, 主要是因為文字異動時會呼叫驗證動作
 
             // 設置證書
-            Certification = certification;
+            Agreement = agreement;
             // 創建群組時應能夠收到可編譯旗標
             bool isEditable = invokeCondition.MaskFlags(ProtocolAttributeFlags.EDITABLE) != ProtocolAttributeFlags.NONE;
             // 此時必定持有可編譯資料的結構描述
@@ -75,7 +77,7 @@ namespace ADServiceForm
             // 轉換成協定
             JToken protocol = JToken.FromObject(requestClass);
             // 發出協定進行驗證
-            bool authenicationSuccess = Certification.AuthenicateMethod(METHOD, protocol);
+            bool authenicationSuccess = Agreement.AuthenicateArticle(METHOD, protocol);
             #endregion
 
             // 只有驗證成功時
@@ -102,9 +104,9 @@ namespace ADServiceForm
             // 轉換成協定: 由於每次異動都會填入新的名稱, 因此可以直接呼叫此動作
             JToken protocol = JToken.FromObject(requestClass);
             // 喚醒異動
-            Dictionary<string, LDAPObject> dictionaryODNWithObject = Certification.InvokeMethod(METHOD, protocol);
+            Dictionary<string, ADCustomUnit> dictionaryODNWithCustomUnit = Agreement.InvokeArticle(METHOD, protocol);
             // 異動結果提供給標籤
-            Tag = dictionaryODNWithObject;
+            Tag = dictionaryODNWithCustomUnit;
 
             // 注意權限不足的情況下會造成新增後卻無法看到新增的群組
         }

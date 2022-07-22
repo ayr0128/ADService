@@ -296,9 +296,8 @@ namespace ADServiceForm
 
             // 取得操作保證書
             ADAgreement recognizance = user.GetAgreement(customUnitTAG);
-            // 取得權利書
             // 透過證書取得目前登入者於此物件上的可用功能
-            Dictionary<string, ADInvokeCondition> dictionaryMethodAndCondition = null;
+            Dictionary<string, ADInvokeCondition> dictionaryMethodAndCondition = recognizance.ListArticles();
             // 檢查是否存在支援方法
             if (dictionaryMethodAndCondition.Count == 0)
             {
@@ -368,7 +367,7 @@ namespace ADServiceForm
             // 可以肯定必定是右鍵選單但是不確定是何者, 因此透過擁有者進行取得
             ToolStripItem toolStripItem = toolStripMenuItem.OwnerItem;
             // 擁有者的 TAG 必定是喚起物件
-            LDAPObject objectTAG = toolStripItem.Tag as LDAPObject;
+            ADCustomUnit customUnit = toolStripItem.Tag as ADCustomUnit;
             // 此時物件內紀錄的 TAG 必定是呼叫方法
             string method = toolStripMenuItem.Tag as string;
             #endregion
@@ -383,9 +382,9 @@ namespace ADServiceForm
             #endregion
 
             // 使用此喚起物件製作證書
-            LDAPCertification certification = serve.GetCertificate(null, objectTAG);
+            ADAgreement agreement = user.GetAgreement(customUnit);
             // 透過證書呼叫可用方法的需求參數: 取得可用物件
-            ADInvokeCondition invokeCondition = certification.GetMethodCondition(method);
+            ADInvokeCondition invokeCondition = agreement.GeArticleCondition(method);
             // 若此時權限被修改導致無法呼叫會提供空的條件
             if (invokeCondition == null)
             {
@@ -394,7 +393,7 @@ namespace ADServiceForm
             }
 
             // 訊息視窗葉面
-            Form dialogForm = CreateDialogForm(method, certification, invokeCondition);
+            Form dialogForm = CreateDialogForm(method, agreement, invokeCondition);
             // 檢查葉面是否成功創建
             if (dialogForm == null)
             {
@@ -419,7 +418,7 @@ namespace ADServiceForm
 
             // 其他狀況時依能夠在標籤處取得返還的物件表
             // 如果沒有資訊則不做任何處理
-            if (!(dialogForm.Tag is Dictionary<string, LDAPObject> dictionaryDNWithObject) || dictionaryDNWithObject.Count == 0)
+            if (!(dialogForm.Tag is Dictionary<string, ADCustomUnit> dictionaryODNWithCustomUnit) || dictionaryODNWithCustomUnit.Count == 0)
             {
                 // 跳過
                 return;
@@ -434,7 +433,7 @@ namespace ADServiceForm
                  - 移動指定的節點
                  - 在指定節點下新增子物件
             */
-            foreach (KeyValuePair<string, LDAPObject> pair in dictionaryDNWithObject)
+            foreach (KeyValuePair<string, ADCustomUnit> pair in dictionaryODNWithCustomUnit)
             {
             }
         }
@@ -443,10 +442,10 @@ namespace ADServiceForm
         /// 創建視窗並展示內容
         /// </summary>
         /// <param name="method">此次動作畫起的方法</param>
-        /// <param name="certification">遷入異動用證書</param>
+        /// <param name="agreement">權利書</param>
         /// <param name="invokeCondition">就夠條件</param>
         /// <returns></returns>
-        private Form CreateDialogForm(in string method, in LDAPCertification certification, ADInvokeCondition invokeCondition)
+        private Form CreateDialogForm(in string method, in ADAgreement agreement, ADInvokeCondition invokeCondition)
         {
             // 預計對外提供的視窗
             Form resultForm = null;
@@ -457,21 +456,21 @@ namespace ADServiceForm
                 case Methods.M_CREATEGROUP:
                     {
                         // 對外提供創建視窗葉面
-                        resultForm = new FormCreateGroup(certification, invokeCondition);
+                        resultForm = new FormCreateGroup(agreement, invokeCondition);
                     }
                     break;
                 // 創建組織單位
                 case Methods.M_CREATEORGANIZATIONUNIT:
                     {
                         // 對外提供創建視窗葉面
-                        resultForm = new FormCreateOrganizationUnit(certification, invokeCondition);
+                        resultForm = new FormCreateOrganizationUnit(agreement, invokeCondition);
                     }
                     break;
                 // 創建使用者
                 case Methods.M_CREATEUSER:
                     {
                         // 對外提供創建視窗葉面
-                        resultForm = new FormCreateUser(certification, invokeCondition);
+                        resultForm = new FormCreateUser(agreement, invokeCondition);
                     }
                     break;
             }

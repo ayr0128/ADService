@@ -46,6 +46,17 @@ namespace ADService.DynamicParse
         private Byte[] SecurityIdentifierInBytes { get; set; }
 
         /// <summary>
+        /// 物件藍本 SID
+        /// </summary>
+        internal Guid GUID => new Guid(GUIDInBytes);
+
+        /// <summary>
+        /// 從資料取得的藍本 SID
+        /// </summary>
+        [ADDescriptionProperty(Properties.C_OBJECTGUID)]
+        private Byte[] GUIDInBytes { get; set; }
+
+        /// <summary>
         /// 取得物件與自身的關係
         /// </summary>
         /// <param name="customUnit">查詢的物件</param>

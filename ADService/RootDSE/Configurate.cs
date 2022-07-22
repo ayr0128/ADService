@@ -422,7 +422,9 @@ namespace ADService.RootDSE
             }
 
             // 嘗試刷新目標欄位
-            entry.RefreshCache(dictionaryPropertyNameWithTuple.Keys.ToArray());
+            string[] propertyNames = dictionaryPropertyNameWithTuple.Keys.ToArray();
+            // 刷新指定項目
+            entry.RefreshCache(propertyNames);
 
             // 逐個檢查是否持有目標特性並設置參數
             foreach(KeyValuePair<string, Tuple<PropertyConvertor, PropertyInfo>> pair in dictionaryPropertyNameWithTuple)

@@ -12,7 +12,7 @@ namespace ADService.Certificate
         /// <summary>
         /// 指定物件
         /// </summary>
-        private readonly CustomSIDUnit CustomSIDUnit;
+        private readonly CustomGUIDUnit CustomGUIDUnit;
         /// <summary>
         /// 按持有權限的單元 SID 儲存的存取規則權限關係
         /// </summary>
@@ -21,11 +21,11 @@ namespace ADService.Certificate
         /// <summary>
         /// 提供指定物件以及透過保證書獲取的持有全縣
         /// </summary>
-        /// <param name="customSIDUnit">詞有或繼承這些權限的單位, 額外添加 SID 資訊</param>
+        /// <param name="customGUIDUnit">詞有或繼承這些權限的單位, 額外添加 SID 資訊</param>
         /// <param name="accessRuleRelationPermissions">存取規則權限</param>
-        internal Permissions(in CustomSIDUnit customSIDUnit, in List<AccessRuleRelationPermission> accessRuleRelationPermissions)
+        internal Permissions(in CustomGUIDUnit customGUIDUnit, in List<AccessRuleRelationPermission> accessRuleRelationPermissions)
         {
-            CustomSIDUnit = customSIDUnit;
+            CustomGUIDUnit = customGUIDUnit;
 
             // 轉換成按群組 SID 儲存的格式
             foreach (AccessRuleRelationPermission accessRuleRelationPermission in accessRuleRelationPermissions)
@@ -49,12 +49,12 @@ namespace ADService.Certificate
         /// <summary>
         /// 主體區分名稱
         /// </summary>
-        internal string PrincipalDN => CustomSIDUnit.DistinguishedName;
+        internal string PrincipalDN => CustomGUIDUnit.DistinguishedName;
 
         /// <summary>
-        /// 取得持有這些權限的單元 SID
+        /// 取得持有這些權限的單元 GUID
         /// </summary>
-        internal string PrincipalSID => CustomSIDUnit.SID;
+        internal Guid PrincipalGUID => CustomGUIDUnit.GUID;
 
         /// <summary>
         /// 提供主體安全性序列識別號取得其應被套用的權限

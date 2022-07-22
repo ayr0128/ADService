@@ -87,7 +87,7 @@
     <Compile Include="DynamicParse\IUserAuthorization.cs" />
     <Compile Include="Certificate\AccessRuleRelationPermission.cs" />
     <Compile Include="Authority\ADAgreement.cs" />
-    <Compile Include="Certificate\CustomRelation.cs" />
+    <Compile Include="Certificate\CustomGUIDUnit.cs" />
     <Compile Include="Certificate\ExecutionDetails.cs" />
     <Compile Include="Certificate\Permissions.cs" />
     <Compile Include="Certificate\Recognizance.cs" />
