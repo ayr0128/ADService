@@ -24,7 +24,7 @@ namespace ADService.Analytical
         /// </summary>
         internal MethodCreateGroup() : base(Methods.M_CREATEGROUP, false) { }
 
-        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
+        internal override (ADInvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 取得是否支援創建目標物件
             bool isAllow = permissions.IsAllow(LDAPCategory.CLASS_GROUP, activeDirectoryRights);
@@ -43,11 +43,11 @@ namespace ADService.Analytical
             const ProtocolAttributeFlags commonFlags = ProtocolAttributeFlags.EDITABLE;
             // 需求內容: 採用封盒動作
             Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object> {
-                { InvokeCondition.RECEIVEDTYPE, typeof(CreateGroup).Name },
+                { ADInvokeCondition.RECEIVEDTYPE, typeof(CreateGroup).Name },
             };
 
             // 持有項目時就外部就能夠異動
-            return (new InvokeCondition(commonFlags, dictionaryProtocolWithDetail), string.Empty);
+            return (new ADInvokeCondition(commonFlags, dictionaryProtocolWithDetail), string.Empty);
         }
 
         internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)

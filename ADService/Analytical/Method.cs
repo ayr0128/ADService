@@ -37,7 +37,7 @@ namespace ADService.Analytical
         /// <param name="permissions">喚起者與目標能使用的權限</param>
         /// <param name="accessRules">釐清繼承關係的所有權限</param>
         /// <returns>是否可使用</returns>
-        internal abstract (InvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules);
+        internal abstract (ADInvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules);
         /// <summary>
         /// 驗證提供的協議內容是否可用
         /// </summary>

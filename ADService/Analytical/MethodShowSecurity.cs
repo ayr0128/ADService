@@ -16,7 +16,7 @@ namespace ADService.Analytical
         /// </summary>
         internal MethodShowSecurity() : base(Methods.M_SHOWSCEURITY, true) { }
 
-        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
+        internal override (ADInvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 檢查是否持有展示安全性的權限
             if (accessRules == null)
@@ -36,13 +36,13 @@ namespace ADService.Analytical
             ValueDescription description = new ValueDescription(typeof(AccessRuleProtocol).Name, accessRules.AccessRuleProtocols.Length, true);
             // 需求內容: 採用封盒動作
             Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object> {
-                { InvokeCondition.STOREDTYPE, description },                // 持有內容描述
-                { InvokeCondition.VALUE, accessRules.AccessRuleProtocols }, // 持有內容
-                { InvokeCondition.METHODS, Methods.M_MODIFYSCEURITY }       // 呼叫修改安全性葉面
+                { ADInvokeCondition.STOREDTYPE, description },                // 持有內容描述
+                { ADInvokeCondition.VALUE, accessRules.AccessRuleProtocols }, // 持有內容
+                { ADInvokeCondition.METHODS, Methods.M_MODIFYSCEURITY }       // 呼叫修改安全性葉面
             };
 
             // 持有項目時就外部就能夠異動
-            return (new InvokeCondition(commonFlags, dictionaryProtocolWithDetail), string.Empty);
+            return (new ADInvokeCondition(commonFlags, dictionaryProtocolWithDetail), string.Empty);
         }
 
         internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules) => false;

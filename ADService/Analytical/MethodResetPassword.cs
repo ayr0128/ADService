@@ -20,7 +20,7 @@ namespace ADService.Analytical
         /// </summary>
         internal MethodResetPassword() : base(Methods.M_RESETPWD) { }
 
-        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
+        internal override (ADInvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 不存在 '重製密碼' 的額外權限
             if (!permissions.IsAllow(ACCESS_ATTRIBUTE_NAME, ActiveDirectoryRights.ExtendedRight))
@@ -35,11 +35,11 @@ namespace ADService.Analytical
             Type typeSetPWD = typeof(string);
             // 宣告持有內容: 修改時需求的類型是改變密碼
             Dictionary<string, object> dictionaryProtocolWithDetailInside = new Dictionary<string, object>() {
-                { InvokeCondition.RECEIVEDTYPE, typeSetPWD.Name }, // 預期內容描述
+                { ADInvokeCondition.RECEIVEDTYPE, typeSetPWD.Name }, // 預期內容描述
             };
 
             // 只要有寫入權限就可以進行修改
-            return (new InvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside), string.Empty);
+            return (new ADInvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside), string.Empty);
         }
 
         internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)

@@ -4,6 +4,30 @@ using System.Collections.Generic;
 namespace ADService.Protocol
 {
     /// <summary>
+    /// 人際關係描述
+    /// </summary>
+    [Flags]
+    public enum InterpersonalRelationFlags : byte
+    {
+        /// <summary>
+        /// 預設: 無人際關係, 不應該出現
+        /// </summary>
+        NONE = 0x00,
+        /// <summary>
+        /// 隸屬於:
+        /// </summary>
+        MEMBEROF = 0x01,
+        /// <summary>
+        /// 成員:
+        /// </summary>
+        MEMBER = 0x02,
+        /// <summary>
+        /// 主要隸屬: 用來表示透過主要隸屬關係關聯, 因此不能隨意刪除或移動
+        /// </summary>
+        PRIMARY = 0x04,
+    }
+
+    /// <summary>
     /// 錯誤編碼
     /// </summary>
     public enum ErrorCodes : ushort
@@ -181,9 +205,13 @@ namespace ADService.Protocol
         /// </summary>
         APTREE = 0x0040,
         /// <summary>
+        /// 電腦
+        /// </summary>
+        COMPUTER = 0x0080,
+        /// <summary>
         /// 所有支援查詢的類型
         /// </summary>
-        ALL_TYPES = CONTAINER | DOMAIN_DNS | ORGANIZATION_UNIT | FOREIGN_SECURITYPRINCIPALS | GROUP | PERSON | APTREE,
+        ALL_TYPES = CONTAINER | DOMAIN_DNS | ORGANIZATION_UNIT | FOREIGN_SECURITYPRINCIPALS | GROUP | PERSON | APTREE | COMPUTER,
     }
 
     /// <summary>
@@ -199,43 +227,43 @@ namespace ADService.Protocol
         /// <summary>
         /// 數據為列舉: 出現時必定包含 下述欄位
         /// <list type="table|bullet">
-        ///     <item><term> <see cref="InvokeCondition.ENUMLIST">可用列舉表</see> </term> 可用 <see cref="HashSet{Enum}"> 列舉列表 </see> </item>
+        ///     <item><term> <see cref="ADInvokeCondition.ENUMLIST">可用列舉表</see> </term> 可用 <see cref="HashSet{Enum}"> 列舉列表 </see> </item>
         /// </list>
         /// </summary>
         ISENUM = 0x00000100,
         /// <summary>
         /// 數據為旗標: 出現時必定包含 下述欄位
         /// <list type="table|bullet">
-        ///     <item><term> <see cref="InvokeCondition.FLAGMASK">可用旗標遮罩</see> </term> 可用 <see cref="FlagsAttribute"> 旗標遮罩 </see> </item>
+        ///     <item><term> <see cref="ADInvokeCondition.FLAGMASK">可用旗標遮罩</see> </term> 可用 <see cref="FlagsAttribute"> 旗標遮罩 </see> </item>
         /// </list>
         /// </summary>
         ISFLAGS = 0x00000200,
         /// <summary>
         /// 持有數值: 出現時必定包含下述欄位
         /// <list type="table|bullet">
-        ///     <item><term> <see cref="InvokeCondition.VALUE">資料內容</see> </term> 須根據儲存格式變換 </item>
-        ///     <item><term> <see cref="InvokeCondition.STOREDTYPE">資料類型</see> </term> 儲存的<see cref="ValueDescription">資料類型與是否為陣列等詳細資料</see> </item>
+        ///     <item><term> <see cref="ADInvokeCondition.VALUE">資料內容</see> </term> 須根據儲存格式變換 </item>
+        ///     <item><term> <see cref="ADInvokeCondition.STOREDTYPE">資料類型</see> </term> 儲存的<see cref="ValueDescription">資料類型與是否為陣列等詳細資料</see> </item>
         /// </list>
         /// </summary>
         HASVALUE = 0x00001000,
         /// <summary>
         /// 是否需要組合
         /// <list type="table|bullet">
-        ///     <item><term> <see cref="InvokeCondition.COMBINETAG">組合旗標</see> </term> <see cref="string">字串</see> </item>
+        ///     <item><term> <see cref="ADInvokeCondition.COMBINETAG">組合旗標</see> </term> <see cref="string">字串</see> </item>
         /// </list>
         /// </summary>
         COMBINE = 0x00002000,
         /// <summary>
         /// 需求屬性: 協議描述中會包含下述欄位, 額外元素中必定持有相關參數的資料描述
         /// <list type="table|bullet">
-        ///     <item><term> <see cref="InvokeCondition.PROPERTIES">需求參數</see> </term> <see cref="HashSet{String}">字串陣列</see> </item>
+        ///     <item><term> <see cref="ADInvokeCondition.PROPERTIES">需求參數</see> </term> <see cref="HashSet{String}">字串陣列</see> </item>
         /// </list>
         /// </summary>
         PROPERTIES = 0x00010000,
         /// <summary>
         /// 持有元素: 協議描述中會包含下述欄位, 額外元素中必定持有相關參數的資料描述
         /// <list type="table|bullet">
-        ///     <item><term> <see cref="InvokeCondition.ELEMENTS">元素</see> </term> <see cref="Dictionary{String, InvokeCondition}">協議字典</see> </item>
+        ///     <item><term> <see cref="ADInvokeCondition.ELEMENTS">元素</see> </term> <see cref="Dictionary{String, InvokeCondition}">協議字典</see> </item>
         /// </list>
         /// </summary>
         ELEMENTS = 0x00020000,
@@ -254,7 +282,7 @@ namespace ADService.Protocol
         /// <summary>
         /// 可喚起其他方法: 出現時必定包含下述欄位
         /// <list type="table|bullet">
-        ///     <item><term> <see cref="InvokeCondition.METHODS">限制目標物件</see> </term> <see cref="CategoryTypes">類型</see> </item>
+        ///     <item><term> <see cref="ADInvokeCondition.METHODS">限制目標物件</see> </term> <see cref="CategoryTypes">類型</see> </item>
         /// </list>
         /// </summary>
         INVOKEMETHOD = 0x80000000,

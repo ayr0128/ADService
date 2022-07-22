@@ -16,7 +16,7 @@ namespace ADService.Analytical
         /// </summary>
         internal MethodShowCreateable() : base(Methods.M_SHOWCRATEABLE, true) { }
 
-        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
+        internal override (ADInvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 所有可用的方法
             List<string> invokedAble = new List<string>(3);
@@ -24,7 +24,7 @@ namespace ADService.Analytical
             // 宣告異動細節分析氣
             MethodCreateUser analyticalCreateUser = new MethodCreateUser();
             // 是否能展示須根據是否能異動決定
-            (InvokeCondition conditionUser, _) = analyticalCreateUser.Invokable(ref certification, protocol, permissions, accessRules);
+            (ADInvokeCondition conditionUser, _) = analyticalCreateUser.Invokable(ref certification, protocol, permissions, accessRules);
             // 能夠取得條件時
             if (conditionUser != null)
             {
@@ -35,7 +35,7 @@ namespace ADService.Analytical
             // 宣告異動細節分析氣
             MethodCreateGroup analyticalCreateGroup = new MethodCreateGroup();
             // 是否能展示須根據是否能異動決定
-            (InvokeCondition conditionGroup, _) = analyticalCreateGroup.Invokable(ref certification, protocol, permissions, accessRules);
+            (ADInvokeCondition conditionGroup, _) = analyticalCreateGroup.Invokable(ref certification, protocol, permissions, accessRules);
             // 能夠取得條件時
             if (conditionGroup != null)
             {
@@ -46,7 +46,7 @@ namespace ADService.Analytical
             // 宣告異動細節分析氣
             MethodCreateOrganizationUnit analyticalCreateOrganizationUnit = new MethodCreateOrganizationUnit();
             // 是否能展示須根據是否能異動決定
-            (InvokeCondition conditionOrganizationUnit, _) = analyticalCreateOrganizationUnit.Invokable(ref certification, protocol, permissions, accessRules);
+            (ADInvokeCondition conditionOrganizationUnit, _) = analyticalCreateOrganizationUnit.Invokable(ref certification, protocol, permissions, accessRules);
             // 能夠取得條件時
             if (conditionOrganizationUnit != null)
             {
@@ -69,11 +69,11 @@ namespace ADService.Analytical
             const ProtocolAttributeFlags commonFlags = ProtocolAttributeFlags.INVOKEMETHOD;
             // 需求內容: 採用封盒動作
             Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object> {
-                { InvokeCondition.METHODS, invokedAble.ToArray() }
+                { ADInvokeCondition.METHODS, invokedAble.ToArray() }
             };
 
             // 持有項目時就外部就能夠異動
-            return (new InvokeCondition(commonFlags, dictionaryProtocolWithDetail), string.Empty);
+            return (new ADInvokeCondition(commonFlags, dictionaryProtocolWithDetail), string.Empty);
         }
 
         internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules) => false;

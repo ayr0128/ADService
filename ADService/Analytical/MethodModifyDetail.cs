@@ -74,10 +74,10 @@ namespace ADService.Analytical
         /// <param name="isShowed">是否展示在功能列表</param>
         internal MethodModifyDetail(in string name, in bool isShowed) : base(name, isShowed) { }
 
-        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
+        internal override (ADInvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 要對外回傳的所有項目: 預設容器大小等於所有需要轉換的項目
-            Dictionary<string, InvokeCondition> dictionaryAttributesNameWithCondition = new Dictionary<string, InvokeCondition>(AttributeNames.Count);
+            Dictionary<string, ADInvokeCondition> dictionaryAttributesNameWithCondition = new Dictionary<string, ADInvokeCondition>(AttributeNames.Count);
             #region 整理可對外提供的項目
             // 遍歷支援項目
             foreach (string attributeName in AttributeNames)
@@ -90,7 +90,7 @@ namespace ADService.Analytical
                 }
 
                 // 將對外提供的處理項目
-                InvokeCondition invokeCondition;
+                ADInvokeCondition invokeCondition;
                 // 是否可異動
                 bool isEditable = permissions.IsAllow(attributeName, ActiveDirectoryRights.WriteProperty);
                 // 對外提供項目有個需要特例處理
@@ -115,8 +115,8 @@ namespace ADService.Analytical
                             ValueDescription description = new ValueDescription(typeof(LDAPRelationship).Name, values.Length, true);
                             // 宣告持有內容: 運行至此必定包含可讀取項目
                             Dictionary<string, object> dictionaryProtocolWithDetailInside = new Dictionary<string, object> {
-                                { InvokeCondition.STOREDTYPE, description }, // 持有內容描述
-                                { InvokeCondition.VALUE, values },           // 持有內容
+                                { ADInvokeCondition.STOREDTYPE, description }, // 持有內容描述
+                                { ADInvokeCondition.VALUE, values },           // 持有內容
                             };
 
                             // 異動能否包含自幾
@@ -130,11 +130,11 @@ namespace ADService.Analytical
                                 // 添加是否能夠新增或移除自己以外的項目
                                 protocolAttributeFlags |= isEditable ? ProtocolAttributeFlags.EDITABLE : ProtocolAttributeFlags.NONE;
                                 // 添加異動項目處理類型
-                                dictionaryProtocolWithDetailInside.Add(InvokeCondition.RECEIVEDTYPE, typeof(string).Name);
+                                dictionaryProtocolWithDetailInside.Add(ADInvokeCondition.RECEIVEDTYPE, typeof(string).Name);
                             }
 
                             // 新增屬性描述
-                            invokeCondition = new InvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside);
+                            invokeCondition = new ADInvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside);
                         }
                         break;
                     #endregion
@@ -157,17 +157,17 @@ namespace ADService.Analytical
                             ValueDescription description = new ValueDescription(typeof(LDAPRelationship).Name, values.Length, true);
                             // 宣告持有內容
                             Dictionary<string, object> dictionaryProtocolWithDetailInside = new Dictionary<string, object> {
-                                { InvokeCondition.STOREDTYPE, description }, // 持有內容描述
-                                { InvokeCondition.VALUE, values },           // 持有內容
+                                { ADInvokeCondition.STOREDTYPE, description }, // 持有內容描述
+                                { ADInvokeCondition.VALUE, values },           // 持有內容
                             };
 
                             // 增加可以編譯
                             protocolAttributeFlags |= ProtocolAttributeFlags.EDITABLE;
                             // 異動時應提供的資料類型
-                            dictionaryProtocolWithDetailInside.Add(InvokeCondition.RECEIVEDTYPE, typeof(string).Name);
+                            dictionaryProtocolWithDetailInside.Add(ADInvokeCondition.RECEIVEDTYPE, typeof(string).Name);
 
                             // 新增屬性描述: 
-                            invokeCondition = new InvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside);
+                            invokeCondition = new ADInvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside);
                         }
                         break;
                     #endregion
@@ -186,10 +186,10 @@ namespace ADService.Analytical
                             ProtocolAttributeFlags protocolAttributeFlags = ProtocolAttributeFlags.HASVALUE | ProtocolAttributeFlags.ISFLAGS | ProtocolAttributeFlags.COMBINE;
                             // 宣告持有內容: 由於宣告為字串類型, 所以儲存與修改時需求的都會是字串
                             Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object>() {
-                                { InvokeCondition.STOREDTYPE, new ValueDescription(typeEnum.Name) }, // 持有內容描述
-                                { InvokeCondition.VALUE, accountControlProtocols },            // 持有內容
-                                { InvokeCondition.COMBINETAG, Methods.CT_USERACCOUNTCONTROL }, // 與其他持有此整合旗標的物件視為同一區塊作處理
-                                { InvokeCondition.FLAGMASK, ACOUNTCONTROL_MASK },              // 提供陳列用的遮罩
+                                { ADInvokeCondition.STOREDTYPE, new ValueDescription(typeEnum.Name) }, // 持有內容描述
+                                { ADInvokeCondition.VALUE, accountControlProtocols },            // 持有內容
+                                { ADInvokeCondition.COMBINETAG, Methods.CT_USERACCOUNTCONTROL }, // 與其他持有此整合旗標的物件視為同一區塊作處理
+                                { ADInvokeCondition.FLAGMASK, ACOUNTCONTROL_MASK },              // 提供陳列用的遮罩
                             };
 
                             // 若可以編譯
@@ -198,11 +198,11 @@ namespace ADService.Analytical
                                 // 增加可以編譯
                                 protocolAttributeFlags |= ProtocolAttributeFlags.EDITABLE;
                                 // 異動時應提供的資料類型
-                                dictionaryProtocolWithDetail.Add(InvokeCondition.RECEIVEDTYPE, typeEnum.Name);
+                                dictionaryProtocolWithDetail.Add(ADInvokeCondition.RECEIVEDTYPE, typeEnum.Name);
                             }
 
                             // 新增屬性描述: 
-                            invokeCondition = new InvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetail);
+                            invokeCondition = new ADInvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetail);
                         }
                         break;
                     #endregion
@@ -224,10 +224,10 @@ namespace ADService.Analytical
                             ProtocolAttributeFlags protocolAttributeFlags = ProtocolAttributeFlags.HASVALUE | ProtocolAttributeFlags.ISFLAGS | ProtocolAttributeFlags.COMBINE;
                             // 宣告持有內容: 由於宣告為字串類型, 所以儲存與修改時需求的都會是字串
                             Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object>() {
-                                { InvokeCondition.STOREDTYPE, new ValueDescription(typeEnum.Name) }, // 持有內容描述
-                                { InvokeCondition.VALUE, accountControlProtocols },                   // 持有內容
-                                { InvokeCondition.COMBINETAG, Methods.CT_USERACCOUNTCONTROL },        // 與其他持有此整合旗標的物件視為同一區塊作處理
-                                { InvokeCondition.FLAGMASK, AccountControlProtocols.PWD_CHANGE_NEXTLOGON }, // 提供陳列用的遮罩
+                                { ADInvokeCondition.STOREDTYPE, new ValueDescription(typeEnum.Name) }, // 持有內容描述
+                                { ADInvokeCondition.VALUE, accountControlProtocols },                   // 持有內容
+                                { ADInvokeCondition.COMBINETAG, Methods.CT_USERACCOUNTCONTROL },        // 與其他持有此整合旗標的物件視為同一區塊作處理
+                                { ADInvokeCondition.FLAGMASK, AccountControlProtocols.PWD_CHANGE_NEXTLOGON }, // 提供陳列用的遮罩
                             };
 
                             // 若可以編譯
@@ -236,11 +236,11 @@ namespace ADService.Analytical
                                 // 增加可以編譯
                                 protocolAttributeFlags |= ProtocolAttributeFlags.EDITABLE;
                                 // 異動時應提供的資料類型
-                                dictionaryProtocolWithDetail.Add(InvokeCondition.RECEIVEDTYPE, typeEnum.Name);
+                                dictionaryProtocolWithDetail.Add(ADInvokeCondition.RECEIVEDTYPE, typeEnum.Name);
                             }
 
                             // 新增屬性描述: 
-                            invokeCondition = new InvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetail);
+                            invokeCondition = new ADInvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetail);
                         }
                         break;
                     #endregion
@@ -263,10 +263,10 @@ namespace ADService.Analytical
                             ProtocolAttributeFlags protocolAttributeFlags = ProtocolAttributeFlags.HASVALUE | ProtocolAttributeFlags.ISFLAGS | ProtocolAttributeFlags.COMBINE;
                             // 宣告持有內容: 由於宣告為字串類型, 所以儲存與修改時需求的都會是字串
                             Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object>() {
-                                { InvokeCondition.STOREDTYPE, new ValueDescription(typeEnum.Name)  }, // 持有內容描述
-                                { InvokeCondition.VALUE, accountControlProtocols },            // 持有內容
-                                { InvokeCondition.COMBINETAG, Methods.CT_USERACCOUNTCONTROL }, // 與其他持有此整合旗標的物件視為同一區塊作處理
-                                { InvokeCondition.FLAGMASK, ENCRYPT_PROTOCOLMASK },            // 提供陳列用的遮罩
+                                { ADInvokeCondition.STOREDTYPE, new ValueDescription(typeEnum.Name)  }, // 持有內容描述
+                                { ADInvokeCondition.VALUE, accountControlProtocols },            // 持有內容
+                                { ADInvokeCondition.COMBINETAG, Methods.CT_USERACCOUNTCONTROL }, // 與其他持有此整合旗標的物件視為同一區塊作處理
+                                { ADInvokeCondition.FLAGMASK, ENCRYPT_PROTOCOLMASK },            // 提供陳列用的遮罩
                             };
 
                             // 若可以編譯
@@ -275,11 +275,11 @@ namespace ADService.Analytical
                                 // 增加可以編譯
                                 protocolAttributeFlags |= ProtocolAttributeFlags.EDITABLE;
                                 // 異動時應提供的資料類型
-                                dictionaryProtocolWithDetail.Add(InvokeCondition.RECEIVEDTYPE, typeEnum.Name);
+                                dictionaryProtocolWithDetail.Add(ADInvokeCondition.RECEIVEDTYPE, typeEnum.Name);
                             }
 
                             // 新增屬性描述: 
-                            invokeCondition = new InvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetail);
+                            invokeCondition = new ADInvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetail);
                         }
                         break;
                     #endregion
@@ -296,8 +296,8 @@ namespace ADService.Analytical
                             ProtocolAttributeFlags protocolAttributeFlags = ProtocolAttributeFlags.HASVALUE;
                             // 宣告持有內容: 由於宣告為字串類型, 所以儲存與修改時需求的都會是字串
                             Dictionary<string, object> dictionaryProtocolWithDetailInside = new Dictionary<string, object>() {
-                                { InvokeCondition.STOREDTYPE, new ValueDescription(typeString.Name) }, // 持有內容描述
-                                { InvokeCondition.VALUE, storedValue ?? string.Empty },                 // 持有內容
+                                { ADInvokeCondition.STOREDTYPE, new ValueDescription(typeString.Name) }, // 持有內容描述
+                                { ADInvokeCondition.VALUE, storedValue ?? string.Empty },                 // 持有內容
                             };
 
                             // 必須根據能否寫入決定是否添加異動旗標
@@ -306,11 +306,11 @@ namespace ADService.Analytical
                                 // 增加可以編譯
                                 protocolAttributeFlags |= ProtocolAttributeFlags.EDITABLE;
                                 // 異動時應提供的資料類型
-                                dictionaryProtocolWithDetailInside.Add(InvokeCondition.RECEIVEDTYPE, typeString.Name);
+                                dictionaryProtocolWithDetailInside.Add(ADInvokeCondition.RECEIVEDTYPE, typeString.Name);
                             }
 
                             // 新增屬性描述: 
-                            invokeCondition = new InvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside);
+                            invokeCondition = new ADInvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside);
                         }
                         break;
                         #endregion
@@ -340,11 +340,11 @@ namespace ADService.Analytical
             const ProtocolAttributeFlags commonFlags = ProtocolAttributeFlags.HASVALUE;
             // 需求內容: 採用封盒動作
             Dictionary<string, object> dictionaryProtocolWithDetailOutside = new Dictionary<string, object> {
-                { InvokeCondition.ELEMENTS, dictionaryAttributesNameWithCondition }
+                { ADInvokeCondition.ELEMENTS, dictionaryAttributesNameWithCondition }
             };
 
             // 持有項目時就外部就能夠異動
-            return (new InvokeCondition(commonFlags, dictionaryProtocolWithDetailOutside), string.Empty);
+            return (new ADInvokeCondition(commonFlags, dictionaryProtocolWithDetailOutside), string.Empty);
         }
 
         internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)

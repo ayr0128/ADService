@@ -28,7 +28,7 @@ namespace ADServiceForm
         /// </summary>
         /// <param name="certification">必須提供的動作證書</param>
         /// <param name="invokeCondition">建構用條件</param>
-        public FormCreateGroup(in LDAPCertification certification, InvokeCondition invokeCondition)
+        public FormCreateGroup(in LDAPCertification certification, ADInvokeCondition invokeCondition)
         {
             InitializeComponent();
 
@@ -37,7 +37,7 @@ namespace ADServiceForm
             // 設置證書
             Certification = certification;
             // 此時必定持有可編譯資料的結構描述
-            string receivedDescription = invokeCondition.CastSingleValue<string>(InvokeCondition.RECEIVEDTYPE);
+            string receivedDescription = invokeCondition.CastSingleValue<string>(ADInvokeCondition.RECEIVEDTYPE);
             // 創建群組時應能夠收到可編譯旗標
             bool isEditable = invokeCondition.MaskFlags(ProtocolAttributeFlags.EDITABLE) != ProtocolAttributeFlags.NONE;
             // 只有符合預期的狀況下才會創建, 否則會提供空物件

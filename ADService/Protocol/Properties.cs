@@ -6,6 +6,23 @@
     public static class Properties
     {
         /// <summary>
+        /// 內部物件的展示名稱
+        /// </summary>
+        public const string C__SCHEMALDAPDISPLAYNAME = "lDAPDisplayName";
+        /// <summary>
+        /// 內部物件的GUID
+        /// </summary>
+        public const string C_SCHEMA_SCHEMAGUID = "schemaIDGUID";
+        /// <summary>
+        /// 物件預設入口
+        /// </summary>
+        public const string C_SCHEMA_DEFAULTCATEGORY = "defaultObjectCategory";
+        /// <summary>
+        /// 何者的子物件
+        /// </summary>
+        public const string C_SCHEMA_SUBCLASSOF = "subClassOf";
+
+        /// <summary>
         /// 樹系路徑: 隨時可能被異動
         /// </summary>
         public const string C_DISTINGUISHEDNAME = "distinguishedName";

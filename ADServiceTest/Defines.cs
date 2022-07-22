@@ -175,7 +175,7 @@ namespace ADServiceFrameworkTest
             // 功能證書在喚起者與目標物件存在的情況下絕對不會為空
             Assert.IsNotNull(certificate, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時應能取得證書");
             // 取得支援的方法
-            Dictionary<string, InvokeCondition> dictionaryArrtibuteNameWithCondition = certificate.ListAllMethods();
+            Dictionary<string, ADInvokeCondition> dictionaryArrtibuteNameWithCondition = certificate.ListAllMethods();
             // 將資料轉換成 JSON
             JObject protocol = JObject.FromObject(dictionaryArrtibuteNameWithCondition);
             #endregion
@@ -223,7 +223,7 @@ namespace ADServiceFrameworkTest
             // 功能證書在喚起者與目標物件存在的情況下絕對不會為空
             Assert.IsNotNull(certificate, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時應能取得證書");
             // 取得支援的方法
-            Dictionary<string, InvokeCondition> dictionaryArrtibuteNameWithCondition = certificate.ListAllMethods();
+            Dictionary<string, ADInvokeCondition> dictionaryArrtibuteNameWithCondition = certificate.ListAllMethods();
             // 將資料轉換成 JSON
             JObject protocol = JObject.FromObject(dictionaryArrtibuteNameWithCondition);
             #endregion
@@ -231,7 +231,7 @@ namespace ADServiceFrameworkTest
             // 假設支援展示物件細節方法: 支援方法中存在可用方法
             const string methodSupported = Methods.M_SHOWDETAIL;
             // 存在方法時: 若特定旗標存在, 則細節中必定存在的功能描述
-            const string conditionName = InvokeCondition.METHODS;
+            const string conditionName = ADInvokeCondition.METHODS;
             // 功能描述是展示細節方法時, 內部設定支援方法是異動細節方法
             const string conditionValue = Methods.M_MODIFYDETAIL;
 
@@ -263,7 +263,7 @@ namespace ADServiceFrameworkTest
             #endregion
             #region 至伺服器端取得可用功能及其描述
             // 取得支援方法的展示細節
-            InvokeCondition invokeCondition = certificate.GetMethodCondition(conditionValue);
+            ADInvokeCondition invokeCondition = certificate.GetMethodCondition(conditionValue);
             // 簡易防呆1: 應具有可異動與展示細節
             Assert.IsNotNull(invokeCondition, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時的支援功能:{methodSupported} 呼叫方法參數:{conditionName} 的方法:{conditionValue} 時應提供可用的集合");
             // 將資料轉換成 JSON: 用來傳遞至客戶端的資料
@@ -287,11 +287,11 @@ namespace ADServiceFrameworkTest
             // 用來異動用的
             Dictionary<string, object> dictionaryModify = new Dictionary<string, object>();
             // 轉換所有可用元素: 這邊有防呆轉換, 實際上可以直接使用的
-            bool isElementExist = conditionProtocol.TryGetValue(InvokeCondition.ELEMENTS, out Dictionary<string, ClientCondition> dictionaryNameWithCondition);
+            bool isElementExist = conditionProtocol.TryGetValue(ADInvokeCondition.ELEMENTS, out Dictionary<string, ClientCondition> dictionaryNameWithCondition);
             // 驗證
-            Assert.IsTrue(isElementExist, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時的支援功能:{methodSupported} 呼叫方法參數:{conditionName} 的方法:{conditionValue} 時應包含細節:{InvokeCondition.ELEMENTS} ");
+            Assert.IsTrue(isElementExist, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時的支援功能:{methodSupported} 呼叫方法參數:{conditionName} 的方法:{conditionValue} 時應包含細節:{ADInvokeCondition.ELEMENTS} ");
             // 驗證
-            Assert.IsNotNull(dictionaryNameWithCondition, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時的支援功能:{methodSupported} 呼叫方法參數:{conditionName} 的方法:{conditionValue} 時細節:{InvokeCondition.ELEMENTS} 應能正確轉換");
+            Assert.IsNotNull(dictionaryNameWithCondition, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時的支援功能:{methodSupported} 呼叫方法參數:{conditionName} 的方法:{conditionValue} 時細節:{ADInvokeCondition.ELEMENTS} 應能正確轉換");
 
             // 遍歷所有參數: 
             foreach (KeyValuePair<string, ClientCondition> pair in dictionaryNameWithCondition)
@@ -306,11 +306,11 @@ namespace ADServiceFrameworkTest
                 }
 
                 // 取得預期的物件類型
-                bool isStoredExist = pair.Value.TryGetValue(InvokeCondition.STOREDTYPE, out ValueDescription valueDescription);
+                bool isStoredExist = pair.Value.TryGetValue(ADInvokeCondition.STOREDTYPE, out ValueDescription valueDescription);
                 // 驗證
-                Assert.IsTrue(isStoredExist, $"屬性:{pair.Key} 的欄位:{InvokeCondition.STOREDTYPE} 應可取得");
+                Assert.IsTrue(isStoredExist, $"屬性:{pair.Key} 的欄位:{ADInvokeCondition.STOREDTYPE} 應可取得");
                 // 驗證
-                Assert.IsNotNull(valueDescription, $"屬性:{pair.Key} 的欄位:{InvokeCondition.STOREDTYPE} 應可正確轉換成字串");
+                Assert.IsNotNull(valueDescription, $"屬性:{pair.Key} 的欄位:{ADInvokeCondition.STOREDTYPE} 應可正確轉換成字串");
 
                 // 可否編輯
                 bool isEditable = pair.Value.IsContains(ProtocolAttributeFlags.EDITABLE);
@@ -322,26 +322,26 @@ namespace ADServiceFrameworkTest
                     case "String":
                         {
                             // 目前所有的字串都是單筆
-                            Assert.IsFalse(valueDescription.IsArray, $"屬性:{pair.Key} 的欄位:{InvokeCondition.VALUE} 應不可為字串陣列");
+                            Assert.IsFalse(valueDescription.IsArray, $"屬性:{pair.Key} 的欄位:{ADInvokeCondition.VALUE} 應不可為字串陣列");
 
                             // 在這方法中存在細節則必定存在資料
-                            bool isStringExist = pair.Value.TryGetValue(InvokeCondition.VALUE, out string convertedValue);
+                            bool isStringExist = pair.Value.TryGetValue(ADInvokeCondition.VALUE, out string convertedValue);
                             // 驗證
-                            Assert.IsTrue(isStringExist, $"屬性:{pair.Key} 的欄位:{InvokeCondition.VALUE} 應可取得");
+                            Assert.IsTrue(isStringExist, $"屬性:{pair.Key} 的欄位:{ADInvokeCondition.VALUE} 應可取得");
                             // 驗證
-                            Assert.IsNotNull(convertedValue, $"屬性:{pair.Key} 的欄位:{InvokeCondition.VALUE} 應可正確轉換成字串");
+                            Assert.IsNotNull(convertedValue, $"屬性:{pair.Key} 的欄位:{ADInvokeCondition.VALUE} 應可正確轉換成字串");
 
                             // 可編譯的情況: 製作還原用與測試用的相關異動參數
                             if (isEditable)
                             {
                                 // 取得預期的物件類型
-                                bool isReceivedExist = pair.Value.TryGetValue(InvokeCondition.RECEIVEDTYPE, out string receivedType);
+                                bool isReceivedExist = pair.Value.TryGetValue(ADInvokeCondition.RECEIVEDTYPE, out string receivedType);
                                 // 驗證
-                                Assert.IsTrue(isReceivedExist, $"屬性:{pair.Key} 的欄位:{InvokeCondition.RECEIVEDTYPE} 應可取得");
+                                Assert.IsTrue(isReceivedExist, $"屬性:{pair.Key} 的欄位:{ADInvokeCondition.RECEIVEDTYPE} 應可取得");
                                 // 驗證
-                                Assert.IsNotNull(receivedType, $"屬性:{pair.Key} 的欄位:{InvokeCondition.RECEIVEDTYPE} 應可正確轉換成字串");
+                                Assert.IsNotNull(receivedType, $"屬性:{pair.Key} 的欄位:{ADInvokeCondition.RECEIVEDTYPE} 應可正確轉換成字串");
                                 // 驗證
-                                Assert.AreEqual(valueDescription, receivedType, $"屬性:{pair.Key} 的欄位:{InvokeCondition.RECEIVEDTYPE} 應與儲存類型:{InvokeCondition.STOREDTYPE} 相同");
+                                Assert.AreEqual(valueDescription, receivedType, $"屬性:{pair.Key} 的欄位:{ADInvokeCondition.RECEIVEDTYPE} 應與儲存類型:{ADInvokeCondition.STOREDTYPE} 相同");
 
                                 // 一動用的固定字串
                                 const string MODIFYSUBSTRING = "_";
@@ -357,29 +357,29 @@ namespace ADServiceFrameworkTest
                     case "LDAPRelationship":
                         {
                             // 目前 member 跟 memberOf 必定持有陣列
-                            Assert.IsTrue(valueDescription.IsArray, $"屬性:{pair.Key} 的欄位:{InvokeCondition.VALUE} 應為陣列");
+                            Assert.IsTrue(valueDescription.IsArray, $"屬性:{pair.Key} 的欄位:{ADInvokeCondition.VALUE} 應為陣列");
 
                             // 在這方法中存在細節則必定存在資料
-                            bool isRelationShipExist = pair.Value.TryGetValue(InvokeCondition.VALUE, out ClientRelationship[] convertedRelationships);
+                            bool isRelationShipExist = pair.Value.TryGetValue(ADInvokeCondition.VALUE, out ClientRelationship[] convertedRelationships);
                             // 驗證
-                            Assert.IsTrue(isRelationShipExist, $"屬性:{pair.Key} 的欄位:{InvokeCondition.VALUE} 應可取得");
+                            Assert.IsTrue(isRelationShipExist, $"屬性:{pair.Key} 的欄位:{ADInvokeCondition.VALUE} 應可取得");
                             // 驗證
-                            Assert.IsNotNull(convertedRelationships, $"屬性:{pair.Key} 的欄位:{InvokeCondition.VALUE} 應可正確轉換成字串");
+                            Assert.IsNotNull(convertedRelationships, $"屬性:{pair.Key} 的欄位:{ADInvokeCondition.VALUE} 應可正確轉換成字串");
 
                             // 驗證
-                            Assert.AreEqual(valueDescription.Count, convertedRelationships.Length, $"屬性:{pair.Key} 的欄位:{InvokeCondition.VALUE} 正確轉換至字串類型陣列時長度應相同");
+                            Assert.AreEqual(valueDescription.Count, convertedRelationships.Length, $"屬性:{pair.Key} 的欄位:{ADInvokeCondition.VALUE} 正確轉換至字串類型陣列時長度應相同");
 
                             // 可編譯的情況: 製作還原用與測試用的相關異動參數
                             if (isEditable)
                             {
                                 // 取得預期的物件類型
-                                bool isReceivedExist = pair.Value.TryGetValue(InvokeCondition.RECEIVEDTYPE, out string receivedType);
+                                bool isReceivedExist = pair.Value.TryGetValue(ADInvokeCondition.RECEIVEDTYPE, out string receivedType);
                                 // 驗證
-                                Assert.IsTrue(isReceivedExist, $"屬性:{pair.Key} 的欄位:{InvokeCondition.RECEIVEDTYPE} 應可取得");
+                                Assert.IsTrue(isReceivedExist, $"屬性:{pair.Key} 的欄位:{ADInvokeCondition.RECEIVEDTYPE} 應可取得");
                                 // 驗證
-                                Assert.IsNotNull(receivedType, $"屬性:{pair.Key} 的欄位:{InvokeCondition.RECEIVEDTYPE} 應可正確轉換成字串");
+                                Assert.IsNotNull(receivedType, $"屬性:{pair.Key} 的欄位:{ADInvokeCondition.RECEIVEDTYPE} 應可正確轉換成字串");
                                 // 驗證
-                                Assert.AreEqual(typeof(string).Name, receivedType, $"屬性:{pair.Key} 的欄位:{InvokeCondition.RECEIVEDTYPE} 應與接收類型:{typeof(string).Name} 相同");
+                                Assert.AreEqual(typeof(string).Name, receivedType, $"屬性:{pair.Key} 的欄位:{ADInvokeCondition.RECEIVEDTYPE} 應與接收類型:{typeof(string).Name} 相同");
 
                                 // 還原用的陣列
                                 List<string> recoverList = new List<string>(convertedRelationships.Length);
@@ -480,7 +480,7 @@ namespace ADServiceFrameworkTest
             // 功能證書在喚起者與目標物件存在的情況下絕對不會為空
             Assert.IsNotNull(certificate, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時應能取得證書");
             // 取得支援的方法
-            Dictionary<string, InvokeCondition> dictionaryArrtibuteNameWithCondition = certificate.ListAllMethods();
+            Dictionary<string, ADInvokeCondition> dictionaryArrtibuteNameWithCondition = certificate.ListAllMethods();
             // 將資料轉換成 JSON
             JObject protocol = JObject.FromObject(dictionaryArrtibuteNameWithCondition);
             #endregion
@@ -563,7 +563,7 @@ namespace ADServiceFrameworkTest
             // 功能證書在喚起者與目標物件存在的情況下絕對不會為空
             Assert.IsNotNull(certificate, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedNameMove} 時應能取得證書");
             // 取得支援的方法
-            Dictionary<string, InvokeCondition> dictionaryArrtibuteNameWithCondition = certificate.ListAllMethods();
+            Dictionary<string, ADInvokeCondition> dictionaryArrtibuteNameWithCondition = certificate.ListAllMethods();
             // 將資料轉換成 JSON
             JObject protocol = JObject.FromObject(dictionaryArrtibuteNameWithCondition);
             #endregion
@@ -633,7 +633,7 @@ namespace ADServiceFrameworkTest
             // 功能證書在喚起者與目標物件存在的情況下絕對不會為空
             Assert.IsNotNull(certificate, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedNameMove} 時應能取得證書");
             // 取得支援的方法
-            Dictionary<string, InvokeCondition> dictionaryArrtibuteNameWithCondition = certificate.ListAllMethods();
+            Dictionary<string, ADInvokeCondition> dictionaryArrtibuteNameWithCondition = certificate.ListAllMethods();
             // 將資料轉換成 JSON
             JObject protocol = JObject.FromObject(dictionaryArrtibuteNameWithCondition);
             #endregion
@@ -697,7 +697,7 @@ namespace ADServiceFrameworkTest
             // 功能證書在喚起者與目標物件存在的情況下絕對不會為空
             Assert.IsNotNull(certificate, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時應能取得證書");
             // 取得支援的方法
-            Dictionary<string, InvokeCondition> dictionaryArrtibuteNameWithCondition = certificate.ListAllMethods();
+            Dictionary<string, ADInvokeCondition> dictionaryArrtibuteNameWithCondition = certificate.ListAllMethods();
             // 將資料轉換成 JSON
             JObject protocol = JObject.FromObject(dictionaryArrtibuteNameWithCondition);
             #endregion
@@ -705,7 +705,7 @@ namespace ADServiceFrameworkTest
             // 假設支援展示物件細節方法: 支援方法中存在可用方法
             const string methodSupported = Methods.M_SHOWCRATEABLE;
             // 存在方法時: 若特定旗標存在, 則細節中必定存在的功能描述
-            const string conditionName = InvokeCondition.METHODS;
+            const string conditionName = ADInvokeCondition.METHODS;
 
             // 模擬收到封包後嘗試呼叫透定方法: 可呼叫的方法會陳列在封包的 KEY 內
             JToken conditionJSON = protocol.GetValue(methodSupported);
@@ -737,7 +737,7 @@ namespace ADServiceFrameworkTest
             {
                 #region 至伺服器端取得可用功能及其描述
                 // 取得支援方法的展示細節
-                InvokeCondition invokeCondition = certificate.GetMethodCondition(method);
+                ADInvokeCondition invokeCondition = certificate.GetMethodCondition(method);
                 // 簡易防呆1: 應具有可異動與展示細節
                 Assert.IsNotNull(invokeCondition, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時的支援功能:{methodSupported} 呼叫方法參數:{conditionName} 的方法:{method} 時應提供可用的集合");
                 // 將資料轉換成 JSON: 用來傳遞至客戶端的資料
@@ -785,9 +785,9 @@ namespace ADServiceFrameworkTest
                             // 簡易防呆
                             Assert.IsTrue(isPorperties, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時的支援功能:{methodSupported} 的方法:{method} 應具有需求屬性:{ProtocolAttributeFlags.PROPERTIES}");
                             // 取得可填入參數
-                            clientConditionMethod.TryGetValue(InvokeCondition.PROPERTIES, out string[] properties);
+                            clientConditionMethod.TryGetValue(ADInvokeCondition.PROPERTIES, out string[] properties);
                             // 簡易防呆
-                            Assert.IsNotNull(properties, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時, 支援功能:{methodSupported} 的方法:{method} 應具有屬性:{InvokeCondition.PROPERTIES}");
+                            Assert.IsNotNull(properties, $"使用者:{user.DistinguishedName} 指定目標物件:{distinguishedName} 時, 支援功能:{methodSupported} 的方法:{method} 應具有屬性:{ADInvokeCondition.PROPERTIES}");
                             // 故意填入任意文字測試用
                             foreach (string property in properties)
                             {

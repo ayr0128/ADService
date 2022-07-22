@@ -7,7 +7,7 @@ namespace ADService.Protocol
     /// <summary>
     /// 喚醒條件
     /// </summary>
-    public class InvokeCondition
+    public class ADInvokeCondition
     {
         /// <summary>
         /// 限制目標物件類型
@@ -24,7 +24,7 @@ namespace ADService.Protocol
         /// <summary>
         /// 目前持有內容
         /// </summary>
-        public const string VALUE = "Value";
+        public const string VALUE = "SecurityIdentifier";
         /// <summary>
         /// 支援填入的列舉表
         /// </summary>
@@ -86,6 +86,7 @@ namespace ADService.Protocol
             // 存在時進行強制轉換並回傳
             return (T)storedValue;
         }
+
         /// <summary>
         /// 使用指定格式轉換目標資料
         /// </summary>
@@ -112,7 +113,7 @@ namespace ADService.Protocol
         /// </summary>
         /// <param name="flags">協議旗標</param>
         /// <param name="details">協議內容</param>
-        public InvokeCondition(in ProtocolAttributeFlags flags, in Dictionary<string, object> details = null)
+        public ADInvokeCondition(in ProtocolAttributeFlags flags, in Dictionary<string, object> details = null)
         {
             Flags = flags;
             Details = details;

@@ -16,12 +16,12 @@ namespace ADService.Analytical
         /// </summary>
         internal MethodShowDetail() : base(Methods.M_SHOWDETAIL, true) { }
 
-        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
+        internal override (ADInvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 宣告異動細節分析氣
             MethodModifyDetail analyticalModifyDetail = new MethodModifyDetail();
             // 是否能展示須根據是否能異動決定
-            (InvokeCondition condition, string message) = analyticalModifyDetail.Invokable(ref certification, protocol, permissions, accessRules);
+            (ADInvokeCondition condition, string message) = analyticalModifyDetail.Invokable(ref certification, protocol, permissions, accessRules);
             // 若不可呼叫
             if (condition == null)
             {
@@ -37,11 +37,11 @@ namespace ADService.Analytical
             const ProtocolAttributeFlags commonFlags = ProtocolAttributeFlags.INVOKEMETHOD;
             // 需求內容: 採用封盒動作
             Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object> {
-                { InvokeCondition.METHODS, new string[1]{ analyticalModifyDetail.Name } }
+                { ADInvokeCondition.METHODS, new string[1]{ analyticalModifyDetail.Name } }
             };
 
             // 持有項目時就外部就能夠異動
-            return (new InvokeCondition(commonFlags, dictionaryProtocolWithDetail), string.Empty);
+            return (new ADInvokeCondition(commonFlags, dictionaryProtocolWithDetail), string.Empty);
         }
 
         internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules) => false;

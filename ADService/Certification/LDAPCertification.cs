@@ -68,7 +68,7 @@ namespace ADService.Certification
         }
 
         /// <summary>
-        /// 透過指定的證書提供可用方法與其動作協議描述, 如何使用需解析 <see cref="InvokeCondition">協議描述</see>, 目前支援下述項目
+        /// 透過指定的證書提供可用方法與其動作協議描述, 如何使用需解析 <see cref="ADInvokeCondition">協議描述</see>, 目前支援下述項目
         /// <list type="table|number">
         ///    <item> <see cref="Methods.M_RENAME">重新命名</see> </item>
         ///    <item> <see cref="Methods.M_MOVETO">移動至</see> </item>
@@ -79,7 +79,7 @@ namespace ADService.Certification
         /// </list>
         /// </summary>
         /// <returns>可用方法與預期接收參數, 格式如右 Dictionary '功能, 協議描述' </returns>
-        public Dictionary<string, InvokeCondition> ListAllMethods()
+        public Dictionary<string, ADInvokeCondition> ListAllMethods()
         {
             // 宣告資料異動證書: 使用 Finally 進行釋放
             IDisposable iRelease = null;
@@ -96,7 +96,7 @@ namespace ADService.Certification
                 // 整合所有可用全縣權限狀態
                 LDAPAccessRules accessRules = certification.CreateAccessRules(Destination);
                 // 最多回傳的長度是所有的項目都支援
-                Dictionary<string, InvokeCondition> dictionaryAttributeNameWithProtocol = new Dictionary<string, InvokeCondition>(dictionaryMethodWithAnalytical.Count);
+                Dictionary<string, ADInvokeCondition> dictionaryAttributeNameWithProtocol = new Dictionary<string, ADInvokeCondition>(dictionaryMethodWithAnalytical.Count);
                 // 遍歷權限並檢查是否可以喚醒
                 foreach (Method analyticalRights in dictionaryMethodWithAnalytical.Values)
                 {
@@ -108,7 +108,7 @@ namespace ADService.Certification
                     }
 
                     // 取得結果
-                    (InvokeCondition condition, _) = analyticalRights.Invokable(ref certification, null, permissions, accessRules);
+                    (ADInvokeCondition condition, _) = analyticalRights.Invokable(ref certification, null, permissions, accessRules);
                     // 無法啟動代表無法呼叫
                     if (condition == null)
                     {
@@ -142,7 +142,7 @@ namespace ADService.Certification
         }
 
         /// <summary>
-        /// 透過指定的證書與可用方法取得對應協定描述, 如何使用需解析 <see cref="InvokeCondition">協議描述</see>, 目前支援下述項目
+        /// 透過指定的證書與可用方法取得對應協定描述, 如何使用需解析 <see cref="ADInvokeCondition">協議描述</see>, 目前支援下述項目
         /// <list type="table|number">
         ///    <item> <see cref="Methods.M_MODIFYDETAIL">異動細節</see> </item>
         /// </list>
@@ -150,7 +150,7 @@ namespace ADService.Certification
         /// <param name="attributeName">目標屬性</param>
         /// <param name="protocol">喚醒時額外提供的協定資料, 預設為 null</param>
         /// <returns>預期接收協議描述</returns>
-        public InvokeCondition GetMethodCondition(in string attributeName, in JToken protocol = null)
+        public ADInvokeCondition GetMethodCondition(in string attributeName, in JToken protocol = null)
         {
             // 取得目標屬性分析
             if (!dictionaryMethodWithAnalytical.TryGetValue(attributeName, out Method analytical))
@@ -181,7 +181,7 @@ namespace ADService.Certification
                 // 整理繼承關係完成的所有全縣
                 LDAPAccessRules accessRules = certification.CreateAccessRules(Destination);
                 // 取得結果
-                (InvokeCondition condition, _) = analytical.Invokable(ref certification, protocol, permissions, accessRules);
+                (ADInvokeCondition condition, _) = analytical.Invokable(ref certification, protocol, permissions, accessRules);
                 // 無法啟動代表無法呼叫
                 if (condition == null)
                 {

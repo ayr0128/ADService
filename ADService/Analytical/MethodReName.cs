@@ -19,7 +19,7 @@ namespace ADService.Analytical
         /// </summary>
         internal MethodReName() : base(Methods.M_RENAME) { }
 
-        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
+        internal override (ADInvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 根目錄不應重新命名
             if (!permissions.Destination.GetOrganizationUnit(out _))
@@ -82,11 +82,11 @@ namespace ADService.Analytical
             // 宣告持有內容: 由於宣告為字串類型, 所以儲存與修改時需求的都會是字串
             Dictionary<string, object> dictionaryProtocolWithDetailInside = new Dictionary<string, object>()
             {
-                { InvokeCondition.RECEIVEDTYPE, typeString.Name }, // 預期內容描述
+                { ADInvokeCondition.RECEIVEDTYPE, typeString.Name }, // 預期內容描述
             };
 
             // 只要有寫入權限就可以進行修改: 重新命名動作考慮提供正則表達式進行額外限制
-            return (new InvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside), string.Empty);
+            return (new ADInvokeCondition(protocolAttributeFlags, dictionaryProtocolWithDetailInside), string.Empty);
         }
 
         internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)

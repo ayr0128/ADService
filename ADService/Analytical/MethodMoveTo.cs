@@ -20,7 +20,7 @@ namespace ADService.Analytical
         /// </summary>
         internal MethodMoveTo() : base(Methods.M_MOVETO) { }
 
-        internal override (InvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
+        internal override (ADInvokeCondition, string) Invokable(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)
         {
             // 無法取得父層的組織單位時, 代表為跟目錄
             if (!permissions.Destination.GetOrganizationUnit(out string organizationUnitDN))
@@ -48,7 +48,7 @@ namespace ADService.Analytical
             // 宣告重新命名分析氣
             MethodReName analyticalReName = new MethodReName();
             // 檢查是否可以喚醒重新命名: 只需要查看是否成功
-            (InvokeCondition condition, string message) = analyticalReName.Invokable(ref certification, protocol, permissions, accessRules);
+            (ADInvokeCondition condition, string message) = analyticalReName.Invokable(ref certification, protocol, permissions, accessRules);
             // 若不可呼叫
             if (condition == null)
             {
@@ -62,11 +62,11 @@ namespace ADService.Analytical
             ProtocolAttributeFlags commonFlags = ProtocolAttributeFlags.NULLDISABLE | ProtocolAttributeFlags.EDITABLE;
             // 需求內容: 採用封盒動作
             Dictionary<string, object> dictionaryProtocolWithDetail = new Dictionary<string, object> {
-                { InvokeCondition.RECEIVEDTYPE, typeString.Name },
+                { ADInvokeCondition.RECEIVEDTYPE, typeString.Name },
             };
 
             // 對外提供成功必須是組織單位的區分名稱
-            return (new InvokeCondition(commonFlags, dictionaryProtocolWithDetail), string.Empty);
+            return (new ADInvokeCondition(commonFlags, dictionaryProtocolWithDetail), string.Empty);
         }
 
         internal override bool Authenicate(ref CertificationProperties certification, in JToken protocol, in LDAPPermissions permissions, in LDAPAccessRules accessRules)

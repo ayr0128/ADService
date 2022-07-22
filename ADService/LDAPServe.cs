@@ -4,6 +4,7 @@ using ADService.Environments;
 using ADService.Foundation;
 using ADService.Media;
 using ADService.Protocol;
+using ADService.RootDSE;
 using System;
 using System.Collections.Generic;
 using System.DirectoryServices;
@@ -30,6 +31,10 @@ namespace ADService
         /// 此網域伺服器目前被讀取做為暫存參數的所有設定: 有效時間為讀取後五分鐘
         /// </summary>
         private readonly LDAPConfiguration Configuration;
+        /// <summary>
+        /// 測試用
+        /// </summary>
+        private readonly Configurate configurate;
 
         /// <summary>
         /// 儲存預計連線的伺服器位置, 當有連線需求時會使用提供的帳號與密碼進行連線伺服器嘗試取得資料
@@ -50,8 +55,66 @@ namespace ADService
 
             // 初始化入口功能支援結構方法
             Configuration = new LDAPConfiguration(domain, port);
+            configurate = new Configurate(domain, port);
 
             // 備註: 上述會對外丟出例外的各種參數只是提前判斷基礎規則, 如果不能連線仍然會在嘗試與 AD 伺服器溝通時丟出例外錯誤
+        }
+
+        /// <summary>
+        /// 指定伺服器透過指定的使用者帳號與使用者密碼進行登入
+        /// </summary>
+        /// <param name="serve">指定登入伺服器</param>
+        /// <param name="userAccount">使用者帳號</param>
+        /// <param name="userPassword">使用者密碼</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException">提供的參數錯誤</exception>
+        /// <exception cref="LDAPExceptions">有被成功解析的資料, 注意也有可能無法解析提供一個奇怪的錯誤</exception>
+        public static ADLoginUser Authenticate(in LDAPServe serve, in string userAccount, in string userPassword)
+        {
+            // 需要提供登入伺服器
+            if (serve == null)
+            {
+                // 對外丟出 ArgumentException
+                throw new ArgumentException($"伺服器: '{nameof(serve)}' 不得為 Null。", nameof(serve));
+            }
+
+            // 帳號不得為空或全是空白
+            if (string.IsNullOrWhiteSpace(userAccount))
+            {
+                // 對外丟出 ArgumentException
+                throw new ArgumentException($"登入者帳號: '{nameof(userAccount)}' 不得為 Null 或空白字元。", nameof(userAccount));
+            }
+
+            // 密碼不得為空或全是空白 (不允許不用密碼進行登入)
+            if (string.IsNullOrWhiteSpace(userPassword))
+            {
+                // 對外丟出 ArgumentException
+                throw new ArgumentException($"登入者密碼: '{nameof(userPassword)}' 不得為 Null 或空白字元。", nameof(userPassword));
+            }
+
+
+            /* 此處有可能接收到下述例外
+                 - COMException: 伺服器發生問題
+                 - DirectoryServicesCOMException: 使用帳號連線出現問題
+            */
+            try
+            {
+                // 使用帳號密碼進行綁定作業: 由於執行錯誤會直接拋出例外, 所以可以不必進行判斷
+                return ADLoginUser.Bind(serve.configurate, userAccount, userPassword);
+            }
+            // 發生時機: 使用者登入時發現例外錯誤
+            catch (DirectoryServicesCOMException exception)
+            {
+                // 解析例外字串, 並提供例外
+                throw LDAPExceptions.OnNormalException(exception.ExtendedErrorMessage);
+            }
+            // 發生時機: 與伺服器連線時發現錯誤
+            catch (COMException exception)
+            {
+                // 取得錯誤描述, 並提供例外
+                throw LDAPExceptions.OnServeException(exception.Message);
+            }
+            // 沒有 Finally 語句
         }
 
         /// <summary>

@@ -18,7 +18,7 @@ namespace ADService.Environments
         /// <summary>
         /// 將容器類型集合成一組檢查表
         /// </summary>
-        private static HashSet<string> containerHashSet = new HashSet<string>()
+        private readonly static HashSet<string> containerHashSet = new HashSet<string>()
         {
             CLASS_DOMAINDNS,
             CLASS_CONTAINER,
@@ -51,6 +51,10 @@ namespace ADService.Environments
         /// </summary>
         public const string CLASS_PERSON = "user";
         /// <summary>
+        /// 電腦
+        /// </summary>
+        public const string CLASS_COMPUTER = "computer";
+        /// <summary>
         /// 應用程式或功能
         /// </summary>
         public const string CLASS_APTREE = "aptree";
@@ -65,6 +69,7 @@ namespace ADService.Environments
         ///         <item> <term><see cref="CLASS_ORGANIZATIONUNIT">物件類型名稱:組織單位</see></term> 對照 <see cref="CategoryTypes.ORGANIZATION_UNIT">物件類型旗標:組織單位</see> </item>
         ///         <item> <term><see cref="CLASS_FOREIGNSECURITYPRINCIPALS">物件類型名稱:外部安全性主體</see></term> 對照 <see cref="CategoryTypes.FOREIGN_SECURITYPRINCIPALS">物件類型旗標:外部安全性主體</see> </item>
         ///         <item> <term><see cref="CLASS_GROUP">物件類型名稱:群組</see></term> 對照 <see cref="CategoryTypes.GROUP">物件類型旗標:群組</see> </item>
+        ///         <item> <term><see cref="CLASS_COMPUTER">物件類型名稱:電腦</see></term> 對照 <see cref="CategoryTypes.COMPUTER">物件類型旗標:電腦</see> </item>
         ///         <item> <term><see cref="CLASS_PERSON">物件類型名稱:人員</see></term> 對照 <see cref="CategoryTypes.PERSON">物件類型旗標:人員</see> </item>
         ///         <item> <term><see cref="CLASS_APTREE">物件類型名稱:人員</see></term> 對照 <see cref="CategoryTypes.APTREE">物件類型旗標:人員</see> </item>
         ///     </list>
@@ -110,6 +115,7 @@ namespace ADService.Environments
         ///         <item> <see cref="CLASS_ORGANIZATIONUNIT">物件類型名稱:組織單位</see> </item>
         ///         <item> <see cref="CLASS_FOREIGNSECURITYPRINCIPALS">物件類型名稱:外部安全性主體</see> </item>
         ///         <item> <see cref="CLASS_GROUP">物件類型名稱:群組</see> </item>
+        ///         <item> <see cref="CLASS_COMPUTER">物件類型名稱:電腦</see> </item>
         ///         <item> <see cref="CLASS_PERSON">物件類型名稱:人員</see> </item>
         ///         <item> <see cref="CLASS_APTREE">物件類型名稱:人員</see> </item>
         ///     </list>
@@ -186,6 +192,7 @@ namespace ADService.Environments
             { CLASS_ORGANIZATIONUNIT, CategoryTypes.ORGANIZATION_UNIT },
             { CLASS_FOREIGNSECURITYPRINCIPALS, CategoryTypes.FOREIGN_SECURITYPRINCIPALS },
             { CLASS_GROUP, CategoryTypes.GROUP },
+            { CLASS_COMPUTER, CategoryTypes.COMPUTER },
             { CLASS_PERSON, CategoryTypes.PERSON },
             { CLASS_APTREE, CategoryTypes.APTREE },
         };
