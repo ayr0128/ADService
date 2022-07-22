@@ -82,6 +82,30 @@
     <Compile Include="Analytical\MethodModifySecurity.cs" />
     <Compile Include="Analytical\MethodShowSecurity.cs" />
     <Compile Include="Analytical\MethodShowDetail.cs" />
+    <Compile Include="Authority\Article.cs" />
+    <Compile Include="Certificate\RequiredCommitSet.cs" />
+    <Compile Include="DynamicParse\IUserAuthorization.cs" />
+    <Compile Include="Certificate\AccessRuleRelationPermission.cs" />
+    <Compile Include="Authority\ADAgreement.cs" />
+    <Compile Include="Certificate\CustomRelation.cs" />
+    <Compile Include="Certificate\ExecutionDetails.cs" />
+    <Compile Include="Certificate\Permissions.cs" />
+    <Compile Include="Certificate\Recognizance.cs" />
+    <Compile Include="DynamicParse\ADCustomRelation.cs" />
+    <Compile Include="DynamicParse\ADDescriptionClass.cs" />
+    <Compile Include="DynamicParse\ADDrive.cs" />
+    <Compile Include="DynamicParse\DriveRelation.cs" />
+    <Compile Include="DynamicParse\ObjectSID.cs" />
+    <Compile Include="Protocol\ADRelationShip.cs" />
+    <Compile Include="RootDSE\SchemaClasses.cs" />
+    <Compile Include="RootDSE\SubSchema.cs" />
+    <Compile Include="DynamicParse\ADDescriptionProperty.cs" />
+    <Compile Include="DynamicParse\AttributeType.cs" />
+    <Compile Include="DynamicParse\ADCustomUnit.cs" />
+    <Compile Include="Basis\PropertyConvertor.cs" />
+    <Compile Include="Foundation\ADLoginUser.cs" />
+    <Compile Include="RootDSE\Configurate.cs" />
+    <Compile Include="Basis\PropertyValue.cs" />
     <Compile Include="Certification\LDAPCertification.cs" />
     <Compile Include="Advanced\CertificationProperties.cs" />
     <Compile Include="Advanced\CombinePermissions.cs" />
@@ -127,6 +151,8 @@
     <Compile Include="Details\LDAPProperties.cs" />
     <Compile Include="Protocol\PropertyDescription.cs" />
     <Compile Include="Protocol\ValueDescription.cs" />
+    <Compile Include="RootDSE\DriveSchemaClass.cs" />
+    <Compile Include="DynamicParse\IExpired.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

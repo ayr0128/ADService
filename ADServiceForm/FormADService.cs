@@ -1,5 +1,7 @@
 ﻿using ADService;
+using ADService.Authority;
 using ADService.Certification;
+using ADService.DynamicParse;
 using ADService.Environments;
 using ADService.Foundation;
 using ADService.Protocol;
@@ -18,7 +20,7 @@ namespace ADServiceForm
         /// <summary>
         /// 登入使用者
         /// </summary>
-        private LDAPLogonPerson user = null;
+        private ADLoginUser user = null;
         /// <summary>
         /// 支援於組織架構圖中顯示的物件
         /// </summary>
@@ -106,13 +108,14 @@ namespace ADServiceForm
             string account = InputBoxAccount.Text;
             // 取得帳號密碼 [TODO] 增加檢查動作
             string password = InputBoxPassword.Text;
-            // 登入帳號 [TODO] 增加例外處理
-            user = serve.AuthenticationUser(account, password);
+            // 測試用
+            user = LDAPServe.Authenticate(serve, account, password);
+
             // 失效並重新繪製
             this.Invalidate();
         }
 
-        private void ButtonUserLogout_Click(object sender, System.EventArgs e)
+        private void ButtonUserLogout_Click(object sender, EventArgs e)
         {
             // 檢查是否創建使用者 或者伺服器物件尚未創建
             if (user == null || serve == null)
@@ -131,7 +134,7 @@ namespace ADServiceForm
             this.Invalidate();
         }
 
-        private void CheckedListClassName_SelectedIndexChanged(object sender, System.EventArgs e)
+        private void CheckedListClassName_SelectedIndexChanged(object sender, EventArgs e)
         {
             // 複製內容用的陣列
             string[] checkedClassNames = new string[CheckedListClassName.CheckedItems.Count];
@@ -149,7 +152,7 @@ namespace ADServiceForm
             this.Invalidate();
         }
 
-        private void ButtonQueryOrganizationalUnit_Click(object sender, System.EventArgs e)
+        private void ButtonQueryOrganizationalUnit_Click(object sender, EventArgs e)
         {
             // 不存在任何料時
             if (TreeViewOrganizationalUnit.Nodes.Count != 0)
@@ -170,25 +173,21 @@ namespace ADServiceForm
 
             // 真正找尋的類別
             string[] searchedClassNames = checkedClassNames.Length == 0 ? defaultClassNames : checkedClassNames;
-            // 查詢
-            Dictionary<string, LDAPObject> dictionaryDNWithObject = serve.GetObjectByPermission(user, null, searchedClassNames);
+            // 查詢: 使用此 DLL 的系統需知道想要找尋的物件
+            ADCustomUnit[] customUnits = user.GetUnitsByClassNames(null, searchedClassNames);
             // 族個推入元素, [可以於此進行排序動作]
-            foreach (LDAPObject noedObject in dictionaryDNWithObject.Values)
+            foreach (ADCustomUnit customUnit in customUnits)
             {
                 // 產生節點
-                TreeNode treeNode = new TreeNode(noedObject.DistinguishedName);
-                // 節點的標籤設置微找到的物件
-                treeNode.Tag = noedObject;
+                TreeNode treeNode = new TreeNode(customUnit.DistinguishedName) { Tag = customUnit };
 
                 // 取得此節點的子物件
-                Dictionary<string, LDAPObject> dictionaryDNWithChildObject = serve.GetObjectByPermission(user, noedObject, searchedClassNames);
+                ADCustomUnit[] unitChildren = user.GetUnitsByClassNames(customUnit, searchedClassNames);
                 // 族個推入元素, [可以於此進行排序動作]
-                foreach (LDAPObject noedChildObject in dictionaryDNWithChildObject.Values)
+                foreach (ADCustomUnit unitChild in unitChildren)
                 {
                     // 產生節點
-                    TreeNode treeChildNode = new TreeNode(noedChildObject.DistinguishedName);
-                    // 節點的標籤設置微找到的物件
-                    treeChildNode.Tag = noedChildObject;
+                    TreeNode treeChildNode = new TreeNode(unitChild.DistinguishedName) { Tag = unitChild };
                     // 推入節點
                     treeNode.Nodes.Add(treeChildNode);
                 }
@@ -232,15 +231,6 @@ namespace ADServiceForm
             // 族個推入元素, [可以於此進行排序動作]
             foreach (TreeNode treeNode in e.Node.Nodes)
             {
-                // 將物件進行轉化
-                LDAPObject objectTAG = treeNode.Tag as LDAPObject;
-                // 不是容器類型不必處理
-                if (!LDAPCategory.IsContainer(objectTAG.DriveClassName))
-                {
-                    // 跳過
-                    continue;
-                }
-
                 // 如果之前已經找尋過此子傑點的子傑點
                 if (treeNode.Nodes.Count != 0)
                 {
@@ -248,15 +238,15 @@ namespace ADServiceForm
                     continue;
                 }
 
+                // 將物件進行轉化
+                ADCustomUnit objectTAG = treeNode.Tag as ADCustomUnit;
                 // 查詢
-                Dictionary<string, LDAPObject> dictionaryDNWithChildObject = serve.GetObjectByPermission(user, objectTAG, checkedClassNames.Length == 0 ? defaultClassNames : checkedClassNames);
+                ADCustomUnit[] customUnitChildren = user.GetUnitsByClassNames(objectTAG, checkedClassNames.Length == 0 ? defaultClassNames : checkedClassNames);
                 // 族個推入元素, [可以於此進行排序動作]
-                foreach (LDAPObject noedChildObject in dictionaryDNWithChildObject.Values)
+                foreach (ADCustomUnit customUnitChild in customUnitChildren)
                 {
                     // 產生節點
-                    TreeNode treeChildNode = new TreeNode(noedChildObject.DistinguishedName);
-                    // 節點的標籤設置微找到的物件
-                    treeChildNode.Tag = noedChildObject;
+                    TreeNode treeChildNode = new TreeNode(customUnitChild.DistinguishedName) { Tag = customUnitChild };
                     // 推入節點
                     treeNode.Nodes.Add(treeChildNode);
                 }
@@ -298,16 +288,17 @@ namespace ADServiceForm
 
             // 紀錄於標籤的物件
             // 檢查標籤物件是否存在
-            if (!(treeNode.Tag is LDAPObject objectTAG))
+            if (!(treeNode.Tag is ADCustomUnit customUnitTAG))
             {
                 // 不存在, 跳過
                 return;
             }
 
-            // 取得目前登入者於此物件相關的認證證書
-            LDAPCertification certification = serve.GetCertificate(user, objectTAG);
+            // 取得操作保證書
+            ADAgreement recognizance = user.GetAgreement(customUnitTAG);
+            // 取得權利書
             // 透過證書取得目前登入者於此物件上的可用功能
-            Dictionary<string, InvokeCondition> dictionaryMethodAndCondition = certification.ListAllMethods();
+            Dictionary<string, ADInvokeCondition> dictionaryMethodAndCondition = null;
             // 檢查是否存在支援方法
             if (dictionaryMethodAndCondition.Count == 0)
             {
@@ -316,14 +307,14 @@ namespace ADServiceForm
             }
 
             // 設定關聯
-            ContextMenuStripOnTreeView.Tag = objectTAG;
+            ContextMenuStripOnTreeView.Tag = customUnitTAG;
             // 遍歷支援的方法並將條件填入
-            foreach (KeyValuePair<string, InvokeCondition> pair in dictionaryMethodAndCondition)
+            foreach (KeyValuePair<string, ADInvokeCondition> pair in dictionaryMethodAndCondition)
             {
                 // 使用方法名稱作為可選選項
                 ToolStripMenuItem toolStripMenuItem = new ToolStripMenuItem(pair.Key);
                 // 轉換型別, 看起來比較值觀
-                InvokeCondition condition = pair.Value;
+                ADInvokeCondition condition = pair.Value;
                 // 存在資料時
                 if (condition.MaskFlags(ProtocolAttributeFlags.HASVALUE) != ProtocolAttributeFlags.NONE)
                 {
@@ -333,7 +324,7 @@ namespace ADServiceForm
                 else if (condition.MaskFlags(ProtocolAttributeFlags.INVOKEMETHOD) != ProtocolAttributeFlags.NONE)
                 {
                     // 是呼叫方法時, 必定內含陣列字串, 此陣列字串為可呼叫方法
-                    string[] methods = condition.CastMutipleValue<string>(InvokeCondition.METHODS);
+                    string[] methods = condition.CastMutipleValue<string>(ADInvokeCondition.METHODS);
                     // 此時必定存在此資料
                     if (methods.Length == 1)
                     {
@@ -345,14 +336,12 @@ namespace ADServiceForm
                     else
                     {
                         // 此時父層關聯改設定為目標物件
-                        toolStripMenuItem.Tag = objectTAG;
+                        toolStripMenuItem.Tag = customUnitTAG;
                         // 具有多個方法時
                         foreach (string method in methods)
                         {
                             // 使用方法名稱作為可選選項
-                            ToolStripMenuItem toolStripMenuItemChild = new ToolStripMenuItem(method);
-                            // 同時改寫標籤為可呼叫方法
-                            toolStripMenuItemChild.Tag = method;
+                            ToolStripMenuItem toolStripMenuItemChild = new ToolStripMenuItem(method) { Tag = method };
                             // 推入事件
                             toolStripMenuItemChild.Click += this.ContextMenuStripOnTreeView_OnMenuItemInvokeMethod;
                             // 推入作為隸屬功能
@@ -394,9 +383,9 @@ namespace ADServiceForm
             #endregion
 
             // 使用此喚起物件製作證書
-            LDAPCertification certification = serve.GetCertificate(user, objectTAG);
+            LDAPCertification certification = serve.GetCertificate(null, objectTAG);
             // 透過證書呼叫可用方法的需求參數: 取得可用物件
-            InvokeCondition invokeCondition = certification.GetMethodCondition(method);
+            ADInvokeCondition invokeCondition = certification.GetMethodCondition(method);
             // 若此時權限被修改導致無法呼叫會提供空的條件
             if (invokeCondition == null)
             {
@@ -457,7 +446,7 @@ namespace ADServiceForm
         /// <param name="certification">遷入異動用證書</param>
         /// <param name="invokeCondition">就夠條件</param>
         /// <returns></returns>
-        private Form CreateDialogForm(in string method, in LDAPCertification certification, InvokeCondition invokeCondition)
+        private Form CreateDialogForm(in string method, in LDAPCertification certification, ADInvokeCondition invokeCondition)
         {
             // 預計對外提供的視窗
             Form resultForm = null;
